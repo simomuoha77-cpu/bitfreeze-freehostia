@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bitfreeze — Admin Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+:root {
+  --bg-primary: #0f1419;
+  --bg-secondary: #1a202c;
+  --card-bg: rgba(26, 32, 44, 0.95);
+  --accent: #ff8a00;
+  --accent-hover: #e67e00;
+  --accent-light: rgba(255, 138, 0, 0.1);
+  --text-primary: #f7fafc;
+  --text-secondary: #a0aec0;
+  --text-muted: #718096;
+  --border: rgba(255, 255, 255, 0.1);
+  --shadow: rgba(0, 0, 0, 0.3);
+  --shadow-hover: rgba(0, 0, 0, 0.5);
+  --success: #48bb78;
+  --error: #f56565;
+  --glass: rgba(255, 255, 255, 0.05);
+  --hover-bg: rgba(255, 255, 255, 0.08);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;background:linear-gradient(135deg,var(--bg-primary),var(--bg-secondary));color:var(--text-primary);min-height:100vh;}
+header{display:flex;justify-content:space-between;align-items:center;padding:20px 40px;background:var(--card-bg);box-shadow:0 4px 20px var(--shadow);border-bottom:1px solid var(--border);}
+header h1{font-weight:700;font-size:28px;color:var(--accent);}
+header button{padding:10px 20px;border:none;border-radius:8px;background:var(--accent);color:#1a202c;font-weight:600;cursor:pointer;transition:0.3s;}
+header button:hover{background:var(--accent-hover);}
+.container{max-width:1400px;margin:0 auto;padding:40px;}
+.card{background:var(--card-bg);border-radius:16px;padding:32px;margin-bottom:40px;border:1px solid var(--border);box-shadow:0 8px 32px var(--shadow);}
+.card h2{margin-bottom:24px;border-bottom:2px solid var(--accent);padding-bottom:12px;font-weight:600;font-size:24px;}
+form input, form select{width:100%;padding:12px;margin-bottom:16px;border-radius:8px;border:1px solid var(--border);background:var(--glass);color:var(--text-primary);}
+form button{padding:12px 20px;border:none;border-radius:8px;background:var(--accent);color:#1a202c;font-weight:600;cursor:pointer;transition:0.3s;}
+form button:hover{background:var(--accent-hover);}
+.fridge-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:24px;}
+.fridge{background:var(--glass);border-radius:16px;padding:24px;text-align:center;border:1px solid var(--border);box-shadow:0 6px 20px var(--shadow);}
+.fridge img{width:100%;height:150px;border-radius:12px;object-fit:cover;margin-bottom:12px;}
+.fridge-info strong{display:block;font-size:18px;margin-bottom:8px;}
+.fridge-info p{margin:6px 0;font-size:14px;color:var(--text-secondary);}
+.fridge-info button{margin-top:8px;padding:10px 16px;border:none;border-radius:8px;background:var(--accent);color:#1a202c;cursor:pointer;transition:0.3s;}
+.fridge-info button:hover{background:var(--accent-hover);}
+#msg{margin-bottom:16px;padding:12px;border-radius:8px;font-weight:500;}
+#msg.success{background:rgba(72,187,120,0.1);color:var(--success);border:1px solid var(--success);}
+#msg.error{background:rgba(245,101,101,0.1);color:var(--error);border:1px solid var(--error);}
+</style>
+</head>
+<body>
+<header>
+  <h1><i class="fas fa-cogs"></i> Admin Dashboard</h1>
+  <button onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+</header>
+
+<div class="container">
+
+  <!-- Add Fridge / Offer -->
+  <div class="card">
+    <h2><i class="fas fa-plus-circle"></i> Add Fridge / Offer</h2>
+    <div id="msg"></div>
+    <form id="fridgeForm">
+      <input type="text" id="name" placeholder="Fridge Name" required>
+      <select id="category">
+        <option value="Standard">Standard</option>
+        <option value="Offer">Offer</option>
+      </select>
+      <input type="number" id="price" placeholder="Fridge Price" required>
+      <input type="number" id="dailyEarn" placeholder="Daily Earn (KES)" required>
+      <input type="text" id="img" placeholder="Image URL" required>
+      <label><input type="checkbox" id="locked"> Lock this fridge</label>
+      <h4>Offer Settings (Optional)</h4>
+      <input type="number" id="offerPrice" placeholder="Offer Price (KES)">
+      <input type="number" id="offerEarn" placeholder="Earning after X days (KES)">
+      <input type="number" id="offerDays" placeholder="Offer duration in days">
+      <button type="submit"><i class="fas fa-plus"></i> Add Fridge / Offer</button>
+    </form>
+  </div>
+
+  <!-- Existing Fridges -->
+  <div class="card">
+    <h2><i class="fas fa-boxes"></i> Existing Fridges</h2>
+    <div class="fridge-list" id="fridgeList"></div>
+  </div>
+
+</div>
+
+<script>
+const DOMAIN = window.location.origin;
+const ADMIN_PASS = prompt("Enter Admin Password:");
+if(!ADMIN_PASS) location.href='/login';
+
+function logout(){location.href='/login';}
+
+// Add fridge
+document.getElementById('fridgeForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const msgEl = document.getElementById('msg');
+  msgEl.textContent=''; msgEl.className='';
+
+  const fridge = {
+    adminPass: ADMIN_PASS,
+    name: document.getElementById('name').value.trim(),
+    category: document.getElementById('category').value,
+    price: Number(document.getElementById('price').value),
+    dailyEarn: Number(document.getElementById('dailyEarn').value),
+    img: document.getElementById('img').value.trim(),
+    locked: document.getElementById('locked').checked
+  };
+
+  // Offer
+  const offerPrice = Number(document.getElementById('offerPrice').value);
+  const offerEarn = Number(document.getElementById('offerEarn').value);
+  const offerDays = Number(document.getElementById('offerDays').value);
+  if(offerPrice && offerEarn && offerDays){
+    fridge.offer = { enabled:true, price:offerPrice, earningAfterDays:offerEarn, durationDays:offerDays, startAt:new Date(), endAt:new Date(new Date().getTime() + offerDays*24*60*60*1000) };
+  }
+
+  try{
+    const res = await fetch(DOMAIN+'/api/admin/fridge',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(fridge)
+    });
+    const data = await res.json();
+    if(res.ok){ msgEl.textContent=data.message; msgEl.className='success'; document.getElementById('fridgeForm').reset(); loadFridges(); }
+    else { msgEl.textContent=data.error; msgEl.className='error'; }
+  }catch(err){ msgEl.textContent='Network error'; msgEl.className='error'; }
+});
+
+// Load fridges
+async function loadFridges(){
+  const res = await fetch(DOMAIN+'/api/fridges',{ headers:{ Authorization:'Bearer admin' }});
+  const data = await res.json();
+  const list = document.getElementById('fridgeList'); list.innerHTML='';
+  data.fridges.forEach(f=>{
+    const div = document.createElement('div');
+    div.className='fridge';
+    const offerText = f.offer?.enabled ? `Offer: KES ${f.offer.price}, Earn: KES ${f.offer.earningAfterDays} in ${f.offer.durationDays} days` : '';
+    div.innerHTML=`
+      <img src="${f.img}" alt="${f.name}">
+      <div class="fridge-info">
+        <strong>${f.name}</strong>
+        <p>Category: ${f.category}</p>
+        <p>Price: KES ${f.price}</p>
+        <p>${offerText}</p>
+        <p>${f.locked?'Locked':'Unlocked'}</p>
+      </div>`;
+    list.appendChild(div);
+  });
+}
+
+loadFridges();
+</script>
+</body>
+</html>

@@ -1,0 +1,155 @@
+/* ===================== General Body ===================== */
+body {
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+  background: radial-gradient(circle at top, #121a26, #070b11);
+  color: #e6eef6;
+  margin: 0;
+  padding: 0;
+}
+
+/* ===================== Wrapper ===================== */
+.wrap {
+  max-width: 1200px;
+  margin: 30px auto;
+  padding: 24px;
+}
+
+/* ===================== Cards ===================== */
+.card {
+  background: linear-gradient(180deg, #0f1620, #0b1420);
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+
+/* ===================== Headings ===================== */
+h1, h2 {
+  margin-top: 0;
+  color: #fff;
+}
+
+/* ===================== Text ===================== */
+label {
+  display: block;
+  margin-top: 10px;
+  font-size: 13px;
+  color: #9aa6b2;
+}
+p, span {
+  color: #e6eef6;
+}
+
+/* ===================== Inputs & Buttons ===================== */
+input, button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 6px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.05);
+  font-size: 14px;
+  outline: none;
+}
+input {
+  background: rgba(255,255,255,0.03);
+  color: #fff;
+}
+button {
+  background: linear-gradient(90deg, #ff8a00, #ffb347);
+  color: #111;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.3s ease;
+}
+button:hover {
+  transform: scale(1.05);
+}
+
+/* ===================== Messages ===================== */
+.error {
+  color: #ff6b6b;
+  margin-top: 6px;
+  font-size: 13px;
+}
+.success {
+  color: #9cffc4;
+  margin-top: 6px;
+  font-size: 13px;
+}
+
+/* ===================== Fridges ===================== */
+.fridge-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px,1fr));
+  gap: 16px;
+}
+
+.fridge {
+  background: rgba(255,255,255,0.03);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  transition: 0.3s ease;
+  cursor: pointer;
+}
+.fridge:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+}
+.fridge img {
+  width: 100%;
+  height: 150px;
+  border-radius: 8px;
+  object-fit: cover;
+  margin-bottom: 8px;
+}
+.fridge-info strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 16px;
+}
+.fridge-info p {
+  margin: 0;
+  font-size: 14px;
+}
+
+/* ===================== Balance Boxes ===================== */
+.balance-container {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.balance-box {
+  flex: 1;
+  background: rgba(255,255,255,0.03);
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+}
+.balance-box h3 {
+  margin: 0 0 10px 0;
+  color: #fff;
+  font-size: 16px;
+}
+.balance-box p {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #ff8a00;
+}
+
+/* ===================== Logout ===================== */
+#userinfo button {
+  margin-top: 12px;
+}
+
+/* ===================== Responsive ===================== */
+@media(max-width:600px){
+  .fridge img { height: 120px; }
+  .balance-container { flex-direction: column; }
+}
