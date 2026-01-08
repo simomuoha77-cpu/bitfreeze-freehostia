@@ -3,268 +3,215 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bitfreeze — Professional Dashboard</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<title>BitFreeze Dashboard</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
-:root {
-  --bg-primary: #0f1419;
-  --bg-secondary: #1a202c;
-  --card-bg: rgba(26, 32, 44, 0.95);
-  --accent: #ff8a00;
-  --accent-hover: #e67e00;
-  --accent-light: rgba(255, 138, 0, 0.1);
-  --text-primary: #f7fafc;
-  --text-secondary: #a0aec0;
-  --text-muted: #718096;
-  --border: rgba(255, 255, 255, 0.1);
-  --shadow: rgba(0, 0, 0, 0.3);
-  --shadow-hover: rgba(0, 0, 0, 0.5);
-  --success: #48bb78;
-  --error: #f56565;
-  --glass: rgba(255, 255, 255, 0.05);
-  --hover-bg: rgba(255, 255, 255, 0.08);
-}
-
-* { box-sizing: border-box; margin:0; padding:0; }
-body {
-  font-family: 'Inter', sans-serif;
-  background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary));
-  color: var(--text-primary);
-  min-height: 100vh;
-  line-height: 1.6;
-  overflow-x: hidden;
-}
-
-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 24px 40px;
-  background: var(--card-bg);
-  box-shadow: 0 4px 20px var(--shadow);
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-header h1 {
-  font-weight: 700;
-  font-size: 28px;
-  color: var(--accent);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-header button {
-  padding: 12px 24px;
-  border: none;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  background: var(--accent);
-  color: #1a202c;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.3s ease;
-}
-header button:hover { background: var(--accent-hover); transform: translateY(-2px); box-shadow:0 4px 12px var(--shadow); }
-
-.container { max-width: 1400px; margin: 0 auto; padding: 40px; }
-.card { background: var(--card-bg); border-radius:16px; padding:32px; margin-bottom:40px; border:1px solid var(--border); box-shadow:0 8px 32px var(--shadow); transition:0.3s; }
-.card:hover { transform: translateY(-4px); box-shadow:0 12px 40px var(--shadow-hover); }
-.card h2 { margin:0 0 24px 0; font-weight:600; font-size:24px; color:var(--text-primary); border-bottom:2px solid var(--accent); padding-bottom:12px; display:flex; align-items:center; gap:12px; }
-
-.balance-container { display:grid; grid-template-columns: repeat(auto-fit, minmax(250px,1fr)); gap:24px; margin:24px 0; }
-.balance-box { background: var(--glass); border-radius:12px; padding:24px; text-align:center; border:1px solid var(--border); transition:0.3s; }
-.balance-box:hover { background: var(--hover-bg); transform: scale(1.02); }
-.balance-box h3 { margin:0 0 16px 0; color: var(--text-secondary); font-size:14px; font-weight:500; text-transform:uppercase; letter-spacing:0.5px; }
-.balance-box p { margin:0; font-size:32px; font-weight:700; color: var(--accent); }
-
-.fridge-list, .offer-list { display:grid; grid-template-columns: repeat(auto-fill,minmax(220px,1fr)); gap:24px; }
-.fridge, .offer { background: var(--glass); border-radius:16px; padding:16px; display:flex; flex-direction:column; align-items:center; text-align:center; border:1px solid var(--border); box-shadow:0 6px 20px var(--shadow); transition:0.3s; }
-.fridge:hover, .offer:hover { transform: translateY(-6px); background: var(--hover-bg); box-shadow:0 10px 32px var(--shadow-hover); }
-.fridge img, .offer img { width:100%; height:140px; border-radius:12px; object-fit:cover; margin-bottom:12px; }
-.fridge-info, .offer-info { width:100%; }
-.fridge-info strong, .offer-info strong { display:block; margin-bottom:8px; font-size:18px; font-weight:600; color:var(--text-primary); }
-.fridge-info p, .offer-info p { margin:4px 0; font-size:14px; color:var(--text-secondary); }
-.fridge-info button, .offer-info button { margin-top:8px; padding:10px 20px; font-weight:600; border:none; border-radius:8px; background:var(--accent); color:#1a202c; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.3s; }
-.fridge-info button:hover, .offer-info button:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow:0 4px 12px var(--shadow); }
-
-.transactions table { width:100%; border-collapse:collapse; border-radius:8px; overflow:hidden; }
-.transactions th, .transactions td { padding:12px 16px; text-align:left; border-bottom:1px solid var(--border); }
-.transactions th { background: var(--glass); color:var(--text-primary); font-weight:600; text-transform:uppercase; font-size:12px; letter-spacing:0.5px; }
-.transactions tbody tr:hover { background: var(--hover-bg); }
-
-form label { display:block; margin-bottom:6px; font-weight:500; color:var(--text-secondary); }
-form input { width:100%; padding:10px 14px; margin-bottom:12px; border:1px solid var(--border); border-radius:8px; background:var(--glass); color:var(--text-primary); font-size:14px; }
-form input:focus { outline:none; border-color: var(--accent); box-shadow:0 0 0 2px var(--accent-light); }
-form button { padding:12px 20px; border:none; border-radius:8px; background:var(--accent); color:#1a202c; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.3s; }
-form button:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow:0 4px 12px var(--shadow); }
-
-#withdrawMsg { margin-top:12px; padding:10px; border-radius:8px; font-weight:500; }
-#withdrawMsg.success { background: rgba(72,187,120,0.1); color:var(--success); border:1px solid var(--success); }
-#withdrawMsg.error { background: rgba(245,101,101,0.1); color:var(--error); border:1px solid var(--error); }
-
-footer { text-align:center; padding:24px 40px; background:var(--card-bg); border-top:1px solid var(--border); color:var(--text-muted); font-size:14px; }
-footer a { color:var(--accent); text-decoration:none; }
-footer a:hover { text-decoration:underline; }
-
-@media(max-width:768px){ .container{padding:20px;} header{padding:20px;} header h1{font-size:24px;} .balance-container{grid-template-columns:1fr;} .fridge-list,.offer-list{grid-template-columns:1fr;} .fridge img,.offer img{height:120px;} .card{padding:20px;} }
+body {margin:0;font-family:Arial,sans-serif;background:#0b0f1a;color:#fff;}
+header {background:#11162a;padding:15px;display:flex;justify-content:space-between;align-items:center;}
+nav button {background:none;border:none;color:#aaa;margin:0 8px;font-size:16px;cursor:pointer;}
+nav button.active {color:#00ffcc;}
+section {display:none;padding:20px;}
+section.active {display:block;}
+.cards {display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:15px;}
+.card {background:#141a33;border-radius:10px;padding:10px;}
+.card img {width:100%;border-radius:8px;}
+.card button {width:100%;margin-top:10px;padding:8px;background:#00ffcc;border:none;border-radius:5px;cursor:pointer;}
+.balance-box {background:#141a33;padding:20px;border-radius:10px;margin-bottom:20px;}
+table {width:100%;border-collapse:collapse;}
+td, th {border-bottom:1px solid #333;padding:8px;}
+input {width:100%;padding:10px;margin:5px 0;border-radius:5px;border:none;background:#0b0f1a;color:#fff;}
 </style>
 </head>
 <body>
+
 <header>
-<h1><i class="fas fa-snowflake"></i> Bitfreeze Dashboard</h1>
-<button onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+  <h2>BitFreeze</h2>
+  <nav>
+    <button onclick="showTab('home')" class="active">Home</button>
+    <button onclick="showTab('fridges')">Fridges</button>
+    <button onclick="showTab('offers')">Offers</button>
+    <button onclick="showTab('withdraw')">Withdraw</button>
+    <button onclick="showTab('profile')">Profile</button>
+  </nav>
 </header>
 
-<div class="container">
-
-<!-- User Info -->
-<div class="card user-info">
-<h2><i class="fas fa-user"></i> Your Account</h2>
-<p><strong>Email:</strong> <span id="userEmail"></span></p>
-<p><strong>Phone:</strong> <span id="userPhone"></span></p>
-<div class="balance-container">
+<!-- HOME -->
+<section id="home" class="active">
   <div class="balance-box">
-    <h3>Earnings</h3>
-    <p>KES <span id="userEarning">0</span></p>
+    <h3>Account Balance</h3>
+    <h1 id="balance">KES 0</h1>
   </div>
-  <div class="balance-box">
-    <h3>Fridges Owned</h3>
-    <p><span id="userFridges">0</span></p>
-  </div>
-</div>
-<p><strong>Referral Link:</strong> <a id="refLink" href="#" target="_blank" style="color: var(--accent);"><i class="fas fa-link"></i> Share</a></p>
-</div>
+  <canvas id="chart" height="200"></canvas>
 
-<!-- Withdraw -->
-<div class="card">
-<h2><i class="fas fa-money-bill-wave"></i> Withdraw Earnings</h2>
-<form id="withdrawForm">
-<label for="withdrawPhone">Phone Number</label>
-<input type="text" id="withdrawPhone" placeholder="Registered phone" required>
-<label for="withdrawAmount">Amount (KES, min 200)</label>
-<input type="number" id="withdrawAmount" min="200" placeholder="Enter amount" required>
-<button type="submit"><i class="fas fa-paper-plane"></i> Request Withdraw</button>
-<div id="withdrawMsg"></div>
-</form>
-</div>
+  <h3>Trade History</h3>
+  <table>
+    <thead>
+      <tr><th>Date</th><th>Action</th><th>Amount</th><th>Status</th></tr>
+    </thead>
+    <tbody id="history"></tbody>
+  </table>
+</section>
 
-<!-- Normal Fridges -->
-<div class="card">
-<h2><i class="fas fa-shopping-cart"></i> Fridges Catalog (MPESA)</h2>
-<div class="fridge-list" id="fridgeList"></div>
-</div>
+<!-- FRIDGES -->
+<section id="fridges">
+  <h2>Normal Fridges</h2>
+  <div class="cards" id="normalFridges"></div>
+</section>
 
-<!-- Offer Fridges -->
-<div class="card">
-<h2><i class="fas fa-gift"></i> Special Offers 🎁</h2>
-<div class="offer-list" id="offerList"></div>
-</div>
+<!-- OFFERS -->
+<section id="offers">
+  <h2>Offer Fridges</h2>
+  <input id="offerCode" placeholder="Enter Offer Code">
+  <button onclick="applyOffer()">Apply</button>
+  <div class="cards" id="offerFridges"></div>
+</section>
 
-<!-- Transactions -->
-<div class="card transactions">
-<h2><i class="fas fa-history"></i> Transaction History</h2>
-<table>
-<thead><tr><th>Date</th><th>Type</th><th>Amount (KES)</th><th>Status</th></tr></thead>
-<tbody id="transactionBody"><tr><td colspan="4" style="text-align:center;color:var(--text-muted)">No transactions yet</td></tr></tbody>
-</table>
-</div>
+<!-- WITHDRAW -->
+<section id="withdraw">
+  <h2>Withdraw Funds</h2>
+  <input id="wAmount" type="number" placeholder="Amount">
+  <input id="wPhone" placeholder="MPESA Phone">
+  <button onclick="withdraw()">Request Withdrawal</button>
+</section>
 
-</div>
-
-<footer>
-<p>&copy; 2023 Bitfreeze. All rights reserved. | <a href="/privacy">Privacy Policy</a> | <a href="/terms">Terms of Service</a></p>
-</footer>
+<!-- PROFILE -->
+<section id="profile">
+  <h2>Profile</h2>
+  <p><strong>Username:</strong> <span id="username"></span></p>
+  <p><strong>Owned Fridges:</strong> <span id="ownedCount"></span></p>
+  <p><strong>Total Earnings:</strong> KES <span id="totalEarning"></span></p>
+</section>
 
 <script>
-const DOMAIN = window.location.origin;
+// ================= UI =================
+function showTab(id){
+  document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+// ================= FRIDGES =================
+const NORMAL_FRIDGES = [
+  { id:'btc100', name:'Bitcoin 100', price:100, dailyEarn:5, img:'/images/btc100.jpg' },
+  { id:'btc200', name:'Bitcoin 200', price:200, dailyEarn:10, img:'/images/btc200.jpg' },
+  { id:'btc300', name:'Bitcoin 300', price:300, dailyEarn:15, img:'/images/btc300.jpg' },
+  { id:'btc400', name:'Bitcoin 400', price:400, dailyEarn:20, img:'/images/btc400.jpg' },
+  { id:'1ft', name:'Bitcoin 1ft', price:500, dailyEarn:25, img:'/images/fridge1ft.jpg' },
+  { id:'2ft', name:'Bitcoin 2ft', price:1000, dailyEarn:55, img:'/images/fridge2ft.jpg' },
+  { id:'3ft', name:'Bitcoin 3ft', price:2000, dailyEarn:100, img:'/images/fridge3ft.jpg' },
+  { id:'4ft', name:'Bitcoin 4ft', price:4000, dailyEarn:150, img:'/images/fridge4ft.jpg' },
+  { id:'5ft', name:'Bitcoin 5ft', price:6000, dailyEarn:250, img:'/images/fridge5ft.jpg' }
+];
+
+const OFFER_FRIDGES = [
+  { id:'offer1', name:'🎁 Offer 1', price:0, dailyEarn:0, img:'/images/offer1.jpg', locked:true },
+  { id:'offer2', name:'🎁 Offer 2', price:0, dailyEarn:0, img:'/images/offer2.jpg', locked:true },
+  { id:'offer3', name:'🎁 Offer 3', price:0, dailyEarn:0, img:'/images/offer3.jpg', locked:true },
+  { id:'offer4', name:'🎁 Offer 4', price:0, dailyEarn:0, img:'/images/offer4.jpg', locked:true },
+  { id:'offer5', name:'🎁 Offer 5', price:0, dailyEarn:0, img:'/images/offer5.jpg', locked:true },
+  { id:'offer6', name:'🎁 Offer 6', price:0, dailyEarn:0, img:'/images/offer6.jpg', locked:true },
+  { id:'offer7', name:'🎁 Offer 7', price:0, dailyEarn:0, img:'/images/offer7.jpg', locked:true },
+  { id:'offer8', name:'🎁 Offer 8', price:0, dailyEarn:0, img:'/images/offer8.jpg', locked:true }
+];
+
+// ================= FETCH USER =================
 const token = localStorage.getItem('bf_token');
+const HEADERS = {Authorization:'Bearer '+token};
 if(!token) location.href='/login';
-function logout(){ localStorage.removeItem('bf_token'); location.href='/login'; }
 
-// Load User Info
-async function getUser(){
-  const res = await fetch(DOMAIN+'/api/me',{ headers:{Authorization:'Bearer '+token}});
-  const data = await res.json();
-  if(!data.user) return logout();
-  document.getElementById('userEmail').textContent = data.user.email;
-  document.getElementById('userPhone').textContent = data.user.phone || '—';
-  document.getElementById('userEarning').textContent = data.user.earning;
-  document.getElementById('userFridges').textContent = data.user.fridges.length;
-  document.getElementById('refLink').href = DOMAIN+'/register?ref='+encodeURIComponent(data.user.email);
-  document.getElementById('refLink').textContent = DOMAIN+'/register?ref='+encodeURIComponent(data.user.email);
-
-  loadTransactions(data.user);
-  loadFridges();
-  loadOffers();
-}
-
-getUser();
-
-// Withdraw
-document.getElementById('withdrawForm').addEventListener('submit', async e=>{
-  e.preventDefault();
-  const phone=document.getElementById('withdrawPhone').value.trim();
-  const amount=Number(document.getElementById('withdrawAmount').value);
-  const msgEl=document.getElementById('withdrawMsg'); msgEl.textContent=''; msgEl.className='';
-  if(amount<200){ msgEl.textContent='Minimum withdrawal is KES 200'; msgEl.className='error'; return; }
+async function loadDashboard(){
   try{
-    const res=await fetch(DOMAIN+'/api/withdraw',{method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}, body:JSON.stringify({phone,amount})});
-    const data=await res.json();
-    if(res.ok){ msgEl.textContent=data.message; msgEl.className='success'; getUser(); }
-    else { msgEl.textContent=data.error; msgEl.className='error'; }
-  } catch(err){ msgEl.textContent='Network error: '+err.message; msgEl.className='error'; }
-});
+    const res = await fetch('/api/me', {headers:HEADERS});
+    const data = await res.json();
+    const u = data.user;
 
-// Load Fridges (Normal)
-async function loadFridges(){
-  const res=await fetch(DOMAIN+'/api/fridges',{ headers:{Authorization:'Bearer '+token}});
-  const data=await res.json();
-  const list=document.getElementById('fridgeList'); list.innerHTML='';
-  data.fridges.forEach(f=>{
-    const div=document.createElement('div'); div.className='fridge';
-    div.innerHTML=`<img src="${f.img}" alt="${f.name}"><div class="fridge-info"><strong>${f.name}</strong><p>Price: KES ${f.price}</p><p>Daily Earn: KES ${f.dailyEarn}</p><button onclick="buyFridge('${f.id}')"><i class="fas fa-shopping-bag"></i> Buy MPESA</button></div>`;
-    list.appendChild(div);
-  });
+    document.getElementById('balance').innerText = 'KES ' + u.earning;
+    document.getElementById('username').innerText = u.name;
+    document.getElementById('ownedCount').innerText = u.fridges.length;
+    document.getElementById('totalEarning').innerText = u.earning;
+
+    // Trade history
+    const tbody = document.getElementById('history');
+    tbody.innerHTML='';
+    u.transactions.forEach(t=>{
+      tbody.innerHTML += `<tr>
+        <td>${new Date(t.date).toLocaleString()}</td>
+        <td>${t.type}</td>
+        <td>${t.amount}</td>
+        <td>${t.status}</td>
+      </tr>`;
+    });
+
+    // Normal fridges
+    const nf = document.getElementById('normalFridges');
+    nf.innerHTML='';
+    NORMAL_FRIDGES.forEach(f=>{
+      nf.innerHTML += `<div class="card">
+        <img src="${f.img}">
+        <h4>${f.name}</h4>
+        <p>Price: KES ${f.price}</p>
+        <p>Daily: KES ${f.dailyEarn}</p>
+        <button onclick="buyFridge('${f.id}')">Buy</button>
+      </div>`;
+    });
+
+    // Offer fridges
+    const of = document.getElementById('offerFridges');
+    of.innerHTML='';
+    OFFER_FRIDGES.forEach(f=>{
+      const unlocked = !f.locked;
+      of.innerHTML += `<div class="card">
+        <img src="${f.img}">
+        <h4>${f.name}</h4>
+        <button ${unlocked?'':'disabled'}>${unlocked?'Buy':'Locked'}</button>
+      </div>`;
+    });
+
+    // Earnings chart (line candlestick style)
+    const labels = u.transactions.map(t=>new Date(t.date).toLocaleTimeString());
+    const dataPoints = u.transactions.map(t=>t.amount);
+    const ctx = document.getElementById('chart').getContext('2d');
+    if(window.earningsChart) window.earningsChart.destroy();
+    window.earningsChart = new Chart(ctx,{
+      type:'line',
+      data:{labels,datasets:[{label:'Earnings',data:dataPoints,borderColor:'#00ffcc',backgroundColor:'rgba(0,255,204,0.2)',fill:true,tension:0.3}]},
+      options:{responsive:true,plugins:{legend:{display:true}},scales:{y:{beginAtZero:true}}}
+    });
+
+  }catch(err){console.error(err);}
 }
 
-// Load Offers (8 offer slots)
-function loadOffers(){
-  const offerList=document.getElementById('offerList'); offerList.innerHTML='';
-  for(let i=1;i<=8;i++){
-    const div=document.createElement('div'); div.className='offer';
-    div.innerHTML=`<img src="images/offer${i}.jpg" alt="Offer ${i}"><div class="offer-info"><strong>Offer ${i} 🎁</strong><p>Price: Locked</p><p>Earn: Locked</p><button onclick="buyOffer(${i})">Buy MPESA</button></div>`;
-    offerList.appendChild(div);
-  }
-}
+loadDashboard();
 
-// Buy Normal Fridge (MPESA)
+// ================= BUY FRIDGE =================
 async function buyFridge(id){
-  if(!confirm('Confirm MPESA purchase?')) return;
-  const res=await fetch(DOMAIN+'/api/buy',{ method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}, body:JSON.stringify({fridgeId:id})});
-  const data=await res.json();
-  if(res.ok){ alert(data.message); getUser(); }
-  else alert(data.error || 'Purchase failed');
+  const res = await fetch('/api/buy',{method:'POST',headers:HEADERS,body:JSON.stringify({fridgeId:id})});
+  const data = await res.json();
+  alert(data.message || data.error);
+  loadDashboard();
 }
 
-// Buy Offer Fridge
-function buyOffer(id){
-  alert('MPESA prompt will appear for Offer '+id);
+// ================= OFFER CODE =================
+async function applyOffer(){
+  const code = document.getElementById('offerCode').value;
+  const res = await fetch('/api/offercode',{method:'POST',headers:HEADERS,body:JSON.stringify({code})});
+  const data = await res.json();
+  alert(data.message || data.error);
+  loadDashboard();
 }
 
-// Transactions
-function loadTransactions(user){
-  const tbody=document.getElementById('transactionBody'); tbody.innerHTML='';
-  if(!user.transactions || !user.transactions.length){ tbody.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--text-muted)">No transactions yet</td></tr>'; return; }
-  user.transactions.forEach(t=>{
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${new Date(t.date).toLocaleString()}</td><td>${t.type}</td><td>${t.amount}</td><td>${t.status}</td>`;
-    tbody.appendChild(tr);
-  });
+// ================= WITHDRAW =================
+async function withdraw(){
+  const amount = document.getElementById('wAmount').value;
+  const phone = document.getElementById('wPhone').value;
+  const res = await fetch('/api/withdraw',{method:'POST',headers:HEADERS,body:JSON.stringify({amount,phone})});
+  const data = await res.json();
+  alert(data.message || data.error);
+  loadDashboard();
 }
 </script>
 </body>
