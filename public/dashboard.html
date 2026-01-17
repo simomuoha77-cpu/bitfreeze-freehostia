@@ -333,7 +333,7 @@ button{
 </div>
 
 <script>
-const DOMAIN='http://localhost:3000';
+const DOMAIN=window.location.origin;
 const token=localStorage.getItem('bf_token');
 if(!token) location.href='/login';
 
