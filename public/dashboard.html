@@ -2,216 +2,602 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BitFreeze Dashboard</title>
-
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Bitfreeze — Dashboard</title>
 <style>
-body {margin:0;font-family:Arial,sans-serif;background:#0b0f1a;color:#fff;}
-header {background:#11162a;padding:15px;display:flex;justify-content:space-between;align-items:center;}
-nav button {background:none;border:none;color:#aaa;margin:0 8px;font-size:16px;cursor:pointer;}
-nav button.active {color:#00ffcc;}
-section {display:none;padding:20px;}
-section.active {display:block;}
-.cards {display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:15px;}
-.card {background:#141a33;border-radius:10px;padding:10px;}
-.card img {width:100%;border-radius:8px;}
-.card button {width:100%;margin-top:10px;padding:8px;background:#00ffcc;border:none;border-radius:5px;cursor:pointer;}
-.balance-box {background:#141a33;padding:20px;border-radius:10px;margin-bottom:20px;}
-table {width:100%;border-collapse:collapse;}
-td, th {border-bottom:1px solid #333;padding:8px;}
-input {width:100%;padding:10px;margin:5px 0;border-radius:5px;border:none;background:#0b0f1a;color:#fff;}
+:root{
+  --bg:#0b0f14;
+  --card:#0f1620;
+  --muted:#9aa6b2;
+  --accent:#ff8a00;
+  --glass:rgba(255,255,255,0.03);
+}
+
+body{
+  margin:0;
+  font-family:Inter,system-ui,Arial;
+  background:radial-gradient(1200px 600px at top,#121a26,#070b11);
+  color:#e6eef6;
+}
+
+.wrap{max-width:1200px;margin:auto;padding:20px}
+
+.card{
+  background:linear-gradient(180deg,var(--card),#0b1420);
+  border-radius:14px;
+  padding:20px;
+  margin-bottom:20px;
+  border:1px solid rgba(255,255,255,.05)
+}
+
+h2{margin-top:0}
+label{display:block;margin-top:10px;font-size:15px;color:var(--muted)}
+
+input,button{
+  width:100%;
+  padding:12px;
+  margin-top:6px;
+  border-radius:8px;
+  border:1px solid rgba(255,255,255,.05);
+  background:var(--glass);
+  color:#fff
+}
+
+button{
+  background:linear-gradient(90deg,var(--accent),#ffb347);
+  color:#111;
+  font-weight:700;
+  cursor:pointer
+}
+
+.tabs{
+  display:flex;
+  gap:10px;
+  margin-bottom:20px;
+  flex-wrap:wrap
+}
+
+.tab{
+  flex:1;
+  padding:12px;
+  border-radius:10px;
+  background:var(--glass);
+  border:1px solid rgba(255,255,255,.05);
+  color:#fff;
+  font-weight:600;
+  cursor:pointer;
+  text-align:center
+}
+
+.tab.active{
+  background:linear-gradient(90deg,var(--accent),#ffb347);
+  color:#111
+}
+
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+.balance-container{
+  display:flex;
+  gap:20px;
+  flex-wrap:wrap
+}
+
+.balance-box{
+  flex:1;
+  background:var(--glass);
+  border-radius:10px;
+  padding:10px;
+  text-align:center
+}
+
+.balance-box p{
+  font-size:20px;
+  font-weight:700;
+  color:var(--accent)
+}
+
+#animatedEarnings{
+  font-size:28px;
+  font-weight:700;
+  color:#00ffb0;
+  margin-top:10px
+}
+
+.fridge-list{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+  gap:12px
+}
+
+.fridge{
+  background:var(--glass);
+  border-radius:10px;
+  padding:10px;
+  text-align:center
+}
+
+.fridge img{
+  width:100%;
+  height:150px;
+  border-radius:8px;
+  object-fit:cover
+}
+
+.fridge-timer {
+  font-size: 18px;
+  font-weight: 700;
+  color: grey;           /* default color */
+  margin-top: 8px;
+  transition: color 0.3s ease;
+}
+
+.fridge-timer.active {
+  color: #00ffb0;       /* green when counting */
+}
+#timer-offer1, #timer-offer2, #timer-offer3 /* etc */ {
+  color: grey;
+  font-weight: 700;
+  transition: color 0.3s ease;
+}
+
+#timer-offer1.active,
+#timer-offer2.active,
+#timer-offer3.active /* etc */ {
+  color: #00ffb0; /* green while counting */
+}
+
+/* ✅ CHART FIX (ONLY CHANGE) */
+.chart-container{
+  width:100%;
+  height:70vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  margin-top:10px
+}
+
+.chart-container iframe{
+  width:100%;
+  height:100%;
+  border:0;
+  border-radius:12px
+}
+
+@media(max-width:768px){
+  .fridge img{height:120px}
+  .chart-container{height:65vh}
+}
+
+/* PAYMENT MODAL */
+#paymentModal{
+  display:none;
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:rgba(0,0,0,.8);
+  justify-content:center;
+  align-items:center;
+  z-index:999
+}
+
+#paymentModal .modalContent{
+  background:#0f1620;
+  padding:20px;
+  border-radius:12px;
+  max-width:400px;
+  width:90%
+}
 </style>
 </head>
+
 <body>
-
-<header>
-  <h2>BitFreeze</h2>
-  <nav>
-    <button onclick="showTab('home')" class="active">Home</button>
-    <button onclick="showTab('fridges')">Fridges</button>
-    <button onclick="showTab('offers')">Offers</button>
-    <button onclick="showTab('withdraw')">Withdraw</button>
-    <button onclick="showTab('profile')">Profile</button>
-  </nav>
-</header>
-
-<!-- HOME -->
-<section id="home" class="active">
-  <div class="balance-box">
-    <h3>Account Balance</h3>
-    <h1 id="balance">KES 0</h1>
+<div class="wrap">
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('home',this)">Home</button>
+    <button class="tab" onclick="showTab('earning',this)">Earning Fridge</button>
+    <button class="tab" onclick="showTab('offer',this)">Offer</button>
+    <button class="tab" onclick="showTab('withdraw',this)">Withdraw</button>
+    <button class="tab" onclick="showTab('profile',this)">Profile</button>
+    <button id="adminTab" class="tab" style="display:none;" onclick="showTab('admin',this)">Admin Panel</button>
   </div>
-  <canvas id="chart" height="200"></canvas>
 
-  <h3>Trade History</h3>
-  <table>
-    <thead>
-      <tr><th>Date</th><th>Action</th><th>Amount</th><th>Status</th></tr>
-    </thead>
-    <tbody id="history"></tbody>
-  </table>
-</section>
+  <!-- HOME -->
+  <div id="home" class="tab-content active">
+    <div class="card">
+      <h2>Your Account</h2>
+      <p>Email: <span id="userEmail"></span></p>
+      <p>Phone: <span id="userPhone"></span></p>
+      <div class="balance-container">
+        <div class="balance-box">
+          <h3>Deposit Balance</h3>
+          <p>KES <span id="userBalance">0</span></p>
+        </div>
+        <div class="balance-box">
+          <h3>Earnings</h3>
+          <p>KES <span id="userEarning">0</span></p>
+        </div>
+      </div>
+      <p>Fridges owned: <span id="userFridges">0</span></p>
+      <p>Daily Earnings: <span id="animatedEarnings">0</span> KES</p>
+    </div>
+    <div class="card">
+      <h2>Bitcoin Earnings Growth (fridge earning chart)</h2>
+      <p style="font-size:13px;color:#9aa6b2">Live Bitcoin chart to demonstrate fridge earning growth.</p>
+      <div class="chart-container">
+      <iframe
+        src="https://www.tradingview.com/widgetembed/?symbol=BTCUSD&interval=D&theme=dark&style=1&locale=en&hide_side_toolbar=false"
+        allowfullscreen>
+        </iframe>
+      </div>
+    </div>
+  </div>
 
-<!-- FRIDGES -->
-<section id="fridges">
-  <h2>Normal Fridges</h2>
-  <div class="cards" id="normalFridges"></div>
-</section>
+  <!-- EARNING -->
+  <div id="earning" class="tab-content">
+    <div class="card">
+      <h2>Your Earning Fridges</h2>
+      <p style="font-size:13px;color:#9aa6b2">These fridges are actively generating daily income.</p>
+      <div class="fridge-list" id="fridgeList"></div>
+    </div>
+  </div>
 
-<!-- OFFERS -->
-<section id="offers">
-  <h2>Offer Fridges</h2>
-  <input id="offerCode" placeholder="Enter Offer Code">
-  <button onclick="applyOffer()">Apply</button>
-  <div class="cards" id="offerFridges"></div>
-</section>
+  <!-- OFFER -->
+  <div id="offer" class="tab-content">
+    <div class="card">
+      <h2>Offer Fridges</h2>
+      <p style="font-size:13px;color:#9aa6b2">Special Offer Fridges, unlocked by admin with limited time.</p>
+      <div class="fridge-list" id="offerFridgeList"></div>
+    </div>
+    <div class="card">
+      <h3>Redeem Offer Code</h3>
+      <input type="text" id="offerCodeInput" placeholder="Enter code">
+      <button onclick="redeemOffer()">Redeem</button>
+      <p id="offerMsg"></p>
+    </div>
+  </div>
 
-<!-- WITHDRAW -->
-<section id="withdraw">
-  <h2>Withdraw Funds</h2>
-  <input id="wAmount" type="number" placeholder="Amount">
-  <input id="wPhone" placeholder="MPESA Phone">
-  <button onclick="withdraw()">Request Withdrawal</button>
-</section>
+  <!-- WITHDRAW -->
+  <div id="withdraw" class="tab-content">
+    <div class="card">
+      <h2>Withdraw Earnings</h2>
+      <form id="withdrawForm">
+        <label>Phone</label>
+        <input id="withdrawPhone" required>
+        <label>Amount (KES)</label>
+        <input type="number" id="withdrawAmount" min="200" required>
+        <button>Withdraw</button>
+        <div id="withdrawMsg"></div>
+      </form>
+    </div>
+  </div>
 
-<!-- PROFILE -->
-<section id="profile">
-  <h2>Profile</h2>
-  <p><strong>Username:</strong> <span id="username"></span></p>
-  <p><strong>Owned Fridges:</strong> <span id="ownedCount"></span></p>
-  <p><strong>Total Earnings:</strong> KES <span id="totalEarning"></span></p>
-</section>
+  <!-- PROFILE -->
+  <div id="profile" class="tab-content">
+    <div class="card">
+      <h2>Profile</h2>
+      <p>Email: <span id="userEmailProfile"></span></p>
+      <p>Phone: <span id="userPhoneProfile"></span></p>
+      <p>Deposit Balance: KES <span id="userBalanceProfile"></span></p>
+      <p>Earnings Balance: KES <span id="userEarningProfile"></span></p>
+      <p>Fridges owned: <span id="userFridgesProfile"></span></p>
+      <p>Referral Link: <a id="refLink" target="_blank"></a></p>
+      <button onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <!-- ADMIN -->
+  <div id="admin" class="tab-content">
+    <div class="card">
+      <h2>Admin Panel</h2>
+      <h3>Create Offer Code</h3>
+      <input type="text" id="adminCode" placeholder="Code">
+      <input type="number" id="adminAmount" placeholder="Amount">
+      <button onclick="createOfferCode()">Create Code</button>
+      <p id="adminMsg"></p>
+
+      <h3>Unlock Offer Fridge</h3>
+      <input type="text" id="unlockFridgeId" placeholder="Fridge ID (offer1, offer2...)">
+      <input type="number" id="unlockPrice" placeholder="Price">
+      <input type="number" id="unlockEarn" placeholder="Daily Earn">
+      <input type="number" id="unlockDuration" placeholder="Duration (hours)">
+      <button onclick="unlockFridge()">Unlock Fridge</button>
+      <p id="unlockMsg"></p>
+
+      <h3>Lock Offer Fridge</h3>
+      <input type="text" id="lockFridgeId" placeholder="Fridge ID (offer1, offer2...)">
+      <button onclick="lockFridge()">Lock Fridge</button>
+      <p id="lockMsg"></p>
+    </div>
+  </div>
+</div>
+
+<!-- PAYMENT MODAL -->
+<div id="paymentModal">
+  <div class="modalContent">
+    <h3 id="modalFridgeName"></h3>
+    <p>Till Number: <strong>123456</strong></p>
+    <p>Business Name: <strong>Bitfreeze Ltd</strong></p>
+    <p>Amount: KES <span id="modalFridgePrice"></span></p>
+    <label>Phone Number Used:</label>
+    <input type="text" id="modalPhone" placeholder="e.g. 0712345678">
+    <label>M-Pesa Transaction Code:</label>
+    <input type="text" id="modalTxn" placeholder="e.g. QWE72YABC">
+    <button id="submitPaymentBtn">Submit Payment</button>
+    <button onclick="closeModal()" style="background:#ff4444;">Cancel</button>
+    <p id="paymentMsg"></p>
+  </div>
+</div>
 
 <script>
-// ================= UI =================
-function showTab(id){
-  document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
-  event.target.classList.add('active');
-}
-
-// ================= FRIDGES =================
-const NORMAL_FRIDGES = [
-  { id:'btc100', name:'Bitcoin 100', price:100, dailyEarn:5, img:'/images/btc100.jpg' },
-  { id:'btc200', name:'Bitcoin 200', price:200, dailyEarn:10, img:'/images/btc200.jpg' },
-  { id:'btc300', name:'Bitcoin 300', price:300, dailyEarn:15, img:'/images/btc300.jpg' },
-  { id:'btc400', name:'Bitcoin 400', price:400, dailyEarn:20, img:'/images/btc400.jpg' },
-  { id:'1ft', name:'Bitcoin 1ft', price:500, dailyEarn:25, img:'/images/fridge1ft.jpg' },
-  { id:'2ft', name:'Bitcoin 2ft', price:1000, dailyEarn:55, img:'/images/fridge2ft.jpg' },
-  { id:'3ft', name:'Bitcoin 3ft', price:2000, dailyEarn:100, img:'/images/fridge3ft.jpg' },
-  { id:'4ft', name:'Bitcoin 4ft', price:4000, dailyEarn:150, img:'/images/fridge4ft.jpg' },
-  { id:'5ft', name:'Bitcoin 5ft', price:6000, dailyEarn:250, img:'/images/fridge5ft.jpg' }
-];
-
-const OFFER_FRIDGES = [
-  { id:'offer1', name:'🎁 Offer 1', price:0, dailyEarn:0, img:'/images/offer1.jpg', locked:true },
-  { id:'offer2', name:'🎁 Offer 2', price:0, dailyEarn:0, img:'/images/offer2.jpg', locked:true },
-  { id:'offer3', name:'🎁 Offer 3', price:0, dailyEarn:0, img:'/images/offer3.jpg', locked:true },
-  { id:'offer4', name:'🎁 Offer 4', price:0, dailyEarn:0, img:'/images/offer4.jpg', locked:true },
-  { id:'offer5', name:'🎁 Offer 5', price:0, dailyEarn:0, img:'/images/offer5.jpg', locked:true },
-  { id:'offer6', name:'🎁 Offer 6', price:0, dailyEarn:0, img:'/images/offer6.jpg', locked:true },
-  { id:'offer7', name:'🎁 Offer 7', price:0, dailyEarn:0, img:'/images/offer7.jpg', locked:true },
-  { id:'offer8', name:'🎁 Offer 8', price:0, dailyEarn:0, img:'/images/offer8.jpg', locked:true }
-];
-
-// ================= FETCH USER =================
-const token = localStorage.getItem('bf_token');
-const HEADERS = {Authorization:'Bearer '+token};
+const DOMAIN='http://localhost:3000';
+const token=localStorage.getItem('bf_token');
 if(!token) location.href='/login';
 
-async function loadDashboard(){
+// TABS
+function showTab(id,btn){
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// MODAL
+function buyFridge(fridgeId, fridgeName, fridgePrice){
+  document.getElementById('modalFridgeName').textContent=fridgeName;
+  document.getElementById('modalFridgePrice').textContent=fridgePrice;
+  document.getElementById('modalPhone').value='';
+  document.getElementById('modalTxn').value='';
+  document.getElementById('paymentMsg').textContent='';
+  document.getElementById('submitPaymentBtn').dataset.fridgeId=fridgeId;
+  document.getElementById('paymentModal').style.display='flex';
+}
+function closeModal(){document.getElementById('paymentModal').style.display='none';}
+
+// REDEEM OFFER CODE
+async function redeemOffer() {
+  const code = offerCodeInput.value.trim();
+  console.log('Redeem clicked, code:', code);
+  if (!code) return;
+
+  try {
+    const res = await fetch(DOMAIN + '/api/offer/redeem', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({ code })
+    });
+
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || 'Server error');
+
+    console.log('Server response:', d);
+    offerMsg.textContent = d.message;
+    getUser();
+  } catch (err) {
+    console.error('Redeem error:', err);
+    offerMsg.textContent = 'Network or server error';
+  }
+}
+
+// FETCH USER
+async function getUser(){
   try{
-    const res = await fetch('/api/me', {headers:HEADERS});
-    const data = await res.json();
-    const u = data.user;
+    const r=await fetch(DOMAIN+'/api/me',{headers:{Authorization:'Bearer '+token}});
+    const d=await r.json();
+    if(!d.user) return logout();
+    const u=d.user;
+    userEmail.textContent=u.email;
+    userPhone.textContent=u.phone||'—';
+    userBalance.textContent=u.balance;
+    userEarning.textContent=u.earning;
+    userFridges.textContent=u.fridges.length;
 
-    document.getElementById('balance').innerText = 'KES ' + u.earning;
-    document.getElementById('username').innerText = u.name;
-    document.getElementById('ownedCount').innerText = u.fridges.length;
-    document.getElementById('totalEarning').innerText = u.earning;
+    userEmailProfile.textContent=u.email;
+    userPhoneProfile.textContent=u.phone||'—';
+    userBalanceProfile.textContent=u.balance;
+    userEarningProfile.textContent=u.earning;
+    userFridgesProfile.textContent=u.fridges.length;
 
-    // Trade history
-    const tbody = document.getElementById('history');
-    tbody.innerHTML='';
-    u.transactions.forEach(t=>{
-      tbody.innerHTML += `<tr>
-        <td>${new Date(t.date).toLocaleString()}</td>
-        <td>${t.type}</td>
-        <td>${t.amount}</td>
-        <td>${t.status}</td>
-      </tr>`;
-    });
+    refLink.textContent=DOMAIN+'/register.html?ref='+u.email;
+    refLink.href=refLink.textContent;
 
-    // Normal fridges
-    const nf = document.getElementById('normalFridges');
-    nf.innerHTML='';
-    NORMAL_FRIDGES.forEach(f=>{
-      nf.innerHTML += `<div class="card">
-        <img src="${f.img}">
-        <h4>${f.name}</h4>
+    animateEarnings(0,Number(u.earning)||0);
+    loadEarningFridges(u.fridges);
+    loadOfferFridges();
+    if(d.isAdmin) document.getElementById('adminTab').style.display='block';
+  }catch(e){console.error(e);}
+}
+getUser();
+
+function logout(){localStorage.removeItem('bf_token');location.href='/login';}
+function animateEarnings(start,end){
+  const elem=document.getElementById('animatedEarnings');
+  let current=start;
+  const increment=Math.max(1,Math.floor((end-start)/100));
+  const interval=setInterval(()=>{
+    current+=increment;
+    if(current>=end){current=end;clearInterval(interval);}
+    elem.textContent=current.toLocaleString();
+  },50);
+}
+
+// FETCH FRIDGES
+async function loadEarningFridges(userFridges){
+  const res=await fetch(DOMAIN+'/api/fridges',{headers:{Authorization:'Bearer '+token}});
+  const data=await res.json();
+  const list=document.getElementById('fridgeList');list.innerHTML='';
+  data.fridges.forEach(f=>{
+    if(f.id.startsWith('offer')) return;
+    const owned=userFridges.some(uf=>uf.id===f.id);
+    const div=document.createElement('div');
+    div.className='fridge';
+    div.innerHTML=`
+      <img src="${DOMAIN}/${f.img}" alt="${f.name}">
+      <div class="fridge-info">
+        <strong>${f.name}</strong>
         <p>Price: KES ${f.price}</p>
-        <p>Daily: KES ${f.dailyEarn}</p>
-        <button onclick="buyFridge('${f.id}')">Buy</button>
+        <p>Daily Earn: KES ${f.dailyEarn}</p>
+        <button onclick="buyFridge('${f.id}','${f.name}',${f.price})">${owned?'Owned':'Buy'}</button>
       </div>`;
-    });
+    list.appendChild(div);
+  });
+}
 
-    // Offer fridges
-    const of = document.getElementById('offerFridges');
-    of.innerHTML='';
-    OFFER_FRIDGES.forEach(f=>{
-      const unlocked = !f.locked;
-      of.innerHTML += `<div class="card">
-        <img src="${f.img}">
-        <h4>${f.name}</h4>
-        <button ${unlocked?'':'disabled'}>${unlocked?'Buy':'Locked'}</button>
+async function loadOfferFridges(){
+  const res=await fetch(DOMAIN+'/api/fridges',{headers:{Authorization:'Bearer '+token}});
+  const data=await res.json();
+  const list=document.getElementById('offerFridgeList');list.innerHTML='';
+  data.fridges.forEach(f=>{
+    if(!f.id.startsWith('offer')) return;
+    const div=document.createElement('div');div.className='fridge';
+    const locked=f.locked?'Locked':'Buy';
+    let remaining='';
+    if(!f.locked && f.startTime && f.durationHrs){
+      remaining=`<p id="timer-${f.id}">Calculating time...</p>`;
+    }
+    div.innerHTML=`
+      <img src="${DOMAIN}/${f.img}" alt="${f.name}">
+      <div class="fridge-info">
+        <strong>${f.name}</strong>
+        <p>Price: ${f.locked?'Locked':'KES '+f.price}</p>
+        <p>Daily Earn: ${f.locked?'Locked':'KES '+f.dailyEarn}</p>
+        ${remaining}
+        <button ${f.locked?'disabled':''} onclick="buyFridge('${f.id}','${f.name}',${f.price})">${locked}</button>
       </div>`;
+    list.appendChild(div);
+    if(!f.locked && f.startTime && f.durationHrs) startCountdown(f.id,new Date(f.startTime),f.durationHrs);
+  });
+}
+
+function startCountdown(id, startTime, durationHrs) {
+  const timerEl = document.getElementById('timer-' + id);
+  const endTime = new Date(startTime).getTime() + durationHrs * 3600 * 1000;
+
+  // Add active class to make text green while counting
+  timerEl.classList.add('active');
+
+  const interval = setInterval(() => {
+    const diff = endTime - Date.now();
+
+    if (diff <= 0) {
+      clearInterval(interval);
+      timerEl.textContent = 'Offer ended';
+      timerEl.classList.remove('active'); // back to grey
+      return;
+    }
+
+    const hrs = Math.floor(diff / 3600000);
+    const mins = Math.floor((diff % 3600000) / 60000);
+    const secs = Math.floor((diff % 60000) / 1000);
+
+    timerEl.textContent = `Remaining: ${hrs}h ${mins}m ${secs}s`;
+  }, 1000);
+}
+
+// SUBMIT PAYMENT
+document.getElementById('submitPaymentBtn').addEventListener('click', async ()=>{
+  const fridgeId=document.getElementById('submitPaymentBtn').dataset.fridgeId;
+  const phone=document.getElementById('modalPhone').value.trim();
+  const txn=document.getElementById('modalTxn').value.trim();
+  if(!phone||!txn){paymentMsg.textContent='Fill all fields';return;}
+  try{
+    const res=await fetch(DOMAIN+'/api/payment/submit',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({fridgeId,phone,transactionCode:txn})
     });
+    const d=await res.json();
+    paymentMsg.textContent=d.message||d.error;
+    if(!d.error) setTimeout(closeModal,2000);
+    getUser();
+  }catch(err){paymentMsg.textContent='Network error';}
+});
 
-    // Earnings chart (line candlestick style)
-    const labels = u.transactions.map(t=>new Date(t.date).toLocaleTimeString());
-    const dataPoints = u.transactions.map(t=>t.amount);
-    const ctx = document.getElementById('chart').getContext('2d');
-    if(window.earningsChart) window.earningsChart.destroy();
-    window.earningsChart = new Chart(ctx,{
-      type:'line',
-      data:{labels,datasets:[{label:'Earnings',data:dataPoints,borderColor:'#00ffcc',backgroundColor:'rgba(0,255,204,0.2)',fill:true,tension:0.3}]},
-      options:{responsive:true,plugins:{legend:{display:true}},scales:{y:{beginAtZero:true}}}
+// WITHDRAW
+document.getElementById('withdrawForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const phone=document.getElementById('withdrawPhone').value.trim();
+  const amount=Number(document.getElementById('withdrawAmount').value);
+  if(!phone||!amount){withdrawMsg.textContent='Fill all fields';return;}
+  try{
+    const res=await fetch(DOMAIN+'/api/withdraw',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({phone,amount})
     });
+    const d = await res.json();
+    withdrawMsg.textContent = d.message || d.error;
+    getUser();
+  } catch (err) {
+    console.error(err);
+    withdrawMsg.textContent = 'Network or server error';
+  }
+});
 
-  }catch(err){console.error(err);}
+// ADMIN: CREATE OFFER CODE
+async function createOfferCode() {
+  const code = document.getElementById('adminCode').value.trim();
+  const amount = Number(document.getElementById('adminAmount').value);
+  if (!code || !amount) { adminMsg.textContent = 'Fill all fields'; return; }
+  try {
+    const res = await fetch(DOMAIN + '/api/admin/offercode', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ code, amount })
+    });
+    const d = await res.json();
+    adminMsg.textContent = d.message || d.error;
+  } catch (err) {
+    console.error(err);
+    adminMsg.textContent = 'Network error';
+  }
 }
 
-loadDashboard();
-
-// ================= BUY FRIDGE =================
-async function buyFridge(id){
-  const res = await fetch('/api/buy',{method:'POST',headers:HEADERS,body:JSON.stringify({fridgeId:id})});
-  const data = await res.json();
-  alert(data.message || data.error);
-  loadDashboard();
+// ADMIN: UNLOCK FRIDGE
+async function unlockFridge() {
+  const id = document.getElementById('unlockFridgeId').value.trim();
+  const price = Number(document.getElementById('unlockPrice').value);
+  const earn = Number(document.getElementById('unlockEarn').value);
+  const duration = Number(document.getElementById('unlockDuration').value);
+  if (!id || !price || !earn || !duration) { unlockMsg.textContent = 'Fill all fields'; return; }
+  try {
+    const res = await fetch(DOMAIN + '/api/admin/unlock', {  // <-- here
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ fridgeId: id, price, dailyEarn: earn, durationHrs: duration })
+    });
+    const d = await res.json();
+    unlockMsg.textContent = d.message || d.error;
+    getUser();
+  } catch (err) {
+    console.error(err);
+    unlockMsg.textContent = 'Network error';
+  }
 }
 
-// ================= OFFER CODE =================
-async function applyOffer(){
-  const code = document.getElementById('offerCode').value;
-  const res = await fetch('/api/offercode',{method:'POST',headers:HEADERS,body:JSON.stringify({code})});
-  const data = await res.json();
-  alert(data.message || data.error);
-  loadDashboard();
-}
-
-// ================= WITHDRAW =================
-async function withdraw(){
-  const amount = document.getElementById('wAmount').value;
-  const phone = document.getElementById('wPhone').value;
-  const res = await fetch('/api/withdraw',{method:'POST',headers:HEADERS,body:JSON.stringify({amount,phone})});
-  const data = await res.json();
-  alert(data.message || data.error);
-  loadDashboard();
+// ADMIN: LOCK FRIDGE
+async function lockFridge() {
+  const id = document.getElementById('lockFridgeId').value.trim();
+  if (!id) { lockMsg.textContent = 'Enter fridge ID'; return; }
+  try {
+    const res = await fetch(DOMAIN + '/api/admin/lock', {  // <-- here
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ fridgeId: id })
+    });
+    const d = await res.json();
+    lockMsg.textContent = d.message || d.error;
+    getUser();
+  } catch (err) {
+    console.error(err);
+    lockMsg.textContent = 'Network error';
+  }
 }
 </script>
 </body>
