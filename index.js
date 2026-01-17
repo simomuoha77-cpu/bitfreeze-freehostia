@@ -1,4 +1,3 @@
-
 require('dotenv').config();
 const express = require('express');
 const bcrypt = require('bcryptjs');
@@ -18,10 +17,8 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 
 // ================= MONGODB =================
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log('MongoDB connected');
-  })
-  .catch((err) => {
+  .then(() => console.log('MongoDB connected'))
+  .catch(err => {
     console.error('MongoDB error:', err);
     process.exit(1);
   });
@@ -35,7 +32,9 @@ const userSchema = new mongoose.Schema({
   balance: { type: Number, default: 0 },
   earning: { type: Number, default: 0 },
   fridges: { type: Array, default: [] },
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
+  lastDepositAttempt: Date,
+  lastWithdrawalAttempt: Date
 });
 const User = mongoose.model('User', userSchema);
 
@@ -157,6 +156,15 @@ app.post('/api/payment/submit', auth, async (req, res) => {
     const user = await User.findOne({ email: req.user.email });
     if (!user) return res.status(404).json({ error: 'User not found' });
 
+    // ❌ Only allow one deposit until previous approved or 24h passed
+    if (user.lastDepositAttempt) {
+      const diff = Date.now() - new Date(user.lastDepositAttempt).getTime();
+      if (diff < 24 * 60 * 60 * 1000) {
+        const pending = await Payment.findOne({ userEmail: user.email, approved: false });
+        if (pending) return res.status(400).json({ error: 'You already have a pending deposit. Wait for approval or 24h.' });
+      }
+    }
+
     const fridge = FRIDGES.find(f => f.id === fridgeId);
     if (!fridge) return res.status(400).json({ error: 'Invalid fridge' });
     if (fridge.locked) return res.status(400).json({ error: 'Fridge is locked' });
@@ -171,7 +179,12 @@ app.post('/api/payment/submit', auth, async (req, res) => {
     });
     await payment.save();
 
-    await bot.telegram.sendMessage(ADMIN_CHAT_ID, `💰 New Payment:\nUser: ${user.email}\nFridge: ${fridge.name}\nAmount: KES ${fridge.price}\nPhone: ${phone}\nTxn: ${transactionCode}`,
+    user.lastDepositAttempt = new Date();
+    await user.save();
+
+    await bot.telegram.sendMessage(
+      ADMIN_CHAT_ID,
+      `💰 New Payment:\nUser: ${user.email}\nFridge: ${fridge.name}\nAmount: KES ${fridge.price}\nPhone: ${phone}\nTxn: ${transactionCode}`,
       Markup.inlineKeyboard([
         Markup.button.callback('✅ Approve', `approve_${payment._id}`),
         Markup.button.callback('❌ Reject', `reject_${payment._id}`)
@@ -194,22 +207,23 @@ app.post('/api/offer/redeem', auth, async (req, res) => {
     const offer = await OfferCode.findOne({ code });
     if (!offer) return res.status(404).json({ error: 'Invalid offer code' });
 
+    // ✅ Check if user has already redeemed
     if (offer.usedBy.includes(user.email)) {
-      return res.status(400).json({ error: 'You already used this code' });
+      return res.status(400).json({ error: 'You have already redeemed this code' });
     }
 
-    // Add offer amount to **earning balance**
+    // ✅ Redeem the code
     user.earning += offer.amount;
     await user.save();
 
-    // Mark code as used by this user
+    // ✅ Mark code as used by this user
     offer.usedBy.push(user.email);
     await offer.save();
 
     res.json({ message: `Offer code redeemed! KES ${offer.amount} added to your earnings.` });
   } catch (err) {
     console.error('Redeem offer error:', err);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'Server error while redeeming offer code' });
   }
 });
 
@@ -296,7 +310,6 @@ bot.on('callback_query', async (ctx) => {
   try {
     const data = ctx.callbackQuery.data;
 
-    // Withdrawal approve/reject
     if (data.startsWith('withdraw_')) {
       const [ , action, id ] = data.split('_');
       const wd = await Withdrawal.findById(id);
@@ -312,16 +325,13 @@ bot.on('callback_query', async (ctx) => {
         await wd.save();
         await ctx.editMessageText(`✅ Withdrawal Approved:\nUser: ${user.email}\nAmount: KES ${wd.amount}`);
       }
-
       if (action === 'reject') {
         await Withdrawal.findByIdAndDelete(id);
         await ctx.editMessageText(`❌ Withdrawal Rejected:\nUser: ${wd.userEmail}\nAmount: KES ${wd.amount}`);
       }
-
       return ctx.answerCbQuery();
     }
 
-    // Payment approve/reject
     const [actionType, paymentId] = data.split('_');
     if (actionType === 'approve' || actionType === 'reject') {
       const payment = await Payment.findById(paymentId);
@@ -343,12 +353,10 @@ bot.on('callback_query', async (ctx) => {
         await payment.save();
         await ctx.editMessageText(`✅ Payment Approved: ${user.email} bought ${fridge.name}`);
       }
-
       if (actionType === 'reject') {
         await Payment.findByIdAndDelete(paymentId);
         await ctx.editMessageText(`❌ Payment Rejected: ${payment.userEmail} for ${fridge.name}`);
       }
-
       return ctx.answerCbQuery();
     }
 
@@ -364,62 +372,35 @@ bot.launch().then(()=>console.log('Telegram bot running'));
 app.post('/api/withdraw', auth, async (req, res) => {
   try {
     const { phone, amount } = req.body;
-
-    if (!phone || !amount || amount < 200) {
-      return res.status(400).json({ error: 'Invalid phone or amount (min 200 KES)' });
-    }
-
-    // ✅ GET USER
     const user = await User.findOne({ email: req.user.email });
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // ❌ Only allow one withdrawal until approved or 24h passed
+    if (user.lastWithdrawalAttempt) {
+      const diff = Date.now() - new Date(user.lastWithdrawalAttempt).getTime();
+      if (diff < 24 * 60 * 60 * 1000) {
+        const pending = await Withdrawal.findOne({ userEmail: user.email, approved: false });
+        if (pending) return res.status(400).json({ error: 'You already have a pending withdrawal. Wait for approval or 24h.' });
+      }
     }
 
-    // ❌ MUST HAVE DEPOSITED AT LEAST 100 KES
-    const totalDeposits = await Payment.aggregate([
-      { $match: { userEmail: user.email, approved: true } },
-      { $group: { _id: null, total: { $sum: '$fridgePrice' } } }
-    ]);
+    // Minimum amount and phone check
+    if (!phone || !amount || amount < 200) return res.status(400).json({ error: 'Invalid phone or amount (min 200 KES)' });
+    if (user.phone !== phone) return res.status(400).json({ error: 'Withdrawal phone must match registered phone' });
 
-    const deposited = totalDeposits[0]?.total || 0;
-    if (deposited < 100) {
-      return res.status(400).json({
-        error: 'You must deposit at least 100 KES before withdrawal'
-      });
-    }
+    // Kenya time check
+    const kenyaNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Africa/Nairobi' }));
+    const day = kenyaNow.getDay();
+    if (day === 0 || day === 6) return res.status(400).json({ error: 'Withdrawals are only allowed Monday to Friday' });
 
-    // 🔐 PHONE MUST MATCH REGISTERED PHONE
-    if (user.phone !== phone) {
-      return res.status(400).json({
-        error: 'Withdrawal phone must match registered phone number'
-      });
-    }
+    if (user.earning < amount) return res.status(400).json({ error: 'Insufficient earnings' });
 
-    // 🇰🇪 KENYA TIME (MONDAY–FRIDAY ONLY)
-    const kenyaNow = new Date(
-      new Date().toLocaleString('en-US', { timeZone: 'Africa/Nairobi' })
-    );
-    const day = kenyaNow.getDay(); // 0 Sun, 6 Sat
-    if (day === 0 || day === 6) {
-      return res.status(400).json({
-        error: 'Withdrawals are only allowed Monday to Friday'
-      });
-    }
-
-    // 💰 EARNINGS CHECK
-    if (user.earning < amount) {
-      return res.status(400).json({ error: 'Insufficient earnings' });
-    }
-
-    // ✅ CREATE WITHDRAWAL
-    const withdrawal = new Withdrawal({
-      userEmail: user.email,
-      phone,
-      amount
-    });
+    const withdrawal = new Withdrawal({ userEmail: user.email, phone, amount });
     await withdrawal.save();
 
-    // 📩 TELEGRAM ADMIN ALERT
+    user.lastWithdrawalAttempt = new Date();
+    await user.save();
+
     await bot.telegram.sendMessage(
       ADMIN_CHAT_ID,
       `💸 New Withdrawal Request:\nUser: ${user.email}\nAmount: KES ${amount}\nPhone: ${phone}`,
@@ -429,17 +410,23 @@ app.post('/api/withdraw', auth, async (req, res) => {
       ])
     );
 
-    res.json({
-      message: 'Withdrawal request submitted. Waiting for admin approval.'
-    });
+    res.json({ message: 'Withdrawal request submitted. Waiting for admin approval.' });
 
-  } catch (err) {
-    console.error('Withdrawal error:', err);
-    res.status(500).json({ error: 'Server error' });
-  }
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= GRACEFUL SHUTDOWN =================
+process.on('SIGINT', () => {
+  console.log('Shutting down...');
+  bot.stop('SIGINT');
+  process.exit();
+});
+
+process.on('SIGTERM', () => {
+  console.log('Shutting down...');
+  bot.stop('SIGTERM');
+  process.exit();
 });
 
 // ================= START SERVER =================
-mongoose.connection.once('open', () => {
-  app.listen(PORT, () => console.log(`Bitfreeze running on http://localhost:${PORT}`));
-});
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
