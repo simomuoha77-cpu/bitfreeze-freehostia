@@ -1,3 +1,4 @@
+
 require('dotenv').config();
 const express = require('express');
 const bcrypt = require('bcryptjs');
@@ -17,8 +18,13 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 
 // ================= MONGODB =================
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('MongoDB connected'))
-  .catch(err => console.error('MongoDB error:', err));
+  .then(() => {
+    console.log('MongoDB connected');
+  })
+  .catch((err) => {
+    console.error('MongoDB error:', err);
+    process.exit(1);
+  });
 
 // ================= SCHEMAS =================
 const userSchema = new mongoose.Schema({
@@ -73,7 +79,6 @@ let FRIDGES = [
   { id: '8ft', name: '8 ft Fridge', price: 4000, dailyEarn: 150, img: 'images/fridge8ft.jpg', locked: false },
   { id: '10ft', name: '10 ft Fridge', price: 6000, dailyEarn: 250, img: 'images/fridge10ft.jpg', locked: false },
   { id: '12ft', name: '12 ft Fridge', price: 8000, dailyEarn: 350, img: 'images/fridge12ft.jpg', locked: false },
-  
   { id: 'offer1', name: 'Offer Fridge 1', price: 0, dailyEarn: 0, durationHrs: 0, startTime: null, img: 'images/offer1.jpg', locked: true },
   { id: 'offer2', name: 'Offer Fridge 2', price: 0, dailyEarn: 0, durationHrs: 0, startTime: null, img: 'images/offer2.jpg', locked: true },
   { id: 'offer3', name: 'Offer Fridge 3', price: 0, dailyEarn: 0, durationHrs: 0, startTime: null, img: 'images/offer3.jpg', locked: true },
@@ -109,11 +114,11 @@ app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'public', 
 // ================= REGISTER / LOGIN =================
 app.post('/api/register', async (req, res) => {
   try {
-    const { name, email, password } = req.body;
-    if (!name || !email || !password) return res.status(400).json({ error: 'Missing fields' });
+    const { name, email, password, phone } = req.body;
+    if (!name || !email || !password || !phone) return res.status(400).json({ error: 'Missing fields' });
     if (await User.findOne({ email })) return res.status(400).json({ error: 'Email exists' });
     const hashed = await bcrypt.hash(password, 10);
-    const user = new User({ name, email, password: hashed });
+    const user = new User({ name, email, password: hashed, phone });
     await user.save();
     const token = jwt.sign({ email: user.email }, SECRET, { expiresIn: '7d' });
     res.json({ token, email: user.email });
@@ -131,53 +136,53 @@ app.post('/api/login', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ================= USER WITHDRAWAL REQUEST =================
-app.post('/api/withdraw', auth, async (req, res) => {
+// ================= GET PROFILE =================
+app.get('/api/me', auth, async (req, res) => {
   try {
-    const { phone, amount } = req.body;
+    const user = await User.findOne({ email: req.user.email });
+    if (!user) return res.status(404).json({ error: 'Not found' });
+    res.json({ user, isAdmin: user.email === ADMIN_EMAIL });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
 
-    if (!phone || !amount || amount < 200) return res.status(400).json({ error: 'Invalid phone or amount (min 200 KES)' });
+// ================= GET FRIDGES =================
+app.get('/api/fridges', auth, async (req, res) => {
+  res.json({ fridges: FRIDGES });
+});
 
-    // ✅ Get User First
+// ================= PAYMENT SUBMISSION =================
+app.post('/api/payment/submit', auth, async (req, res) => {
+  try {
+    const { fridgeId, phone, transactionCode } = req.body;
     const user = await User.findOne({ email: req.user.email });
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    // 🔐 PHONE LOCK CHECK
-    if (user.phone !== phone) return res.status(400).json({ error: 'Withdrawal phone must match registered phone number' });
+    const fridge = FRIDGES.find(f => f.id === fridgeId);
+    if (!fridge) return res.status(400).json({ error: 'Invalid fridge' });
+    if (fridge.locked) return res.status(400).json({ error: 'Fridge is locked' });
 
-    // 🇰🇪 KENYA TIME CHECK (MON–FRI ONLY)
-    const kenyaNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Africa/Nairobi' }));
-    const day = kenyaNow.getDay(); // 0 = Sun, 6 = Sat
-    if (day === 0 || day === 6) return res.status(400).json({ error: 'Withdrawals are only allowed Monday to Friday' });
+    const payment = new Payment({
+      userEmail: user.email,
+      fridgeId: fridge.id,
+      fridgeName: fridge.name,
+      fridgePrice: fridge.price,
+      phone,
+      transactionCode
+    });
+    await payment.save();
 
-    // 🏦 DEPOSIT CHECK (Minimum 100 KES Deposit)
-    if (user.balance < 100) {
-      return res.status(400).json({ error: 'You must deposit at least 100 KES before making a withdrawal.' });
-    }
-
-    // 💰 EARNINGS CHECK
-    if (user.earning < amount) return res.status(400).json({ error: 'Insufficient earnings' });
-
-    // ✅ CREATE WITHDRAWAL REQUEST
-    const withdrawal = new Withdrawal({ userEmail: user.email, phone, amount });
-    await withdrawal.save();
-
-    // Notify admin on Telegram
-    await bot.telegram.sendMessage(ADMIN_CHAT_ID, `💸 New Withdrawal Request:\nUser: ${user.email}\nAmount: KES ${amount}\nPhone: ${phone}`,
+    await bot.telegram.sendMessage(ADMIN_CHAT_ID, `💰 New Payment:\nUser: ${user.email}\nFridge: ${fridge.name}\nAmount: KES ${fridge.price}\nPhone: ${phone}\nTxn: ${transactionCode}`,
       Markup.inlineKeyboard([
-        Markup.button.callback('✅ Approve', `withdraw_approve_${withdrawal._id}`),
-        Markup.button.callback('❌ Reject', `withdraw_reject_${withdrawal._id}`)
+        Markup.button.callback('✅ Approve', `approve_${payment._id}`),
+        Markup.button.callback('❌ Reject', `reject_${payment._id}`)
       ])
     );
 
-    res.json({ message: 'Withdrawal request submitted. Waiting for admin approval.' });
-  } catch (err) {
-    console.error('Withdrawal error:', err);
-    res.status(500).json({ error: 'Server error' });
-  }
+    res.json({ message: 'Payment submitted. Waiting for admin approval.' });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ================= OFFER CODE REDEMPTION =================
+// ================= REDEEM OFFER CODE =================
 app.post('/api/offer/redeem', auth, async (req, res) => {
   try {
     const { code } = req.body;
@@ -193,9 +198,11 @@ app.post('/api/offer/redeem', auth, async (req, res) => {
       return res.status(400).json({ error: 'You already used this code' });
     }
 
+    // Add offer amount to **earning balance**
     user.earning += offer.amount;
     await user.save();
 
+    // Mark code as used by this user
     offer.usedBy.push(user.email);
     await offer.save();
 
@@ -351,7 +358,86 @@ bot.on('callback_query', async (ctx) => {
   }
 });
 
-bot.launch().then(() => console.log('Telegram bot running'));
+bot.launch().then(()=>console.log('Telegram bot running'));
+
+// ================= USER WITHDRAWAL REQUEST =================
+app.post('/api/withdraw', auth, async (req, res) => {
+  try {
+    const { phone, amount } = req.body;
+
+    if (!phone || !amount || amount < 200) {
+      return res.status(400).json({ error: 'Invalid phone or amount (min 200 KES)' });
+    }
+
+    // ✅ GET USER
+    const user = await User.findOne({ email: req.user.email });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // ❌ MUST HAVE DEPOSITED AT LEAST 100 KES
+    const totalDeposits = await Payment.aggregate([
+      { $match: { userEmail: user.email, approved: true } },
+      { $group: { _id: null, total: { $sum: '$fridgePrice' } } }
+    ]);
+
+    const deposited = totalDeposits[0]?.total || 0;
+    if (deposited < 100) {
+      return res.status(400).json({
+        error: 'You must deposit at least 100 KES before withdrawal'
+      });
+    }
+
+    // 🔐 PHONE MUST MATCH REGISTERED PHONE
+    if (user.phone !== phone) {
+      return res.status(400).json({
+        error: 'Withdrawal phone must match registered phone number'
+      });
+    }
+
+    // 🇰🇪 KENYA TIME (MONDAY–FRIDAY ONLY)
+    const kenyaNow = new Date(
+      new Date().toLocaleString('en-US', { timeZone: 'Africa/Nairobi' })
+    );
+    const day = kenyaNow.getDay(); // 0 Sun, 6 Sat
+    if (day === 0 || day === 6) {
+      return res.status(400).json({
+        error: 'Withdrawals are only allowed Monday to Friday'
+      });
+    }
+
+    // 💰 EARNINGS CHECK
+    if (user.earning < amount) {
+      return res.status(400).json({ error: 'Insufficient earnings' });
+    }
+
+    // ✅ CREATE WITHDRAWAL
+    const withdrawal = new Withdrawal({
+      userEmail: user.email,
+      phone,
+      amount
+    });
+    await withdrawal.save();
+
+    // 📩 TELEGRAM ADMIN ALERT
+    await bot.telegram.sendMessage(
+      ADMIN_CHAT_ID,
+      `💸 New Withdrawal Request:\nUser: ${user.email}\nAmount: KES ${amount}\nPhone: ${phone}`,
+      Markup.inlineKeyboard([
+        Markup.button.callback('✅ Approve', `withdraw_approve_${withdrawal._id}`),
+        Markup.button.callback('❌ Reject', `withdraw_reject_${withdrawal._id}`)
+      ])
+    );
+
+    res.json({
+      message: 'Withdrawal request submitted. Waiting for admin approval.'
+    });
+
+  } catch (err) {
+    console.error('Withdrawal error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 
 // ================= START SERVER =================
 mongoose.connection.once('open', () => {
