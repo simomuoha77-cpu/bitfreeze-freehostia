@@ -245,15 +245,15 @@ button{
     </div>
   </div>
 
-  <!-- OFFER -->
+  <!-- OFFER🎁🎁 -->
   <div id="offer" class="tab-content">
     <div class="card">
-      <h2>Offer Fridges</h2>
-      <p style="font-size:13px;color:#9aa6b2">Special Offer Fridges, unlocked by admin with limited time.</p>
+      <h2>Offer Fridges🎁</h2>
+      <p style="font-size:13px;color:#9aa6b2">🎁🎁Special Offer Fridges, unlocked by admin with limited time🎁🎁.</p>
       <div class="fridge-list" id="offerFridgeList"></div>
     </div>
     <div class="card">
-      <h3>Redeem Offer Code</h3>
+      <h3>Redeem Offer Code🎁🎁</h3>
       <input type="text" id="offerCodeInput" placeholder="Enter code">
       <button onclick="redeemOffer()">Redeem</button>
       <p id="offerMsg"></p>
@@ -358,31 +358,17 @@ function buyFridge(fridgeId, fridgeName, fridgePrice){
 function closeModal(){document.getElementById('paymentModal').style.display='none';}
 
 // REDEEM OFFER CODE
-async function redeemOffer() {
-  const code = offerCodeInput.value.trim();
-  console.log('Redeem clicked, code:', code);
-  if (!code) return;
-
-  try {
-    const res = await fetch(DOMAIN + '/api/offer/redeem', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + token
-      },
-      body: JSON.stringify({ code })
-    });
-
-    const d = await res.json();
-    if (!res.ok) throw new Error(d.error || 'Server error');
-
-    console.log('Server response:', d);
-    offerMsg.textContent = d.message;
-    getUser();
-  } catch (err) {
-    console.error('Redeem error:', err);
-    offerMsg.textContent = 'Network or server error';
-  }
+async function redeemOffer(){
+  const code=document.getElementById('offerCodeInput').value.trim();
+  if(!code) return;
+  const res=await fetch(DOMAIN+'/api/offer/redeem',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+    body: JSON.stringify({code})
+  });
+  const d=await res.json();
+  offerMsg.textContent=d.message || d.error;
+  getUser();
 }
 
 // FETCH USER
@@ -466,7 +452,7 @@ async function loadOfferFridges(){
       <div class="fridge-info">
         <strong>${f.name}</strong>
         <p>Price: ${f.locked?'Locked':'KES '+f.price}</p>
-        <p>Daily Earn: ${f.locked?'Locked':'KES '+f.dailyEarn}</p>
+        <p>total Earn: ${f.locked?'Locked':'KES '+f.dailyEarn}</p>
         ${remaining}
         <button ${f.locked?'disabled':''} onclick="buyFridge('${f.id}','${f.name}',${f.price})">${locked}</button>
       </div>`;

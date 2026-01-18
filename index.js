@@ -68,24 +68,24 @@ const Withdrawal = mongoose.model('Withdrawal', withdrawalSchema);
 
 // ================= FRIDGES =================
 let FRIDGES = [
-  { id: '100', name: 'Earning Fridge 100', price: 100, dailyEarn: 5, img: 'images/fridge100.jpg', locked: false },
-  { id: '200', name: 'Earning Fridge 200', price: 200, dailyEarn: 10, img: 'images/fridge200.jpg', locked: false },
-  { id: '300', name: 'Earning Fridge 300', price: 300, dailyEarn: 15, img: 'images/fridge300.jpg', locked: false },
-  { id: '400', name: 'Earning Fridge 400', price: 400, dailyEarn: 20, img: 'images/fridge400.jpg', locked: false },
+  { id: '100', name: 'low Earning Fridge 100', price: 100, dailyEarn: 5, img: 'images/fridge100.jpg', locked: false },
+  { id: '200', name: 'low Earning Fridge 200', price: 200, dailyEarn: 10, img: 'images/fridge200.jpg', locked: false },
+  { id: '300', name: 'low Earning Fridge 300', price: 300, dailyEarn: 15, img: 'images/fridge300.jpg', locked: false },
+  { id: '400', name: 'low Earning Fridge 400', price: 400, dailyEarn: 20, img: 'images/fridge400.jpg', locked: false },
   { id: '2ft', name: '2 ft Fridge', price: 500, dailyEarn: 25, img: 'images/fridge2ft.jpg', locked: false },
   { id: '4ft', name: '4 ft Fridge', price: 1000, dailyEarn: 55, img: 'images/fridge4ft.jpg', locked: false },
   { id: '6ft', name: '6 ft Fridge', price: 2000, dailyEarn: 100, img: 'images/fridge6ft.jpg', locked: false },
   { id: '8ft', name: '8 ft Fridge', price: 4000, dailyEarn: 150, img: 'images/fridge8ft.jpg', locked: false },
   { id: '10ft', name: '10 ft Fridge', price: 6000, dailyEarn: 250, img: 'images/fridge10ft.jpg', locked: false },
   { id: '12ft', name: '12 ft Fridge', price: 8000, dailyEarn: 350, img: 'images/fridge12ft.jpg', locked: false },
-  { id: 'offer1', name: 'Offer Fridge 1', price: 0, dailyEarn: 0, durationHrs: 0, startTime: null, img: 'images/offer1.jpg', locked: true },
-  { id: 'offer2', name: 'Offer Fridge 2', price: 0, dailyEarn: 0, durationHrs: 0, startTime: null, img: 'images/offer2.jpg', locked: true },
-  { id: 'offer3', name: 'Offer Fridge 3', price: 0, dailyEarn: 0, durationHrs: 0, startTime: null, img: 'images/offer3.jpg', locked: true },
-  { id: 'offer4', name: 'Offer Fridge 4', price: 0, dailyEarn: 0, durationHrs: 0, startTime: null, img: 'images/offer4.jpg', locked: true },
-  { id: 'offer5', name: 'Offer Fridge 5', price: 0, dailyEarn: 0, durationHrs: 0, startTime: null, img: 'images/offer5.jpg', locked: true },
-  { id: 'offer6', name: 'Offer Fridge 6', price: 0, dailyEarn: 0, durationHrs: 0, startTime: null, img: 'images/offer6.jpg', locked: true },
-  { id: 'offer7', name: 'Offer Fridge 7', price: 0, dailyEarn: 0, durationHrs: 0, startTime: null, img: 'images/offer7.jpg', locked: true },
-  { id: 'offer8', name: 'Offer Fridge 8', price: 0, dailyEarn: 0, durationHrs: 0, startTime: null, img: 'images/offer8.jpg', locked: true },
+  { id: 'offer1', name: 'Offer Fridge 1', price: 0,totaldailyEarn: 0, durationHrs: 0, startTime: null, img: 'images/offer1.jpg', locked: true },
+  { id: 'offer2', name: 'Offer Fridge 2', price: 0, totalearning: 0, durationHrs: 0, startTime: null, img: 'images/offer2.jpg', locked: true },
+  { id: 'offer3', name: 'Offer Fridge 3', price: 0, totalearning: 0, durationHrs: 0, startTime: null, img: 'images/offer3.jpg', locked: true },
+  { id: 'offer4', name: 'Offer Fridge 4', price: 0, totalearning: 0, durationHrs: 0, startTime: null, img: 'images/offer4.jpg', locked: true },
+  { id: 'offer5', name: 'Offer Fridge 5', price: 0, totalearning: 0, durationHrs: 0, startTime: null, img: 'images/offer5.jpg', locked: true },
+  { id: 'offer6', name: 'Offer Fridge 6', price: 0, totalearning: 0, durationHrs: 0, startTime: null, img: 'images/offer6.jpg', locked: true },
+  { id: 'offer7', name: 'Offer Fridge 7', price: 0, totalearning: 0, durationHrs: 0, startTime: null, img: 'images/offer7.jpg', locked: true },
+  { id: 'offer8', name: 'Offer Fridge 8', price: 0, totalearning: 0, durationHrs: 0, startTime: null, img: 'images/offer8.jpg', locked: true },
 ];
 
 // ================= EXPRESS SETUP =================
@@ -197,34 +197,28 @@ app.post('/api/payment/submit', auth, async (req, res) => {
 
 // ================= REDEEM OFFER CODE =================
 app.post('/api/offer/redeem', auth, async (req, res) => {
-  try {
-    const { code } = req.body;
-    if (!code) return res.status(400).json({ error: 'No code provided' });
+try {
+const { code } = req.body;
+if (!code) return res.status(400).json({ error: 'No code provided' });
 
-    const user = await User.findOne({ email: req.user.email });
-    if (!user) return res.status(404).json({ error: 'User not found' });
+const user = await User.findOne({ email: req.user.email });  
+if (!user) return res.status(404).json({ error: 'User not found' });  
 
-    const offer = await OfferCode.findOne({ code });
-    if (!offer) return res.status(404).json({ error: 'Invalid offer code' });
+const offer = await OfferCode.findOne({ code });  
+if (!offer) return res.status(404).json({ error: 'Invalid offer code😭' });  
 
-    // ✅ Check if user has already redeemed
-    if (offer.usedBy.includes(user.email)) {
-      return res.status(400).json({ error: 'You have already redeemed this code' });
-    }
+// Single-use: Add to earnings and delete the code immediately  
+user.earning += offer.amount;  
+await user.save();  
 
-    // ✅ Redeem the code
-    user.earning += offer.amount;
-    await user.save();
+await OfferCode.findOneAndDelete({ code });  
 
-    // ✅ Mark code as used by this user
-    offer.usedBy.push(user.email);
-    await offer.save();
+res.json({ message: `Successfully ✅💯 redeemed! KES ${offer.amount} added to your earnings.` });
 
-    res.json({ message: `Offer code redeemed! KES ${offer.amount} added to your earnings.` });
-  } catch (err) {
-    console.error('Redeem offer error:', err);
-    res.status(500).json({ error: 'Server error while redeeming offer code' });
-  }
+} catch (err) {
+console.error('Redeem offer error:', err);
+res.status(500).json({ error: 'Server error' });
+}
 });
 
 // ================= ADMIN: OFFER CODE =================
