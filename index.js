@@ -7,6 +7,7 @@ const cors = require('cors');
 const path = require('path');
 const mongoose = require('mongoose');
 const { Telegraf, Markup } = require('telegraf');
+const cron = require('node-cron'); // Added for scheduling
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -31,7 +32,15 @@ const userSchema = new mongoose.Schema({
   phone: String,
   balance: { type: Number, default: 0 },
   earning: { type: Number, default: 0 },
-  fridges: { type: Array, default: [] },
+  fridges: [{
+    id: String,
+    name: String,
+    price: Number,
+    dailyEarn: Number,
+    boughtAt: Date,
+    endTime: Date, // New: For offer fridges, the time when duration ends
+    earningAdded: Boolean // New: Flag to track if earning has been added for offers
+  }],
   createdAt: { type: Date, default: Date.now },
   lastDepositAttempt: Date,
   lastWithdrawalAttempt: Date
@@ -78,14 +87,14 @@ let FRIDGES = [
   { id: '8ft', name: '8 ft Fridge', price: 4000, dailyEarn: 150, img: 'images/fridge8ft.jpg', locked: false },
   { id: '10ft', name: '10 ft Fridge', price: 6000, dailyEarn: 250, img: 'images/fridge10ft.jpg', locked: false },
   { id: '12ft', name: '12 ft Fridge', price: 8000, dailyEarn: 350, img: 'images/fridge12ft.jpg', locked: false },
-  { id: 'offer1', name: 'Offer Fridge 1', price: 0,totaldailyEarn: 0, durationHrs: 0, startTime: null, img: 'images/offer1.jpg', locked: true },
-  { id: 'offer2', name: 'Offer Fridge 2', price: 0, totalearning: 0, durationHrs: 0, startTime: null, img: 'images/offer2.jpg', locked: true },
-  { id: 'offer3', name: 'Offer Fridge 3', price: 0, totalearning: 0, durationHrs: 0, startTime: null, img: 'images/offer3.jpg', locked: true },
-  { id: 'offer4', name: 'Offer Fridge 4', price: 0, totalearning: 0, durationHrs: 0, startTime: null, img: 'images/offer4.jpg', locked: true },
-  { id: 'offer5', name: 'Offer Fridge 5', price: 0, totalearning: 0, durationHrs: 0, startTime: null, img: 'images/offer5.jpg', locked: true },
-  { id: 'offer6', name: 'Offer Fridge 6', price: 0, totalearning: 0, durationHrs: 0, startTime: null, img: 'images/offer6.jpg', locked: true },
-  { id: 'offer7', name: 'Offer Fridge 7', price: 0, totalearning: 0, durationHrs: 0, startTime: null, img: 'images/offer7.jpg', locked: true },
-  { id: 'offer8', name: 'Offer Fridge 8', price: 0, totalearning: 0, durationHrs: 0, startTime: null, img: 'images/offer8.jpg', locked: true },
+  { id: 'offer1', name: 'Offer Fridge 1', price: 0, dailyEarn: 0, durationHrs: 0, startTime: null, img: 'images/offer1.jpg', locked: true },
+  { id: 'offer2', name: 'Offer Fridge 2', price: 0, dailyEarn: 0, durationHrs: 0, startTime: null, img: 'images/offer2.jpg', locked: true },
+  { id: 'offer3', name: 'Offer Fridge 3', price: 0, dailyEarn: 0, durationHrs: 0, startTime: null, img: 'images/offer3.jpg', locked: true },
+  { id: 'offer4', name: 'Offer Fridge 4', price: 0, dailyEarn: 0, durationHrs: 0, startTime: null, img: 'images/offer4.jpg', locked: true },
+  { id: 'offer5', name: 'Offer Fridge 5', price: 0, dailyEarn: 0, durationHrs: 0, startTime: null, img: 'images/offer5.jpg', locked: true },
+  { id: 'offer6', name: 'Offer Fridge 6', price: 0, dailyEarn: 0, durationHrs: 0, startTime: null, img: 'images/offer6.jpg', locked: true },
+  { id: 'offer7', name: 'Offer Fridge 7', price: 0, dailyEarn: 0, durationHrs: 0, startTime: null, img: 'images/offer7.jpg', locked: true },
+  { id: 'offer8', name: 'Offer Fridge 8', price: 0, dailyEarn: 0, durationHrs: 0, startTime: null, img: 'images/offer8.jpg', locked: true },
 ];
 
 // ================= EXPRESS SETUP =================
@@ -197,28 +206,28 @@ app.post('/api/payment/submit', auth, async (req, res) => {
 
 // ================= REDEEM OFFER CODE =================
 app.post('/api/offer/redeem', auth, async (req, res) => {
-try {
-const { code } = req.body;
-if (!code) return res.status(400).json({ error: 'No code provided' });
+  try {
+    const { code } = req.body;
+    if (!code) return res.status(400).json({ error: 'No code provided' });
 
-const user = await User.findOne({ email: req.user.email });  
-if (!user) return res.status(404).json({ error: 'User not found' });  
+    const user = await User.findOne({ email: req.user.email });
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
-const offer = await OfferCode.findOne({ code });  
-if (!offer) return res.status(404).json({ error: 'Invalid offer code😭' });  
+    const offer = await OfferCode.findOne({ code });
+    if (!offer) return res.status(404).json({ error: 'Invalid offer code😭' });
 
-// Single-use: Add to earnings and delete the code immediately  
-user.earning += offer.amount;  
-await user.save();  
+    // Single-use: Add to earnings and delete the code immediately
+    user.earning += offer.amount;
+    await user.save();
 
-await OfferCode.findOneAndDelete({ code });  
+    await OfferCode.findOneAndDelete({ code });
 
-res.json({ message: `Successfully ✅💯 redeemed! KES ${offer.amount} added to your earnings.` });
+    res.json({ message: `Successfully ✅💯 redeemed! KES ${offer.amount} added to your earnings.` });
 
-} catch (err) {
-console.error('Redeem offer error:', err);
-res.status(500).json({ error: 'Server error' });
-}
+  } catch (err) {
+    console.error('Redeem offer error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
 // ================= ADMIN: OFFER CODE =================
@@ -237,6 +246,7 @@ app.post('/api/admin/offercode', auth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+
 // ================= ADMIN: UNLOCK / LOCK FRIDGE =================
 app.post('/api/admin/unlock', auth, async (req, res) => {
   try {
@@ -248,7 +258,7 @@ app.post('/api/admin/unlock', auth, async (req, res) => {
 
     fridge.locked = false;
     fridge.price = price;
-    fridge.dailyEarn = dailyEarn;
+    fridge.dailyEarn = dailyEarn; // This is the total earning for offers
     fridge.durationHrs = durationHrs;
     fridge.startTime = new Date();
 
@@ -284,18 +294,38 @@ async function runDailyEarnings() {
       for (const f of u.fridges) {
         const fridge = FRIDGES.find(fr => fr.id === f.id);
         if (!fridge) continue;
-        if (!fridge.id.startsWith('offer')) earn += fridge.dailyEarn || 0;
-        if (fridge.id.startsWith('offer') && fridge.startTime && fridge.durationHrs) {
-          const endTime = new Date(fridge.startTime).getTime() + fridge.durationHrs * 3600 * 1000;
-          if (now >= endTime) earn += fridge.price;
+
+        if (!fridge.id.startsWith('offer')) {
+          // Normal fridges: Add daily earnings
+          earn += fridge.dailyEarn || 0;
+        } else if (fridge.id.startsWith('offer') && f.endTime && !f.earningAdded) {
+          // Offer fridges: Check if 24 hours have passed since endTime
+          const creditTime = new Date(f.endTime).getTime() + 24 * 60 * 60 * 1000; // 24 hours after endTime
+          if (now >= creditTime) {
+            earn += f.dailyEarn; // Total earning for the offer
+            f.earningAdded = true; // Mark as added
+          }
         }
       }
-      u.earning += earn;
-      await u.save();
+      if (earn > 0) {
+        u.earning += earn;
+        await u.save();
+      }
     }
+    console.log('Daily earnings updated at', new Date().toISOString());
   } catch (err) { console.error('Daily earnings error:', err); }
 }
-setInterval(runDailyEarnings, 24 * 60 * 60 * 1000);
+
+// Schedule to run at 12:00 AM Kenya time (21:00 UTC, since EAT is UTC+3)
+cron.schedule('0 21 * * *', async () => {
+  try {
+    await runDailyEarnings();
+  } catch (err) {
+    console.error('Cron job error:', err);
+  }
+}, {
+  timezone: "UTC"
+});
 
 // ================= TELEGRAM BOT =================
 const bot = new Telegraf(TELEGRAM_TOKEN);
@@ -335,13 +365,26 @@ bot.on('callback_query', async (ctx) => {
       if (!user || !fridge) return ctx.answerCbQuery('User or fridge not found');
 
       if (actionType === 'approve') {
-        user.fridges.push({
-          id: fridge.id,
-          name: fridge.name,
-          price: fridge.price,
-          dailyEarn: fridge.dailyEarn,
-          boughtAt: new Date()
-        });
+        if (fridge.id.startsWith('offer')) {
+          const endTime = new Date(Date.now() + fridge.durationHrs * 3600 * 1000);
+          user.fridges.push({
+            id: fridge.id,
+            name: fridge.name,
+            price: fridge.price,
+            dailyEarn: fridge.dailyEarn,
+            boughtAt: new Date(),
+            endTime: endTime,
+            earningAdded: false
+          });
+        } else {
+          user.fridges.push({
+            id: fridge.id,
+            name: fridge.name,
+            price: fridge.price,
+            dailyEarn: fridge.dailyEarn,
+            boughtAt: new Date()
+          });
+        }
         await user.save();
         payment.approved = true;
         await payment.save();
@@ -360,7 +403,7 @@ bot.on('callback_query', async (ctx) => {
   }
 });
 
-bot.launch().then(()=>console.log('Telegram bot running'));
+bot.launch().then(() => console.log('Telegram bot running'));
 
 // ================= USER WITHDRAWAL REQUEST =================
 app.post('/api/withdraw', auth, async (req, res) => {
