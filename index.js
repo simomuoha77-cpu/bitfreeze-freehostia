@@ -7,7 +7,7 @@ const cors = require('cors');
 const path = require('path');
 const mongoose = require('mongoose');
 const { Telegraf, Markup } = require('telegraf');
-const cron = require('node-cron'); // Added for scheduling
+const cron = require('node-cron');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -38,8 +38,8 @@ const userSchema = new mongoose.Schema({
     price: Number,
     dailyEarn: Number,
     boughtAt: Date,
-    endTime: Date, // New: For offer fridges, the time when duration ends
-    earningAdded: Boolean // New: Flag to track if earning has been added for offers
+    endTime: Date,
+    earningAdded: Boolean
   }],
   createdAt: { type: Date, default: Date.now },
   lastDepositAttempt: Date,
@@ -165,12 +165,11 @@ app.post('/api/payment/submit', auth, async (req, res) => {
     const user = await User.findOne({ email: req.user.email });
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    // ❌ Only allow one deposit until previous approved or 24h passed
     if (user.lastDepositAttempt) {
       const diff = Date.now() - new Date(user.lastDepositAttempt).getTime();
       if (diff < 24 * 60 * 60 * 1000) {
         const pending = await Payment.findOne({ userEmail: user.email, approved: false });
-        if (pending) return res.status(400).json({ error: 'You already have a pending deposit. Wait for approval or 24h.' });
+        if (pending) return res.status(400).json({ error: 'Pending deposit. Wait for approval or 24h.' });
       }
     }
 
@@ -214,20 +213,15 @@ app.post('/api/offer/redeem', auth, async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const offer = await OfferCode.findOne({ code });
-    if (!offer) return res.status(404).json({ error: 'Invalid offer code😭' });
+    if (!offer) return res.status(404).json({ error: 'Invalid offer😭 code' });
 
-    // Single-use: Add to earnings and delete the code immediately
     user.earning += offer.amount;
     await user.save();
 
     await OfferCode.findOneAndDelete({ code });
 
-    res.json({ message: `Successfully ✅💯 redeemed! KES ${offer.amount} added to your earnings.` });
-
-  } catch (err) {
-    console.error('Redeem offer error:', err);
-    res.status(500).json({ error: 'Server error' });
-  }
+    res.json({ message: `Successfully✅🎁 redeemed! KES ${offer.amount} added to your earnings.` });
+  } catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
 
 // ================= ADMIN: OFFER CODE =================
@@ -238,14 +232,13 @@ app.post('/api/admin/offercode', auth, async (req, res) => {
     if (!code || !amount) return res.status(400).json({ error: 'Missing fields' });
 
     const exists = await OfferCode.findOne({ code });
-    if (exists) return res.status(400).json({ error: 'Offer code already exists' });
+    if (exists) return res.status(400).json({ error: 'Offer code exists' });
 
     const oc = new OfferCode({ code, amount });
     await oc.save();
     res.json({ message: 'Offer code created', code, amount });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
-
 
 // ================= ADMIN: UNLOCK / LOCK FRIDGE =================
 app.post('/api/admin/unlock', auth, async (req, res) => {
@@ -258,7 +251,7 @@ app.post('/api/admin/unlock', auth, async (req, res) => {
 
     fridge.locked = false;
     fridge.price = price;
-    fridge.dailyEarn = dailyEarn; // This is the total earning for offers
+    fridge.dailyEarn = dailyEarn;
     fridge.durationHrs = durationHrs;
     fridge.startTime = new Date();
 
@@ -284,56 +277,65 @@ app.post('/api/admin/lock', auth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ================= DAILY EARNINGS =================
-async function runDailyEarnings() {
+// ================= DAILY EARNINGS & AUTO-LOCK OFFERS =================
+async function runDailyEarningsAndOffers() {
   try {
     const users = await User.find();
-    const now = Date.now();
-    for (const u of users) {
-      let earn = 0;
-      for (const f of u.fridges) {
-        const fridge = FRIDGES.find(fr => fr.id === f.id);
-        if (!fridge) continue;
+    const now = new Date();
 
-        if (!fridge.id.startsWith('offer')) {
-          // Normal fridges: Add daily earnings
-          earn += fridge.dailyEarn || 0;
-        } else if (fridge.id.startsWith('offer') && f.endTime && !f.earningAdded) {
-          // Offer fridges: Check if 24 hours have passed since endTime
-          const creditTime = new Date(f.endTime).getTime() + 24 * 60 * 60 * 1000; // 24 hours after endTime
-          if (now >= creditTime) {
-            earn += f.dailyEarn; // Total earning for the offer
-            f.earningAdded = true; // Mark as added
+    for (const user of users) {
+      let totalEarn = 0;
+      let saveNeeded = false;
+
+      for (const f of user.fridges) {
+        const globalFridge = FRIDGES.find(fr => fr.id === f.id);
+        if (!globalFridge) continue;
+
+        if (!f.id.startsWith('offer')) {
+          totalEarn += globalFridge.dailyEarn || 0;
+        }
+
+        if (f.id.startsWith('offer') && !f.earningAdded && f.endTime) {
+          const endTime = new Date(f.endTime);
+          const creditTime = endTime.getTime() + 24 * 60 * 60 * 1000;
+          if (now.getTime() >= creditTime) {
+            totalEarn += f.dailyEarn || globalFridge.dailyEarn || 0;
+            f.earningAdded = true;
+            saveNeeded = true;
+
+            if (globalFridge) {
+              globalFridge.locked = true;
+              globalFridge.price = 0;
+              globalFridge.dailyEarn = 0;
+              globalFridge.durationHrs = 0;
+              globalFridge.startTime = null;
+            }
           }
         }
       }
-      if (earn > 0) {
-        u.earning += earn;
-        await u.save();
+
+      if (totalEarn > 0) {
+        user.earning += totalEarn;
+        saveNeeded = true;
       }
+
+      if (saveNeeded) await user.save();
     }
-    console.log('Daily earnings updated at', new Date().toISOString());
-  } catch (err) { console.error('Daily earnings error:', err); }
+
+    console.log('Daily earnings & offer fridges updated at', now.toISOString());
+  } catch (err) { console.error('Daily earnings & offer error:', err); }
 }
 
-// Schedule to run at 12:00 AM Kenya time (21:00 UTC, since EAT is UTC+3)
-cron.schedule('0 21 * * *', async () => {
-  try {
-    await runDailyEarnings();
-  } catch (err) {
-    console.error('Cron job error:', err);
-  }
-}, {
-  timezone: "UTC"
-});
+// Cron: 12:00 AM Kenya time (UTC+3 => 21:00 UTC)
+cron.schedule('0 21 * * *', runDailyEarningsAndOffers, { timezone: 'UTC' });
 
 // ================= TELEGRAM BOT =================
 const bot = new Telegraf(TELEGRAM_TOKEN);
 
+// Telegram callback handling (approvals for payments/withdrawals)
 bot.on('callback_query', async (ctx) => {
   try {
     const data = ctx.callbackQuery.data;
-
     if (data.startsWith('withdraw_')) {
       const [ , action, id ] = data.split('_');
       const wd = await Withdrawal.findById(id);
@@ -366,14 +368,14 @@ bot.on('callback_query', async (ctx) => {
 
       if (actionType === 'approve') {
         if (fridge.id.startsWith('offer')) {
-          const endTime = new Date(Date.now() + fridge.durationHrs * 3600 * 1000);
+          const endTime = new Date(Date.now() + fridge.durationHrs * 60 * 60 * 1000);
           user.fridges.push({
             id: fridge.id,
             name: fridge.name,
             price: fridge.price,
             dailyEarn: fridge.dailyEarn,
             boughtAt: new Date(),
-            endTime: endTime,
+            endTime,
             earningAdded: false
           });
         } else {
@@ -385,18 +387,25 @@ bot.on('callback_query', async (ctx) => {
             boughtAt: new Date()
           });
         }
+
         await user.save();
         payment.approved = true;
         await payment.save();
-        await ctx.editMessageText(`✅ Payment Approved: ${user.email} bought ${fridge.name}`);
+
+        await ctx.editMessageText(
+          `✅ Payment Approved:\nUser: ${user.email}\nFridge: ${fridge.name}`
+        );
       }
+
       if (actionType === 'reject') {
         await Payment.findByIdAndDelete(paymentId);
-        await ctx.editMessageText(`❌ Payment Rejected: ${payment.userEmail} for ${fridge.name}`);
+        await ctx.editMessageText(
+          `❌ Payment Rejected:\nUser: ${payment.userEmail}\nFridge: ${fridge.name}`
+        );
       }
+
       return ctx.answerCbQuery();
     }
-
   } catch (err) {
     console.error('Telegram callback error:', err);
     ctx.answerCbQuery('Error processing action');
@@ -412,27 +421,34 @@ app.post('/api/withdraw', auth, async (req, res) => {
     const user = await User.findOne({ email: req.user.email });
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    // ❌ Only allow one withdrawal until approved or 24h passed
     if (user.lastWithdrawalAttempt) {
       const diff = Date.now() - new Date(user.lastWithdrawalAttempt).getTime();
       if (diff < 24 * 60 * 60 * 1000) {
         const pending = await Withdrawal.findOne({ userEmail: user.email, approved: false });
-        if (pending) return res.status(400).json({ error: 'You already have a pending withdrawal. Wait for approval or 24h.' });
+        if (pending) {
+          return res.status(400).json({ error: 'You already have a pending withdrawal.' });
+        }
       }
     }
 
-    // Minimum amount and phone check
-    if (!phone || !amount || amount < 200) return res.status(400).json({ error: 'Invalid phone or amount (min 200 KES)' });
-    if (user.phone !== phone) return res.status(400).json({ error: 'Withdrawal phone must match registered phone' });
+    if (!phone || !amount || amount < 200) {
+      return res.status(400).json({ error: 'Invalid phone or amount (min 200 KES)' });
+    }
 
-    // Kenya time check
-    const kenyaNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Africa/Nairobi' }));
-    const day = kenyaNow.getDay();
-    if (day === 0 || day === 6) return res.status(400).json({ error: 'Withdrawals are only allowed Monday to Friday' });
+    if (user.phone !== phone) {
+      return res.status(400).json({ error: 'Phone must match registered phone' });
+    }
 
-    if (user.earning < amount) return res.status(400).json({ error: 'Insufficient earnings' });
+    if (user.earning < amount) {
+      return res.status(400).json({ error: 'Insufficient earnings' });
+    }
 
-    const withdrawal = new Withdrawal({ userEmail: user.email, phone, amount });
+    const withdrawal = new Withdrawal({
+      userEmail: user.email,
+      phone,
+      amount
+    });
+
     await withdrawal.save();
 
     user.lastWithdrawalAttempt = new Date();
@@ -440,16 +456,17 @@ app.post('/api/withdraw', auth, async (req, res) => {
 
     await bot.telegram.sendMessage(
       ADMIN_CHAT_ID,
-      `💸 New Withdrawal Request:\nUser: ${user.email}\nAmount: KES ${amount}\nPhone: ${phone}`,
+      `💸 Withdrawal Request:\nUser: ${user.email}\nAmount: KES ${amount}\nPhone: ${phone}`,
       Markup.inlineKeyboard([
         Markup.button.callback('✅ Approve', `withdraw_approve_${withdrawal._id}`),
         Markup.button.callback('❌ Reject', `withdraw_reject_${withdrawal._id}`)
       ])
     );
 
-    res.json({ message: 'Withdrawal request submitted. Waiting for admin approval.' });
-
-  } catch (err) { res.status(500).json({ error: err.message }); }
+    res.json({ message: 'Withdrawal request submitted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ================= GRACEFUL SHUTDOWN =================
@@ -466,4 +483,6 @@ process.on('SIGTERM', () => {
 });
 
 // ================= START SERVER =================
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
