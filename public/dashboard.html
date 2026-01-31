@@ -1,590 +1,616 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Bitfreeze — Dashboard</title>
-<style>
-:root{
-  --bg:#0b0f14;
-  --card:#0f1620;
-  --muted:#9aa6b2;
-  --accent:#ff8a00;
-  --glass:rgba(255,255,255,0.03);
-}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitfreeze — Dashboard</title>
+    <style>
+        :root {
+            --bg: #0b0f14;
+            --card: #0f1620;
+            --muted: #9aa6b2;
+            --accent: #ff8a00;
+            --glass: rgba(255, 255, 255, 0.03);
+        }
 
-body{
-  margin:0;
-  font-family:Inter,system-ui,Arial;
-  background:radial-gradient(1200px 600px at top,#121a26,#070b11);
-  color:#e6eef6;
-}
+        body {
+            margin: 0;
+            font-family: Inter, system-ui, Arial;
+            background: radial-gradient(1200px 600px at top, #121a26, #070b11);
+            color: #e6eef6;
+        }
 
-.wrap{max-width:1200px;margin:auto;padding:20px}
+        .wrap {
+            max-width: 1200px;
+            margin: auto;
+            padding: 20px;
+        }
 
-.card{
-  background:linear-gradient(180deg,var(--card),#0b1420);
-  border-radius:14px;
-  padding:20px;
-  margin-bottom:20px;
-  border:1px solid rgba(255,255,255,.05)
-}
+        .card {
+            background: linear-gradient(180deg, var(--card), #0b1420);
+            border-radius: 14px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, .05);
+        }
 
-h2{margin-top:0}
-label{display:block;margin-top:10px;font-size:15px;color:var(--muted)}
+        h2 {
+            margin-top: 0;
+        }
 
-input,button{
-  width:100%;
-  padding:12px;
-  margin-top:6px;
-  border-radius:8px;
-  border:1px solid rgba(255,255,255,.05);
-  background:var(--glass);
-  color:#fff
-}
+        label {
+            display: block;
+            margin-top: 10px;
+            font-size: 15px;
+            color: var(--muted);
+        }
 
-button{
-  background:linear-gradient(90deg,var(--accent),#ffb347);
-  color:#111;
-  font-weight:700;
-  cursor:pointer
-}
+        input, button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 6px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, .05);
+            background: var(--glass);
+            color: #fff;
+        }
 
-.tabs{
-  display:flex;
-  gap:10px;
-  margin-bottom:20px;
-  flex-wrap:wrap
-}
+        button {
+            background: linear-gradient(90deg, var(--accent), #ffb347);
+            color: #111;
+            font-weight: 700;
+            cursor: pointer;
+        }
 
-.tab{
-  flex:1;
-  padding:12px;
-  border-radius:10px;
-  background:var(--glass);
-  border:1px solid rgba(255,255,255,.05);
-  color:#fff;
-  font-weight:600;
-  cursor:pointer;
-  text-align:center
-}
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
 
-.tab.active{
-  background:linear-gradient(90deg,var(--accent),#ffb347);
-  color:#111
-}
+        .tab {
+            flex: 1;
+            padding: 12px;
+            border-radius: 10px;
+            background: var(--glass);
+            border: 1px solid rgba(255, 255, 255, .05);
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+        }
 
-.tab-content{display:none}
-.tab-content.active{display:block}
+        .tab.active {
+            background: linear-gradient(90deg, var(--accent), #ffb347);
+            color: #111;
+        }
 
-.balance-container{
-  display:flex;
-  gap:20px;
-  flex-wrap:wrap
-}
+        .tab-content {
+            display: none;
+        }
 
-.balance-box{
-  flex:1;
-  background:var(--glass);
-  border-radius:10px;
-  padding:10px;
-  text-align:center
-}
+        .tab-content.active {
+            display: block;
+        }
 
-.balance-box p{
-  font-size:20px;
-  font-weight:700;
-  color:var(--accent)
-}
+        .balance-container {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
 
-#animatedEarnings{
-  font-size:28px;
-  font-weight:700;
-  color:#00ffb0;
-  margin-top:10px
-}
+        .balance-box {
+            flex: 1;
+            background: var(--glass);
+            border-radius: 10px;
+            padding: 10px;
+            text-align: center;
+        }
 
-.fridge-list{
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
-  gap:12px
-}
+        .balance-box p {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--accent);
+        }
 
-.fridge{
-  background:var(--glass);
-  border-radius:10px;
-  padding:10px;
-  text-align:center
-}
+        #animatedEarnings {
+            font-size: 28px;
+            font-weight: 700;
+            color: #00ffb0;
+            margin-top: 10px;
+        }
 
-.fridge img{
-  width:100%;
-  height:150px;
-  border-radius:8px;
-  object-fit:cover
-}
+        .fridge-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+        }
 
-.fridge-timer {
-  font-size: 18px;
-  font-weight: 700;
-  color: grey;           /* default color */
-  margin-top: 8px;
-  transition: color 0.3s ease;
-}
+        .fridge {
+            background: var(--glass);
+            border-radius: 10px;
+            padding: 10px;
+            text-align: center;
+        }
 
-.fridge-timer.active {
-  color: #00ffb0;       /* green when counting */
-}
-#timer-offer1, #timer-offer2, #timer-offer3 /* etc */ {
-  color: grey;
-  font-weight: 700;
-  transition: color 0.3s ease;
-}
+        .fridge img {
+            width: 100%;
+            height: 150px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
 
-#timer-offer1.active,
-#timer-offer2.active,
-#timer-offer3.active /* etc */ {
-  color: #00ffb0; /* green while counting */
-}
+        .chart-container {
+            width: 100%;
+            height: 70vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 10px;
+        }
 
-/* ✅ CHART FIX (ONLY CHANGE) */
-.chart-container{
-  width:100%;
-  height:70vh;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  margin-top:10px
-}
+        .chart-container iframe {
+            width: 100%;
+            height: 100%;
+            border: 0;
+            border-radius: 12px;
+        }
 
-.chart-container iframe{
-  width:100%;
-  height:100%;
-  border:0;
-  border-radius:12px
-}
+        @media (max-width: 768px) {
+            .fridge img {
+                height: 120px;
+            }
 
-@media(max-width:768px){
-  .fridge img{height:120px}
-  .chart-container{height:65vh}
-}
+            .chart-container {
+                height: 65vh;
+            }
+        }
 
-/* PAYMENT MODAL */
-#paymentModal{
-  display:none;
-  position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
-  background:rgba(0,0,0,.8);
-  justify-content:center;
-  align-items:center;
-  z-index:999
-}
+        /* PAYMENT MODAL */
+        #paymentModal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, .8);
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+        }
 
-#paymentModal .modalContent{
-  background:#0f1620;
-  padding:20px;
-  border-radius:12px;
-  max-width:400px;
-  width:90%
-}
-</style>
+        #paymentModal .modalContent {
+            background: #0f1620;
+            padding: 20px;
+            border-radius: 12px;
+            max-width: 400px;
+            width: 90%;
+        }
+    </style>
 </head>
 
 <body>
 <div class="wrap">
-  <!-- TABS -->
-  <div class="tabs">
-    <button class="tab active" onclick="showTab('home',this)">Home</button>
-    <button class="tab" onclick="showTab('earning',this)">Earning Fridge</button>
-    <button class="tab" onclick="showTab('offer',this)">Offer</button>
-    <button class="tab" onclick="showTab('withdraw',this)">Withdraw</button>
-    <button class="tab" onclick="showTab('profile',this)">Profile</button>
-    <button id="adminTab" class="tab" style="display:none;" onclick="showTab('admin',this)">Admin Panel</button>
-  </div>
+    <!-- TABS -->
+    <div class="tabs">
+        <button class="tab active" onclick="showTab('home', this)">Home</button>
+        <button class="tab" onclick="showTab('earning', this)">Earning Fridge</button>
+        <button class="tab" onclick="showTab('offer', this)">Offer</button>
+        <button class="tab" onclick="showTab('withdraw', this)">Withdraw</button>
+        <button class="tab" onclick="showTab('profile', this)">Profile</button>
+        <button id="adminTab" class="tab" style="display:none;" onclick="showTab('admin', this)">Admin Panel</button>
+    </div>
 
-  <!-- HOME -->
-  <div id="home" class="tab-content active">
-    <div class="card">
-      <h2>Your Account</h2>
-      <p>Email: <span id="userEmail"></span></p>
-      <p>Phone: <span id="userPhone"></span></p>
-      <div class="balance-container">
-        <div class="balance-box">
-          <h3>Deposit Balance</h3>
-          <p>KES <span id="userBalance">0</span></p>
+    <!-- HOME -->
+    <div id="home" class="tab-content active">
+        <div class="card">
+            <h2>Your Account</h2>
+            <p>Email: <span id="userEmail"></span></p>
+            <p>Phone: <span id="userPhone"></span></p>
+            <div class="balance-container">
+                <div class="balance-box">
+                    <h3>Deposit Balance</h3>
+                    <p>KES <span id="userBalance">0</span></p>
+                </div>
+                <div class="balance-box">
+                    <h3>Earnings</h3>
+                    <p>KES <span id="userEarning">0</span></p>
+                </div>
+            </div>
+            <p>Fridges owned: <span id="userFridges">0</span></p>
+            <p>Daily Earnings: <span id="animatedEarnings">0</span> KES</p>
         </div>
-        <div class="balance-box">
-          <h3>Earnings</h3>
-          <p>KES <span id="userEarning">0</span></p>
+        <div class="card">
+            <h2>Bitcoin Earnings Growth (fridge earning chart)</h2>
+            <p style="font-size:13px;color:#9aa6b2">Live Bitcoin chart to demonstrate fridge earning growth.</p>
+            <div class="chart-container">
+                <iframe
+                    src="https://www.tradingview.com/widgetembed/?symbol=BTCUSD&interval=D&theme=dark&style=1&locale=en&hide_side_toolbar=false"
+                    allowfullscreen>
+                </iframe>
+            </div>
         </div>
-      </div>
-      <p>Fridges owned: <span id="userFridges">0</span></p>
-      <p>Daily Earnings: <span id="animatedEarnings">0</span> KES</p>
     </div>
-    <div class="card">
-      <h2>Bitcoin Earnings Growth (fridge earning chart)</h2>
-      <p style="font-size:13px;color:#9aa6b2">Live Bitcoin chart to demonstrate fridge earning growth.</p>
-      <div class="chart-container">
-      <iframe
-        src="https://www.tradingview.com/widgetembed/?symbol=BTCUSD&interval=D&theme=dark&style=1&locale=en&hide_side_toolbar=false"
-        allowfullscreen>
-        </iframe>
-      </div>
-    </div>
-  </div>
 
-  <!-- EARNING -->
-  <div id="earning" class="tab-content">
-    <div class="card">
-      <h2>Your Earning Fridges</h2>
-      <p style="font-size:13px;color:#9aa6b2">These fridges are actively generating daily income.</p>
-      <div class="fridge-list" id="fridgeList"></div>
+    <!-- EARNING -->
+    <div id="earning" class="tab-content">
+        <div class="card">
+            <h2>Your Earning Fridges</h2>
+            <p style="font-size:13px;color:#9aa6b2">These fridges are actively generating daily income.</p>
+            <div class="fridge-list" id="fridgeList"></div>
+        </div>
     </div>
-  </div>
 
-  <!-- OFFER🎁🎁 -->
-  <div id="offer" class="tab-content">
-    <div class="card">
-      <h2>Offer Fridges🎁</h2>
-      <p style="font-size:13px;color:#9aa6b2">🎁🎁Special Offer Fridges, unlocked by admin with limited time🎁🎁.</p>
-      <div class="fridge-list" id="offerFridgeList"></div>
+    <!-- OFFER🎁🎁 -->
+    <div id="offer" class="tab-content">
+        <div class="card">
+            <h2>Offer Fridges🎁</h2>
+            <p style="font-size:13px;color:#9aa6b2">🎁🎁Special Offer Fridges, unlocked by admin with limited time🎁🎁.</p>
+            <div class="fridge-list" id="offerFridgeList"></div>
+        </div>
+        <div class="card">
+            <h3>Redeem Offer Code🎁🎁</h3>
+            <input type="text" id="offerCodeInput" placeholder="Enter code">
+            <button onclick="redeemOffer()">Redeem</button>
+            <p id="offerMsg"></p>
+        </div>
     </div>
-    <div class="card">
-      <h3>Redeem Offer Code🎁🎁</h3>
-      <input type="text" id="offerCodeInput" placeholder="Enter code">
-      <button onclick="redeemOffer()">Redeem</button>
-      <p id="offerMsg"></p>
+
+    <!-- WITHDRAW -->
+    <div id="withdraw" class="tab-content">
+        <div class="card">
+            <h2>Withdraw Earnings</h2>
+            <form id="withdrawForm">
+                <label>Phone</label>
+                <input id="withdrawPhone" required>
+                <label>Amount (KES)</label>
+                <input type="number" id="withdrawAmount" min="200" required>
+                <button>Withdraw</button>
+                <div id="withdrawMsg"></div>
+            </form>
+        </div>
     </div>
-  </div>
 
-  <!-- WITHDRAW -->
-  <div id="withdraw" class="tab-content">
-    <div class="card">
-      <h2>Withdraw Earnings</h2>
-      <form id="withdrawForm">
-        <label>Phone</label>
-        <input id="withdrawPhone" required>
-        <label>Amount (KES)</label>
-        <input type="number" id="withdrawAmount" min="200" required>
-        <button>Withdraw</button>
-        <div id="withdrawMsg"></div>
-      </form>
+    <!-- PROFILE -->
+    <div id="profile" class="tab-content">
+        <div class="card">
+            <h2>Profile</h2>
+            <p>Email: <span id="userEmailProfile"></span></p>
+            <p>Phone: <span id="userPhoneProfile"></span></p>
+            <p>Deposit Balance: KES <span id="userBalanceProfile"></span></p>
+            <p>Earnings Balance: KES <span id="userEarningProfile"></span></p>
+            <p>Fridges owned: <span id="userFridgesProfile"></span></p>
+            <p>Referral Link: <a id="refLink" target="_blank"></a></p>
+            <button onclick="logout()">Logout</button>
+        </div>
     </div>
-  </div>
 
-  <!-- PROFILE -->
-  <div id="profile" class="tab-content">
-    <div class="card">
-      <h2>Profile</h2>
-      <p>Email: <span id="userEmailProfile"></span></p>
-      <p>Phone: <span id="userPhoneProfile"></span></p>
-      <p>Deposit Balance: KES <span id="userBalanceProfile"></span></p>
-      <p>Earnings Balance: KES <span id="userEarningProfile"></span></p>
-      <p>Fridges owned: <span id="userFridgesProfile"></span></p>
-      <p>Referral Link: <a id="refLink" target="_blank"></a></p>
-      <button onclick="logout()">Logout</button>
+    <!-- ADMIN -->
+    <div id="admin" class="tab-content">
+        <div class="card">
+            <h2>Admin Panel</h2>
+            <h3>Create Offer Code</h3>
+            <input type="text" id="adminCode" placeholder="Code">
+            <input type="number" id="adminAmount" placeholder="Amount">
+            <button onclick="createOfferCode()">Create Code</button>
+            <p id="adminMsg"></p>
+
+            <h3>Unlock Offer Fridge</h3>
+            <input type="text" id="unlockFridgeId" placeholder="Fridge ID (offer1, offer2...)">
+            <input type="number" id="unlockPrice" placeholder="Price">
+            <input type="number" id="unlockEarn" placeholder="Daily Earn">
+            <input type="number" id="unlockDuration" placeholder="Duration (hours)">
+            <button onclick="unlockFridge()">Unlock Fridge</button>
+            <p id="unlockMsg"></p>
+
+            <h3>Lock Offer Fridge</h3>
+            <input type="text" id="lockFridgeId" placeholder="Fridge ID (offer1, offer2...)">
+            <button onclick="lockFridge()">Lock Fridge</button>
+            <p id="lockMsg"></p>
+        </div>
     </div>
-  </div>
-
-  <!-- ADMIN -->
-  <div id="admin" class="tab-content">
-    <div class="card">
-      <h2>Admin Panel</h2>
-      <h3>Create Offer Code</h3>
-      <input type="text" id="adminCode" placeholder="Code">
-      <input type="number" id="adminAmount" placeholder="Amount">
-      <button onclick="createOfferCode()">Create Code</button>
-      <p id="adminMsg"></p>
-
-      <h3>Unlock Offer Fridge</h3>
-      <input type="text" id="unlockFridgeId" placeholder="Fridge ID (offer1, offer2...)">
-      <input type="number" id="unlockPrice" placeholder="Price">
-      <input type="number" id="unlockEarn" placeholder="Daily Earn">
-      <input type="number" id="unlockDuration" placeholder="Duration (hours)">
-      <button onclick="unlockFridge()">Unlock Fridge</button>
-      <p id="unlockMsg"></p>
-
-      <h3>Lock Offer Fridge</h3>
-      <input type="text" id="lockFridgeId" placeholder="Fridge ID (offer1, offer2...)">
-      <button onclick="lockFridge()">Lock Fridge</button>
-      <p id="lockMsg"></p>
-    </div>
-  </div>
 </div>
 
 <!-- PAYMENT MODAL -->
 <div id="paymentModal">
-  <div class="modalContent">
-    <h3 id="modalFridgeName"></h3>
-    <p>Till Number: <strong>6992349</strong></p>
-    <p>Business Name: <strong>Bitfreeze Ltd</strong></p>
-    <p>Amount: KES <span id="modalFridgePrice"></span></p>
-    <label>Phone Number Used:</label>
-    <input type="text" id="modalPhone" placeholder="e.g. 0712345678">
-    <label>M-Pesa Transaction Code:</label>
-    <input type="text" id="modalTxn" placeholder="e.g. QWE72YABC">
-    <button id="submitPaymentBtn">Submit Payment</button>
-    <button onclick="closeModal()" style="background:#ff4444;">Cancel</button>
-    <p id="paymentMsg"></p>
-  </div>
+    <div class="modalContent">
+        <h3 id="modalFridgeName"></h3>
+        <label>Phone Number Used:</label>
+        <input type="text" id="modalPhone" placeholder="e.g. 0712345678" readonly>
+        <p id="paymentMsg"></p>
+        <button id="submitPaymentBtn">Confirm Purchase</button>
+        <button onclick="closeModal()" style="background:#ff4444;">Cancel</button>
+    </div>
 </div>
 
 <script>
-const DOMAIN=window.location.origin;
-const token=localStorage.getItem('bf_token');
-if(!token) location.href='/login';
+const DOMAIN = window.location.origin;
+const token = localStorage.getItem('bf_token');
+if (!token) location.href = '/login';
 
 // TABS
-function showTab(id,btn){
-  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  btn.classList.add('active');
+function showTab(id, btn) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    btn.classList.add('active');
 }
 
 // MODAL
-function buyFridge(fridgeId, fridgeName, fridgePrice){
-  document.getElementById('modalFridgeName').textContent=fridgeName;
-  document.getElementById('modalFridgePrice').textContent=fridgePrice;
-  document.getElementById('modalPhone').value='';
-  document.getElementById('modalTxn').value='';
-  document.getElementById('paymentMsg').textContent='';
-  document.getElementById('submitPaymentBtn').dataset.fridgeId=fridgeId;
-  document.getElementById('paymentModal').style.display='flex';
+function buyFridge(fridgeId, fridgeName, fridgePrice) {
+    document.getElementById('modalFridgeName').textContent = fridgeName;
+    document.getElementById('modalPhone').value = document.getElementById('userPhone').textContent; // Pre-fill with registered phone number
+    document.getElementById('paymentMsg').textContent = '';
+    document.getElementById('paymentModal').style.display = 'flex';
 }
-function closeModal(){document.getElementById('paymentModal').style.display='none';}
+
+function closeModal() {
+    document.getElementById('paymentModal').style.display = 'none';
+}
 
 // REDEEM OFFER CODE
-async function redeemOffer(){
-  const code=document.getElementById('offerCodeInput').value.trim();
-  if(!code) return;
-  const res=await fetch(DOMAIN+'/api/offer/redeem',{
-    method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-    body: JSON.stringify({code})
-  });
-  const d=await res.json();
-  offerMsg.textContent=d.message || d.error;
-  getUser();
+async function redeemOffer() {
+    const code = document.getElementById('offerCodeInput').value.trim();
+    if (!code) return;
+    const res = await fetch(DOMAIN + '/api/offer/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ code })
+    });
+    const d = await res.json();
+    offerMsg.textContent = d.message || d.error;
+    getUser();
 }
 
 // FETCH USER
-async function getUser(){
-  try{
-    const r=await fetch(DOMAIN+'/api/me',{headers:{Authorization:'Bearer '+token}});
-    const d=await r.json();
-    if(!d.user) return logout();
-    const u=d.user;
-    userEmail.textContent=u.email;
-    userPhone.textContent=u.phone||'—';
-    userBalance.textContent=u.balance;
-    userEarning.textContent=u.earning;
-    userFridges.textContent=u.fridges.length;
+async function getUser() {
+    try {
+        const r = await fetch(DOMAIN + '/api/me', { headers: { Authorization: 'Bearer ' + token } });
+        const d = await r.json();
+        if (!d.user) return logout();
+        const u = d.user;
+        userEmail.textContent = u.email;
+        userPhone.textContent = u.phone || '—';
+        userBalance.textContent = u.balance;
+        userEarning.textContent = u.earning;
+        userFridges.textContent = u.fridges.length;
 
-    userEmailProfile.textContent=u.email;
-    userPhoneProfile.textContent=u.phone||'—';
-    userBalanceProfile.textContent=u.balance;
-    userEarningProfile.textContent=u.earning;
-    userFridgesProfile.textContent=u.fridges.length;
+        userEmailProfile.textContent = u.email;
+        userPhoneProfile.textContent = u.phone || '—';
+        userBalanceProfile.textContent = u.balance;
+        userEarningProfile.textContent = u.earning;
+        userFridgesProfile.textContent = u.fridges.length;
 
-    refLink.textContent=DOMAIN+'/register.html?ref='+u.email;
-    refLink.href=refLink.textContent;
+        refLink.textContent = DOMAIN + '/register.html?ref=' + u.email;
+        refLink.href = refLink.textContent;
 
-    animateEarnings(0,Number(u.earning)||0);
-    loadEarningFridges(u.fridges);
-    loadOfferFridges();
-    if(d.isAdmin) document.getElementById('adminTab').style.display='block';
-  }catch(e){console.error(e);}
+        animateEarnings(0, Number(u.earning) || 0);
+        loadEarningFridges(u.fridges);
+        loadOfferFridges();
+        if (d.isAdmin) document.getElementById('adminTab').style.display = 'block';
+    } catch (e) { console.error(e); }
 }
 getUser();
 
-function logout(){localStorage.removeItem('bf_token');location.href='/login';}
-function animateEarnings(start,end){
-  const elem=document.getElementById('animatedEarnings');
-  let current=start;
-  const increment=Math.max(1,Math.floor((end-start)/100));
-  const interval=setInterval(()=>{
-    current+=increment;
-    if(current>=end){current=end;clearInterval(interval);}
-    elem.textContent=current.toLocaleString();
-  },50);
+function logout() {
+    localStorage.removeItem('bf_token');
+    location.href = '/login';
+}
+
+function animateEarnings(start, end) {
+    const elem = document.getElementById('animatedEarnings');
+    let current = start;
+    const increment = Math.max(1, Math.floor((end - start) / 100));
+    const interval = setInterval(() => {
+        current += increment;
+        if (current >= end) { current = end; clearInterval(interval); }
+        elem.textContent = current.toLocaleString();
+    }, 50);
 }
 
 // FETCH FRIDGES
-async function loadEarningFridges(userFridges){
-  const res=await fetch(DOMAIN+'/api/fridges',{headers:{Authorization:'Bearer '+token}});
-  const data=await res.json();
-  const list=document.getElementById('fridgeList');list.innerHTML='';
-  data.fridges.forEach(f=>{
-    if(f.id.startsWith('offer')) return;
-    const owned=userFridges.some(uf=>uf.id===f.id);
-    const div=document.createElement('div');
-    div.className='fridge';
-    div.innerHTML=`
-      <img src="${DOMAIN}/${f.img}" alt="${f.name}">
-      <div class="fridge-info">
-        <strong>${f.name}</strong>
-        <p>Price: KES ${f.price}</p>
-        <p>Daily Earn: KES ${f.dailyEarn}</p>
-        <button onclick="buyFridge('${f.id}','${f.name}',${f.price})">${owned?'Owned':'Buy'}</button>
-      </div>`;
-    list.appendChild(div);
-  });
+async function loadEarningFridges(userFridges) {
+    const res = await fetch(DOMAIN + '/api/fridges', { headers: { Authorization: 'Bearer ' + token } });
+    const data = await res.json();
+    const list = document.getElementById('fridgeList'); list.innerHTML = '';
+    data.fridges.forEach(f => {
+        if (f.id.startsWith('offer')) return;
+        const owned = userFridges.some(uf => uf.id === f.id);
+        const div = document.createElement('div');
+        div.className = 'fridge';
+        div.innerHTML = `
+            <img src="${DOMAIN}/${f.img}" alt="${f.name}">
+            <div class="fridge-info">
+                <strong>${f.name}</strong>
+                <p>Price: KES ${f.price}</p>
+                <p>Daily Earn: KES ${f.dailyEarn}</p>
+                <button onclick="buyFridge('${f.id}', '${f.name}', ${f.price})">${owned ? 'Owned' : 'Buy'}</button>
+            </div>`;
+        list.appendChild(div);
+    });
 }
 
-async function loadOfferFridges(){
-  const res=await fetch(DOMAIN+'/api/fridges',{headers:{Authorization:'Bearer '+token}});
-  const data=await res.json();
-  const list=document.getElementById('offerFridgeList');list.innerHTML='';
-  data.fridges.forEach(f=>{
-    if(!f.id.startsWith('offer')) return;
-    const div=document.createElement('div');div.className='fridge';
-    const locked=f.locked?'Locked':'Buy';
-    let remaining='';
-    if(!f.locked && f.startTime && f.durationHrs){
-      remaining=`<p id="timer-${f.id}">Calculating time...</p>`;
-    }
-    div.innerHTML=`
-      <img src="${DOMAIN}/${f.img}" alt="${f.name}">
-      <div class="fridge-info">
-        <strong>${f.name}</strong>
-        <p>Price: ${f.locked?'Locked':'KES '+f.price}</p>
-        <p>total Earn: ${f.locked?'Locked':'KES '+f.dailyEarn}</p>
-        ${remaining}
-        <button ${f.locked?'disabled':''} onclick="buyFridge('${f.id}','${f.name}',${f.price})">${locked}</button>
-      </div>`;
-    list.appendChild(div);
-    if(!f.locked && f.startTime && f.durationHrs) startCountdown(f.id,new Date(f.startTime),f.durationHrs);
-  });
+async function loadOfferFridges() {
+    const res = await fetch(DOMAIN + '/api/fridges', { headers: { Authorization: 'Bearer ' + token } });
+    const data = await res.json();
+    const list = document.getElementById('offerFridgeList'); list.innerHTML = '';
+    data.fridges.forEach(f => {
+        if (!f.id.startsWith('offer')) return;
+        const div = document.createElement('div'); div.className = 'fridge';
+        const locked = f.locked ? 'Locked' : 'Buy';
+        let remaining = '';
+        if (!f.locked && f.startTime && f.durationHrs) {
+            remaining = `<p id="timer-${f.id}">Calculating time...</p>`;
+        }
+        div.innerHTML = `
+            <img src="${DOMAIN}/${f.img}" alt="${f.name}">
+            <div class="fridge-info">
+                <strong>${f.name}</strong>
+                <p>Price: ${f.locked ? 'Locked' : 'KES ' + f.price}</p>
+                <p>Total Earn: ${f.locked ? 'Locked' : 'KES ' + f.dailyEarn}</p>
+                ${remaining}
+                <button ${f.locked ? 'disabled' : ''} onclick="buyFridge('${f.id}', '${f.name}', ${f.price})">${locked}</button>
+            </div>`;
+        list.appendChild(div);
+        if (!f.locked && f.startTime && f.durationHrs) startCountdown(f.id, new Date(f.startTime), f.durationHrs);
+    });
 }
 
 function startCountdown(id, startTime, durationHrs) {
-  const timerEl = document.getElementById('timer-' + id);
-  const endTime = new Date(startTime).getTime() + durationHrs * 3600 * 1000;
+    const timerEl = document.getElementById('timer-' + id);
+    const endTime = new Date(startTime).getTime() + durationHrs * 3600 * 1000;
 
-  // Add active class to make text green while counting
-  timerEl.classList.add('active');
+    // Add active class to make text green while counting
+    timerEl.classList.add('active');
 
-  const interval = setInterval(() => {
-    const diff = endTime - Date.now();
+    const interval = setInterval(() => {
+        const diff = endTime - Date.now();
 
-    if (diff <= 0) {
-      clearInterval(interval);
-      timerEl.textContent = 'Offer ended';
-      timerEl.classList.remove('active'); // back to grey
-      return;
-    }
+        if (diff <= 0) {
+            clearInterval(interval);
+            timerEl.textContent = 'Offer ended';
+            timerEl.classList.remove('active'); // back to grey
+            return;
+        }
 
-    const hrs = Math.floor(diff / 3600000);
-    const mins = Math.floor((diff % 3600000) / 60000);
-    const secs = Math.floor((diff % 60000) / 1000);
+        const hrs = Math.floor(diff / 3600000);
+        const mins = Math.floor((diff % 3600000) / 60000);
+        const secs = Math.floor((diff % 60000)           / 1000);
 
-    timerEl.textContent = `Remaining: ${hrs}h ${mins}m ${secs}s`;
-  }, 1000);
+        timerEl.textContent = `Remaining: ${hrs}h ${mins}m ${secs}s`;
+    }, 1000);
 }
 
-// SUBMIT PAYMENT
-document.getElementById('submitPaymentBtn').addEventListener('click', async ()=>{
-  const fridgeId=document.getElementById('submitPaymentBtn').dataset.fridgeId;
-  const phone=document.getElementById('modalPhone').value.trim();
-  const txn=document.getElementById('modalTxn').value.trim();
-  if(!phone||!txn){paymentMsg.textContent='Fill all fields';return;}
-  try{
-    const res=await fetch(DOMAIN+'/api/payment/submit',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-      body: JSON.stringify({fridgeId,phone,transactionCode:txn})
-    });
-    const d=await res.json();
-    paymentMsg.textContent=d.message||d.error;
-    if(!d.error) setTimeout(closeModal,2000);
-    getUser();
-  }catch(err){paymentMsg.textContent='Network error';}
+// INITIATE PAYMENT
+document.getElementById('submitPaymentBtn').addEventListener('click', async () => {
+    const fridgeId = document.getElementById('modalFridgeName').textContent; // Use fridge ID from context
+    const phone = document.getElementById('modalPhone').value.trim();
+
+    if (!phone) {
+        paymentMsg.textContent = 'Enter phone number';
+        return;
+    }
+
+    try {
+        const res = await fetch(DOMAIN + '/api/payment/initiate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ fridgeId, phone })
+        });
+        const d = await res.json();
+        paymentMsg.textContent = d.message || d.error;
+
+        if (!d.error) setTimeout(closeModal, 2000);
+        getUser(); // Refresh the user info
+    } catch (err) {
+        console.error(err);
+        paymentMsg.textContent = 'Network error';
+    }
 });
 
 // WITHDRAW
-document.getElementById('withdrawForm').addEventListener('submit', async e=>{
-  e.preventDefault();
-  const phone=document.getElementById('withdrawPhone').value.trim();
-  const amount=Number(document.getElementById('withdrawAmount').value);
-  if(!phone||!amount){withdrawMsg.textContent='Fill all fields';return;}
-  try{
-    const res=await fetch(DOMAIN+'/api/withdraw',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-      body: JSON.stringify({phone,amount})
-    });
-    const d = await res.json();
-    withdrawMsg.textContent = d.message || d.error;
-    getUser();
-  } catch (err) {
-    console.error(err);
-    withdrawMsg.textContent = 'Network or server error';
-  }
+document.getElementById('withdrawForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const phone = document.getElementById('withdrawPhone').value.trim();
+    const amount = Number(document.getElementById('withdrawAmount').value);
+    
+    if (!phone || !amount) {
+        withdrawMsg.textContent = 'Fill all fields';
+        return;
+    }
+
+    try {
+        const res = await fetch(DOMAIN + '/api/withdraw', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ phone, amount })
+        });
+        const d = await res.json();
+        withdrawMsg.textContent = d.message || d.error;
+        getUser();
+    } catch (err) {
+        console.error(err);
+        withdrawMsg.textContent = 'Network or server error';
+    }
 });
 
 // ADMIN: CREATE OFFER CODE
 async function createOfferCode() {
-  const code = document.getElementById('adminCode').value.trim();
-  const amount = Number(document.getElementById('adminAmount').value);
-  if (!code || !amount) { adminMsg.textContent = 'Fill all fields'; return; }
-  try {
-    const res = await fetch(DOMAIN + '/api/admin/offercode', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ code, amount })
-    });
-    const d = await res.json();
-    adminMsg.textContent = d.message || d.error;
-  } catch (err) {
-    console.error(err);
-    adminMsg.textContent = 'Network error';
-  }
+    const code = document.getElementById('adminCode').value.trim();
+    const amount = Number(document.getElementById('adminAmount').value);
+    
+    if (!code || !amount) { 
+        adminMsg.textContent = 'Fill all fields'; 
+        return; 
+    }
+
+    try {
+        const res = await fetch(DOMAIN + '/api/admin/offercode', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ code, amount })
+        });
+        const d = await res.json();
+        adminMsg.textContent = d.message || d.error;
+    } catch (err) {
+        console.error(err);
+        adminMsg.textContent = 'Network error';
+    }
 }
 
 // ADMIN: UNLOCK FRIDGE
 async function unlockFridge() {
-  const id = document.getElementById('unlockFridgeId').value.trim();
-  const price = Number(document.getElementById('unlockPrice').value);
-  const earn = Number(document.getElementById('unlockEarn').value);
-  const duration = Number(document.getElementById('unlockDuration').value);
-  if (!id || !price || !earn || !duration) { unlockMsg.textContent = 'Fill all fields'; return; }
-  try {
-    const res = await fetch(DOMAIN + '/api/admin/unlock', {  // <-- here
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ fridgeId: id, price, dailyEarn: earn, durationHrs: duration })
-    });
-    const d = await res.json();
-    unlockMsg.textContent = d.message || d.error;
-    getUser();
-  } catch (err) {
-    console.error(err);
-    unlockMsg.textContent = 'Network error';
-  }
+    const id = document.getElementById('unlockFridgeId').value.trim();
+    const price = Number(document.getElementById('unlockPrice').value);
+    const earn = Number(document.getElementById('unlockEarn').value);
+    const duration = Number(document.getElementById('unlockDuration').value);
+    
+    if (!id || !price || !earn || !duration) {
+        unlockMsg.textContent = 'Fill all fields';
+        return;
+    }
+
+    try {
+        const res = await fetch(DOMAIN + '/api/admin/unlock', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ fridgeId: id, price, dailyEarn: earn, durationHrs: duration })
+        });
+        const d = await res.json();
+        unlockMsg.textContent = d.message || d.error;
+        getUser();
+    } catch (err) {
+        console.error(err);
+        unlockMsg.textContent = 'Network error';
+    }
 }
 
 // ADMIN: LOCK FRIDGE
 async function lockFridge() {
-  const id = document.getElementById('lockFridgeId').value.trim();
-  if (!id) { lockMsg.textContent = 'Enter fridge ID'; return; }
-  try {
-    const res = await fetch(DOMAIN + '/api/admin/lock', {  // <-- here
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ fridgeId: id })
-    });
-    const d = await res.json();
-    lockMsg.textContent = d.message || d.error;
-    getUser();
-  } catch (err) {
-    console.error(err);
-    lockMsg.textContent = 'Network error';
-  }
+    const id = document.getElementById('lockFridgeId').value.trim();
+    if (!id) {
+        lockMsg.textContent = 'Enter fridge ID';
+        return;
+    }
+
+    try {
+        const res = await fetch(DOMAIN + '/api/admin/lock', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ fridgeId: id })
+        });
+        const d = await res.json();
+        lockMsg.textContent = d.message || d.error;
+        getUser();
+    } catch (err) {
+        console.error(err);
+        lockMsg.textContent = 'Network error';
+    }
 }
 </script>
 </body>
 </html>
+
+
