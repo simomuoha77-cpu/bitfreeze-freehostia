@@ -1,0 +1,1526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bitfreeze — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+    --bg: #07090d;
+    --surface: #0d1117;
+    --card: #111820;
+    --border: rgba(255,255,255,0.06);
+    --accent: #ff8a00;
+    --accent2: #ffb347;
+    --green: #00e676;
+    --red: #ff3d5a;
+    --blue: #3d9eff;
+    --muted: #5a6a7a;
+    --text: #dce8f0;
+    --heading: #ffffff;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* ── LOGIN SCREEN ── */
+#loginScreen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:
+        radial-gradient(ellipse 800px 500px at 60% 0%, rgba(255,138,0,0.07) 0%, transparent 70%),
+        radial-gradient(ellipse 600px 400px at 10% 100%, rgba(61,158,255,0.05) 0%, transparent 70%),
+        var(--bg);
+    padding: 20px;
+}
+
+.login-box {
+    width: 100%;
+    max-width: 420px;
+    animation: riseIn 0.5s cubic-bezier(0.16,1,0.3,1);
+}
+
+@keyframes riseIn { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
+@keyframes fadeSlide { from { opacity:0; transform:translateX(-10px); } to { opacity:1; transform:translateX(0); } }
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+
+.login-logo {
+    text-align: center;
+    margin-bottom: 36px;
+}
+
+.login-logo .icon {
+    width: 64px; height: 64px;
+    background: linear-gradient(135deg, #ff8a00, #ffb347);
+    border-radius: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+    margin-bottom: 16px;
+    box-shadow: 0 12px 40px rgba(255,138,0,0.3);
+}
+
+.login-logo h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--heading);
+    letter-spacing: -0.5px;
+}
+
+.login-logo p {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 4px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 500;
+}
+
+.login-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+}
+
+.field { margin-bottom: 18px; }
+
+.field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--muted);
+    margin-bottom: 8px;
+}
+
+.field input {
+    width: 100%;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 13px 16px;
+    color: var(--heading);
+    font-size: 14px;
+    font-family: 'DM Sans', sans-serif;
+    transition: border 0.2s, box-shadow 0.2s;
+    outline: none;
+}
+
+.field input:focus {
+    border-color: rgba(255,138,0,0.4);
+    box-shadow: 0 0 0 3px rgba(255,138,0,0.08);
+}
+
+.btn-primary {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(90deg, #ff8a00, #ffb347);
+    border: none;
+    border-radius: 10px;
+    color: #111;
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+    transition: opacity 0.2s, transform 0.1s;
+    margin-top: 6px;
+}
+
+.btn-primary:hover { opacity: 0.9; }
+.btn-primary:active { transform: scale(0.99); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+#loginErr {
+    font-size: 13px;
+    color: var(--red);
+    text-align: center;
+    margin-top: 14px;
+    min-height: 18px;
+}
+
+/* ── ADMIN APP ── */
+#adminApp { display: none; min-height: 100vh; }
+
+/* Sidebar */
+.layout { display: flex; min-height: 100vh; }
+
+.sidebar {
+    width: 230px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0; left: 0;
+    height: 100vh;
+    z-index: 100;
+    transition: transform 0.3s;
+}
+
+.sidebar-logo {
+    padding: 24px 20px 20px;
+    border-bottom: 1px solid var(--border);
+}
+
+.sidebar-logo .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sidebar-logo .brand .ico {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, #ff8a00, #ffb347);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.sidebar-logo .brand span {
+    font-family: 'Syne', sans-serif;
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--heading);
+}
+
+.sidebar-logo .role-badge {
+    display: inline-block;
+    background: rgba(255,138,0,0.12);
+    color: var(--accent);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 20px;
+    margin-top: 10px;
+    border: 1px solid rgba(255,138,0,0.2);
+}
+
+.nav { flex: 1; padding: 16px 12px; overflow-y: auto; }
+
+.nav-section-label {
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+    padding: 0 8px;
+    margin: 16px 0 6px;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--muted);
+    transition: all 0.15s;
+    margin-bottom: 2px;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+}
+
+.nav-item:hover { background: rgba(255,255,255,0.04); color: var(--text); }
+
+.nav-item.active {
+    background: rgba(255,138,0,0.1);
+    color: var(--accent);
+    border: 1px solid rgba(255,138,0,0.15);
+}
+
+.nav-item .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+.badge-count {
+    margin-left: auto;
+    background: var(--red);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 20px;
+    min-width: 20px;
+    text-align: center;
+}
+
+.sidebar-footer {
+    padding: 16px 12px;
+    border-top: 1px solid var(--border);
+}
+
+.admin-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.03);
+}
+
+.admin-avatar {
+    width: 34px; height: 34px;
+    background: linear-gradient(135deg, #ff8a00, #ffb347);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    font-weight: 800;
+    color: #111;
+    font-family: 'Syne', sans-serif;
+    flex-shrink: 0;
+}
+
+.admin-email {
+    font-size: 12px;
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+}
+
+.logout-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px;
+    transition: color 0.2s;
+}
+.logout-btn:hover { color: var(--red); }
+
+/* Main content */
+.main {
+    margin-left: 230px;
+    flex: 1;
+    min-height: 100vh;
+    background:
+        radial-gradient(ellipse 1000px 400px at 80% 0%, rgba(255,138,0,0.04) 0%, transparent 60%),
+        var(--bg);
+}
+
+.topbar {
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    background: rgba(7,9,13,0.9);
+    backdrop-filter: blur(12px);
+    z-index: 50;
+}
+
+.page-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--heading);
+}
+
+.topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.refresh-btn {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 13px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+}
+.refresh-btn:hover { color: var(--text); background: rgba(255,255,255,0.08); }
+
+.content { padding: 28px 32px; }
+
+/* Pages */
+.page { display: none; animation: fadeSlide 0.25s ease; }
+.page.active { display: block; }
+
+/* Stats row */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+}
+
+.stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: -20px; right: -20px;
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    opacity: 0.08;
+}
+
+.stat-card.orange::before { background: #ff8a00; }
+.stat-card.green::before  { background: #00e676; }
+.stat-card.red::before    { background: #ff3d5a; }
+.stat-card.blue::before   { background: #3d9eff; }
+
+.stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+.stat-value { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; color: var(--heading); margin: 6px 0 0; }
+.stat-card.orange .stat-value { color: var(--accent); }
+.stat-card.green .stat-value  { color: var(--green); }
+.stat-card.red .stat-value    { color: var(--red); }
+.stat-card.blue .stat-value   { color: var(--blue); }
+
+/* Section headers */
+.section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--heading);
+}
+
+/* Tables */
+.table-wrap {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 28px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+thead th {
+    background: rgba(255,255,255,0.02);
+    padding: 13px 16px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+}
+
+tbody tr {
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    transition: background 0.15s;
+}
+
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: rgba(255,255,255,0.02); }
+
+tbody td {
+    padding: 13px 16px;
+    color: var(--text);
+    vertical-align: middle;
+}
+
+.mono {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--accent2);
+}
+
+.pill {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+.pill-pending  { background: rgba(255,138,0,0.12); color: var(--accent); border: 1px solid rgba(255,138,0,0.2); }
+.pill-approved { background: rgba(0,230,118,0.10); color: var(--green);  border: 1px solid rgba(0,230,118,0.2); }
+.pill-rejected { background: rgba(255,61,90,0.10);  color: var(--red);   border: 1px solid rgba(255,61,90,0.2); }
+
+/* Action buttons */
+.act-btn {
+    padding: 6px 14px;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+}
+
+.act-approve { background: rgba(0,230,118,0.12); color: var(--green); border: 1px solid rgba(0,230,118,0.2); }
+.act-approve:hover { background: rgba(0,230,118,0.25); }
+
+.act-reject { background: rgba(255,61,90,0.10); color: var(--red); border: 1px solid rgba(255,61,90,0.15); }
+.act-reject:hover { background: rgba(255,61,90,0.22); }
+
+.act-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Empty state */
+.empty-state {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--muted);
+}
+.empty-state .icon { font-size: 36px; margin-bottom: 10px; }
+.empty-state p { font-size: 14px; }
+
+/* Form cards */
+.form-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 20px;
+}
+
+.form-card h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--heading);
+    margin-bottom: 18px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+}
+
+.form-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+
+.form-group { flex: 1; min-width: 160px; }
+
+.form-group label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    margin-bottom: 7px;
+}
+
+.form-group input, .form-group select {
+    width: 100%;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 11px 14px;
+    color: var(--heading);
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+    transition: border 0.2s;
+}
+
+.form-group input:focus, .form-group select:focus {
+    border-color: rgba(255,138,0,0.4);
+}
+
+.form-group select option { background: #1a2030; }
+
+.btn-action {
+    padding: 11px 22px;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    font-family: 'Syne', sans-serif;
+    transition: all 0.15s;
+}
+
+.btn-orange { background: linear-gradient(90deg, #ff8a00, #ffb347); color: #111; }
+.btn-orange:hover { opacity: 0.88; }
+
+.btn-red { background: rgba(255,61,90,0.15); color: var(--red); border: 1px solid rgba(255,61,90,0.25); }
+.btn-red:hover { background: rgba(255,61,90,0.28); }
+
+.btn-green { background: rgba(0,230,118,0.12); color: var(--green); border: 1px solid rgba(0,230,118,0.2); }
+.btn-green:hover { background: rgba(0,230,118,0.22); }
+
+.form-msg {
+    font-size: 13px;
+    margin-top: 10px;
+    min-height: 18px;
+}
+.form-msg.ok  { color: var(--green); }
+.form-msg.err { color: var(--red); }
+
+/* User table email */
+.user-email { font-weight: 500; color: var(--heading); }
+
+/* Fridge grid */
+.fridge-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+    margin-bottom: 28px;
+}
+
+.fridge-tile {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+    transition: border 0.2s;
+}
+
+.fridge-tile.unlocked { border-color: rgba(0,230,118,0.2); }
+.fridge-tile.locked   { border-color: rgba(255,61,90,0.12); }
+
+.fridge-tile .f-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--heading);
+    margin-bottom: 8px;
+}
+
+.fridge-tile .f-id { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); }
+
+.fridge-meta { margin: 10px 0; font-size: 12px; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+.fridge-meta span { color: var(--text); }
+
+.fridge-actions { margin-top: 12px; display: flex; gap: 8px; }
+
+/* Mobile hamburger */
+.hamburger {
+    display: none;
+    background: none;
+    border: none;
+    color: var(--text);
+    font-size: 22px;
+    cursor: pointer;
+    padding: 4px;
+}
+
+.overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 90;
+}
+
+@media (max-width: 768px) {
+    .sidebar { transform: translateX(-100%); }
+    .sidebar.open { transform: translateX(0); }
+    .main { margin-left: 0; }
+    .content { padding: 20px 16px; }
+    .topbar { padding: 16px; }
+    .hamburger { display: block; }
+    .overlay.show { display: block; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    table { font-size: 12px; }
+    thead th, tbody td { padding: 10px 10px; }
+}
+
+/* Loading spinner */
+.spinner {
+    display: inline-block;
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,138,0,0.3);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Toast */
+#toast {
+    position: fixed;
+    bottom: 28px; right: 28px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 20px;
+    font-size: 14px;
+    color: var(--text);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+    z-index: 9999;
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
+    max-width: 320px;
+}
+#toast.show { transform: translateY(0); opacity: 1; }
+#toast.ok  { border-color: rgba(0,230,118,0.3); }
+#toast.err { border-color: rgba(255,61,90,0.3); }
+</style>
+</head>
+<body>
+
+<!-- ── LOGIN ── -->
+<div id="loginScreen">
+    <div class="login-box">
+        <div class="login-logo">
+            <div class="icon">❄️</div>
+            <h1>Bitfreeze</h1>
+            <p>Admin Portal</p>
+        </div>
+        <div class="login-card">
+            <div class="field">
+                <label>Admin Email</label>
+                <input type="email" id="loginEmail" placeholder="admin@example.com">
+            </div>
+            <div class="field">
+                <label>Password</label>
+                <input type="password" id="loginPassword" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+            </div>
+            <button class="btn-primary" onclick="doLogin()" id="loginBtn">Sign In to Admin Panel</button>
+            <p id="loginErr"></p>
+        </div>
+    </div>
+</div>
+
+<!-- ── ADMIN APP ── -->
+<div id="adminApp">
+    <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+    <div class="layout">
+
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-logo">
+                <div class="brand">
+                    <div class="ico">❄️</div>
+                    <span>Bitfreeze</span>
+                </div>
+                <div class="role-badge">Admin Panel</div>
+            </div>
+
+            <nav class="nav">
+                <div class="nav-section-label">Overview</div>
+                <button class="nav-item active" onclick="showPage('overview', this)">
+                    <span class="nav-icon">📊</span> Dashboard
+                </button>
+
+                <div class="nav-section-label">Requests</div>
+                <button class="nav-item" onclick="showPage('payments', this)">
+                    <span class="nav-icon">💰</span> Payments
+                    <span class="badge-count" id="payBadge" style="display:none"></span>
+                </button>
+                <button class="nav-item" onclick="showPage('withdrawals', this)">
+                    <span class="nav-icon">💸</span> Withdrawals
+                    <span class="badge-count" id="wdBadge" style="display:none"></span>
+                </button>
+
+                <div class="nav-section-label">Management</div>
+                <button class="nav-item" onclick="showPage('users', this)">
+                    <span class="nav-icon">👥</span> Users
+                </button>
+                <button class="nav-item" onclick="showPage('fridges', this)">
+                    <span class="nav-icon">🧊</span> Fridges
+                </button>
+                <button class="nav-item" onclick="showPage('offers', this)">
+                    <span class="nav-icon">🎁</span> Offer Codes
+                </button>
+                <button class="nav-item" onclick="showPage('links', this)">
+                    <span class="nav-icon">🔗</span> Community Links
+                </button>
+                <button class="nav-item" onclick="showPage('broadcast', this)">
+                    <span class="nav-icon">📢</span> Broadcast
+                </button>
+                <button class="nav-item" onclick="showPage('logs', this)">
+                    <span class="nav-icon">📋</span> Activity Log
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="admin-info">
+                    <div class="admin-avatar" id="adminAvatar">A</div>
+                    <div class="admin-email" id="adminEmailDisplay">—</div>
+                    <button class="logout-btn" onclick="doLogout()" title="Logout">⏏</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main -->
+        <main class="main">
+            <div class="topbar">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <button class="hamburger" onclick="openSidebar()">☰</button>
+                    <div class="page-title" id="pageTitle">Dashboard</div>
+                </div>
+                <div class="topbar-right">
+                    <button class="refresh-btn" onclick="refreshAll()">↻ Refresh</button>
+                </div>
+            </div>
+
+            <div class="content">
+
+                <!-- OVERVIEW -->
+                <div class="page active" id="page-overview">
+                    <div class="stats-grid">
+                        <div class="stat-card orange">
+                            <div class="stat-label">Pending Payments</div>
+                            <div class="stat-value" id="statPendingPay">—</div>
+                        </div>
+                        <div class="stat-card blue">
+                            <div class="stat-label">Pending Withdrawals</div>
+                            <div class="stat-value" id="statPendingWd">—</div>
+                        </div>
+                        <div class="stat-card green">
+                            <div class="stat-label">Total Users</div>
+                            <div class="stat-value" id="statUsers">—</div>
+                        </div>
+                        <div class="stat-card red">
+                            <div class="stat-label">Total Payments</div>
+                            <div class="stat-value" id="statTotalPay">—</div>
+                        </div>
+                    </div>
+
+                    <div class="section-head">
+                        <div class="section-title">Recent Pending Payments</div>
+                    </div>
+                    <div class="table-wrap" id="overviewPayTable"></div>
+
+                    <div class="section-head" style="margin-top:8px;">
+                        <div class="section-title">Recent Pending Withdrawals</div>
+                    </div>
+                    <div class="table-wrap" id="overviewWdTable"></div>
+                </div>
+
+                <!-- PAYMENTS -->
+                <div class="page" id="page-payments">
+                    <div class="section-head">
+                        <div class="section-title">All Payment Requests</div>
+                    </div>
+                    <div class="table-wrap" id="paymentsTable"></div>
+                </div>
+
+                <!-- WITHDRAWALS -->
+                <div class="page" id="page-withdrawals">
+                    <div class="section-head">
+                        <div class="section-title">All Withdrawal Requests</div>
+                    </div>
+                    <div class="table-wrap" id="withdrawalsTable"></div>
+                </div>
+
+                <!-- USERS -->
+                <div class="page" id="page-users">
+                    <div class="section-head">
+                        <div class="section-title">All Users</div>
+                    </div>
+                    <div style="display:flex;gap:10px;margin-bottom:16px;">
+                        <input type="text" id="userSearchInput" placeholder="🔍  Search by email, phone or name..." 
+                            style="flex:1;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:9px;padding:11px 14px;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;"
+                            oninput="searchUsers(this.value)">
+                        <button class="refresh-btn" onclick="loadUsers()" style="white-space:nowrap;">Show All</button>
+                    </div>
+                    <div class="table-wrap" id="usersTable"></div>
+
+                    <div class="form-card" style="margin-top:24px;">
+                        <h3>✏️ Edit User Balance / Earnings</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>User Email</label>
+                                <input type="email" id="editUserEmail" placeholder="user@example.com">
+                            </div>
+                            <div class="form-group">
+                                <label>New Deposit Balance (KES)</label>
+                                <input type="number" id="editBalance" placeholder="0" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>New Earnings Balance (KES)</label>
+                                <input type="number" id="editEarning" placeholder="0" min="0">
+                            </div>
+                        </div>
+                        <button class="btn-action btn-orange" onclick="editUser()">Update User</button>
+                        <div class="form-msg" id="editUserMsg"></div>
+                    </div>
+                </div>
+
+                <!-- FRIDGES -->
+                <div class="page" id="page-fridges">
+                    <div class="section-head">
+                        <div class="section-title">Offer Fridges Management</div>
+                    </div>
+                    <div class="fridge-grid" id="fridgeGrid"></div>
+
+                    <div class="form-card">
+                        <h3>🔓 Unlock Offer Fridge</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Fridge ID</label>
+                                <select id="unlockFridgeId">
+                                    <option value="">Select fridge...</option>
+                                    <option value="offer1">offer1</option>
+                                    <option value="offer2">offer2</option>
+                                    <option value="offer3">offer3</option>
+                                    <option value="offer4">offer4</option>
+                                    <option value="offer5">offer5</option>
+                                    <option value="offer6">offer6</option>
+                                    <option value="offer7">offer7</option>
+                                    <option value="offer8">offer8</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Price (KES)</label>
+                                <input type="number" id="unlockPrice" placeholder="e.g. 1500" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Total Earn (KES)</label>
+                                <input type="number" id="unlockEarn" placeholder="e.g. 300" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Duration (hours)</label>
+                                <input type="number" id="unlockDuration" placeholder="e.g. 48" min="1">
+                            </div>
+                        </div>
+                        <button class="btn-action btn-green" onclick="unlockFridge()">🔓 Unlock Fridge</button>
+                        <div class="form-msg" id="unlockMsg"></div>
+                    </div>
+
+                    <div class="form-card">
+                        <h3>🔒 Lock Offer Fridge</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Fridge ID</label>
+                                <select id="lockFridgeId">
+                                    <option value="">Select fridge...</option>
+                                    <option value="offer1">offer1</option>
+                                    <option value="offer2">offer2</option>
+                                    <option value="offer3">offer3</option>
+                                    <option value="offer4">offer4</option>
+                                    <option value="offer5">offer5</option>
+                                    <option value="offer6">offer6</option>
+                                    <option value="offer7">offer7</option>
+                                    <option value="offer8">offer8</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button class="btn-action btn-red" onclick="lockFridge()">🔒 Lock Fridge</button>
+                        <div class="form-msg" id="lockMsg"></div>
+                    </div>
+                </div>
+
+                <!-- OFFER CODES -->
+                <div class="page" id="page-offers">
+                    <div class="form-card">
+                        <h3>🎁 Generate Offer Code</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Amount (KES)</label>
+                                <input type="number" id="offerAmount" placeholder="e.g. 100" min="1">
+                            </div>
+                        </div>
+                        <button class="btn-action btn-orange" onclick="createOfferCode()">⚡ Generate Code</button>
+                        <div class="form-msg" id="offerMsg"></div>
+
+                        <!-- Generated code display -->
+                        <div id="generatedCodeBox" style="display:none;margin-top:20px;background:rgba(255,138,0,0.06);border:1px solid rgba(255,138,0,0.25);border-radius:12px;padding:20px;">
+                            <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px;font-weight:600;">Generated Code</div>
+                            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                                <div id="generatedCodeText" style="font-family:'DM Mono',monospace;font-size:26px;font-weight:700;color:var(--accent);letter-spacing:4px;"></div>
+                                <button class="btn-action btn-orange" onclick="copyCode()" id="copyCodeBtn" style="padding:8px 18px;font-size:13px;">📋 Copy</button>
+                            </div>
+                            <div style="font-size:12px;color:var(--muted);margin-top:8px;" id="generatedCodeMeta"></div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        
+                <!-- COMMUNITY LINKS -->
+                <div class="page" id="page-links">
+                    <div class="form-card">
+                        <h3>🔗 Community & Contact Links</h3>
+                        <p style="font-size:13px;color:var(--muted);margin-bottom:18px;">These links appear on the Support page for your clients. Update them anytime.</p>
+                        <div class="form-row">
+                            <div class="form-group" style="flex:2;min-width:100%">
+                                <label>WhatsApp Group Link</label>
+                                <input type="url" id="waLink" placeholder="https://chat.whatsapp.com/...">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group" style="flex:2;min-width:100%">
+                                <label>Telegram Group / Channel Link</label>
+                                <input type="url" id="tgLink" placeholder="https://t.me/...">
+                            </div>
+                        </div>
+                        <button class="btn-action btn-orange" onclick="saveLinks()">💾 Save Links</button>
+                        <div class="form-msg" id="linksMsg"></div>
+                    </div>
+
+                    <div class="form-card" style="margin-top:0">
+                        <h3>👁 Current Links</h3>
+                        <div id="currentLinks" style="font-size:13px;color:var(--muted);">Loading...</div>
+                    </div>
+                </div>
+
+
+                <!-- BROADCAST -->
+                <div class="page" id="page-broadcast">
+                    <div class="form-card">
+                        <h3>📢 Broadcast Message to All Users</h3>
+                        <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">This message will be shown to all users on their dashboard as a notification banner.</p>
+                        <div class="form-group" style="margin-bottom:14px;">
+                            <label>Message</label>
+                            <textarea id="broadcastMsg" rows="4" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:9px;padding:12px;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;resize:vertical;box-sizing:border-box;" placeholder="e.g. 🎁 New Offer Fridge unlocked! Check the Offer tab now..."></textarea>
+                        </div>
+                        <button class="btn-action btn-orange" onclick="sendBroadcast()">📢 Send Broadcast</button>
+                        <div class="form-msg" id="broadcastFormMsg"></div>
+                    </div>
+                    <div class="form-card">
+                        <h3>📜 Broadcast History</h3>
+                        <div id="broadcastHistory" style="font-size:13px;color:var(--muted);">Loading...</div>
+                    </div>
+                </div>
+
+                <!-- ACTIVITY LOG -->
+                <div class="page" id="page-logs">
+                    <div class="section-head">
+                        <div class="section-title">Admin Activity Log</div>
+                        <button class="refresh-btn" onclick="loadLogs()">↻ Refresh</button>
+                    </div>
+                    <div class="table-wrap" id="logsTable"></div>
+                </div>
+
+</main>
+    </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const DOMAIN = window.location.origin;
+let adminToken = localStorage.getItem('bf_admin_token');
+
+const pageTitles = {
+    overview: 'Dashboard',
+    payments: 'Payment Requests',
+    withdrawals: 'Withdrawal Requests',
+    users: 'User Management',
+    fridges: 'Fridge Management',
+    offers: 'Offer Codes',
+    links: 'Community Links',
+    broadcast: 'Broadcast Message',
+    logs: 'Activity Log'
+};
+
+// ── TOAST ──
+function toast(msg, type = 'ok') {
+    const el = document.getElementById('toast');
+    el.textContent = (type === 'ok' ? '✅ ' : '❌ ') + msg;
+    el.className = 'show ' + type;
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.className = '', 3200);
+}
+
+// ── AUTH CHECK ──
+if (adminToken) {
+    verifyAndLoad();
+} else {
+    document.getElementById('loginScreen').style.display = 'flex';
+}
+
+async function doLogin() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass  = document.getElementById('loginPassword').value;
+    const err   = document.getElementById('loginErr');
+    const btn   = document.getElementById('loginBtn');
+
+    if (!email || !pass) { err.textContent = 'Please fill in all fields'; return; }
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Signing in...';
+    err.textContent = '';
+
+    try {
+        const r = await fetch(DOMAIN + '/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password: pass })
+        });
+        const d = await r.json();
+        if (d.error) { err.textContent = d.error; btn.disabled=false; btn.textContent='Sign In to Admin Panel'; return; }
+
+        // Verify admin
+        const me = await fetch(DOMAIN + '/api/me', { headers: { Authorization: 'Bearer ' + d.token } });
+        const md = await me.json();
+        if (!md.isAdmin) { err.textContent = 'Access denied — not an admin account'; btn.disabled=false; btn.textContent='Sign In to Admin Panel'; return; }
+
+        localStorage.setItem('bf_admin_token', d.token);
+        adminToken = d.token;
+        loadApp(md.user.email);
+    } catch(e) {
+        err.textContent = 'Network error. Try again.';
+        btn.disabled=false;
+        btn.textContent='Sign In to Admin Panel';
+    }
+}
+
+async function verifyAndLoad() {
+    try {
+        const r = await fetch(DOMAIN + '/api/me', { headers: { Authorization: 'Bearer ' + adminToken } });
+        const d = await r.json();
+        if (!d.isAdmin) { doLogout(); return; }
+        loadApp(d.user.email);
+    } catch { doLogout(); }
+}
+
+function loadApp(email) {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('adminApp').style.display = 'block';
+    document.getElementById('adminEmailDisplay').textContent = email;
+    document.getElementById('adminAvatar').textContent = email[0].toUpperCase();
+    refreshAll();
+}
+
+function doLogout() {
+    localStorage.removeItem('bf_admin_token');
+    adminToken = null;
+    document.getElementById('adminApp').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('loginErr').textContent = '';
+    document.getElementById('loginEmail').value = '';
+    document.getElementById('loginPassword').value = '';
+    document.getElementById('loginBtn').disabled = false;
+    document.getElementById('loginBtn').textContent = 'Sign In to Admin Panel';
+}
+
+// ── NAVIGATION ──
+function showPage(id, btn) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    document.getElementById('page-' + id).classList.add('active');
+    btn.classList.add('active');
+    document.getElementById('pageTitle').textContent = pageTitles[id];
+    closeSidebar();
+    loadPage(id);
+}
+
+function loadPage(id) {
+    if (id === 'overview')    { loadOverview(); }
+    if (id === 'payments')    { loadPayments(); }
+    if (id === 'withdrawals') { loadWithdrawals(); }
+    if (id === 'users')       { loadUsers(); }
+    if (id === 'fridges')     { loadFridges(); }
+    if (id === 'links')       { loadLinks(); }
+    if (id === 'broadcast')   { loadBroadcastHistory(); }
+    if (id === 'logs')        { loadLogs(); }
+}
+
+function refreshAll() {
+    const active = document.querySelector('.page.active');
+    if (!active) return;
+    const id = active.id.replace('page-', '');
+    loadPage(id);
+}
+
+// ── SIDEBAR ──
+function openSidebar()  { document.getElementById('sidebar').classList.add('open'); document.getElementById('overlay').classList.add('show'); }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('overlay').classList.remove('show'); }
+
+// ── API HELPER ──
+async function api(path, method='GET', body=null) {
+    const opts = { method, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken } };
+    if (body) opts.body = JSON.stringify(body);
+    const r = await fetch(DOMAIN + path, opts);
+    return r.json();
+}
+
+// ── FORMAT DATE ──
+function fmtDate(d) {
+    if (!d) return '—';
+    return new Date(d).toLocaleString('en-KE', { dateStyle:'medium', timeStyle:'short' });
+}
+
+// ── OVERVIEW ──
+async function loadOverview() {
+    const [pays, wds, users] = await Promise.all([
+        api('/api/admin/payments'),
+        api('/api/admin/withdrawals'),
+        api('/api/admin/users')
+    ]);
+
+    const pendPay = (pays.payments||[]).filter(p=>!p.approved);
+    const pendWd  = (wds.withdrawals||[]).filter(w=>!w.approved);
+    const allPay  = pays.payments||[];
+    const allUsers = users.users||[];
+
+    document.getElementById('statPendingPay').textContent = pendPay.length;
+    document.getElementById('statPendingWd').textContent  = pendWd.length;
+    document.getElementById('statUsers').textContent      = allUsers.length;
+    document.getElementById('statTotalPay').textContent   = allPay.length;
+
+    // Update badges
+    const pb = document.getElementById('payBadge');
+    const wb = document.getElementById('wdBadge');
+    if (pendPay.length > 0) { pb.style.display='inline'; pb.textContent=pendPay.length; } else { pb.style.display='none'; }
+    if (pendWd.length > 0)  { wb.style.display='inline'; wb.textContent=pendWd.length; } else { wb.style.display='none'; }
+
+    document.getElementById('overviewPayTable').innerHTML = renderPayTable(pendPay.slice(0,5), true);
+    document.getElementById('overviewWdTable').innerHTML  = renderWdTable(pendWd.slice(0,5), true);
+}
+
+// ── PAYMENTS ──
+async function loadPayments() {
+    const d = await api('/api/admin/payments');
+    document.getElementById('paymentsTable').innerHTML = renderPayTable(d.payments||[], false);
+}
+
+function renderPayTable(list, compact) {
+    if (!list.length) return `<div class="empty-state"><div class="icon">✅</div><p>No pending payments</p></div>`;
+    return `<table>
+        <thead><tr>
+            <th>User</th><th>Fridge</th><th>Amount</th><th>Txn Code</th>
+            ${compact?'':'<th>Date</th>'}
+            <th>Status</th><th>Actions</th>
+        </tr></thead>
+        <tbody>${list.map(p => `<tr>
+            <td class="user-email">${p.userEmail}</td>
+            <td>${p.fridgeName}</td>
+            <td><strong>KES ${(p.fridgePrice||0).toLocaleString()}</strong></td>
+            <td><span class="mono">${p.transactionCode||'—'}</span></td>
+            ${compact?'': `<td style="color:var(--muted);font-size:12px">${fmtDate(p.createdAt)}</td>`}
+            <td><span class="pill ${p.approved?'pill-approved':'pill-pending'}">${p.approved?'Approved':'Pending'}</span></td>
+            <td>${!p.approved ? `
+                <button class="act-btn act-approve" onclick="actPayment('${p._id}','approve',this)">✅ Approve</button>
+                <button class="act-btn act-reject"  onclick="actPayment('${p._id}','reject',this)"  style="margin-left:6px">❌ Reject</button>
+            ` : '<span style="color:var(--muted);font-size:12px">Done</span>'}</td>
+        </tr>`).join('')}</tbody>
+    </table>`;
+}
+
+async function actPayment(id, action, btn) {
+    btn.disabled = true;
+    const d = await api('/api/admin/payment/' + action, 'POST', { paymentId: id });
+    if (d.error) { toast(d.error, 'err'); btn.disabled=false; return; }
+    toast(action==='approve' ? 'Payment approved!' : 'Payment rejected');
+    loadOverview();
+    if (document.getElementById('page-payments').classList.contains('active')) loadPayments();
+}
+
+// ── WITHDRAWALS ──
+async function loadWithdrawals() {
+    const d = await api('/api/admin/withdrawals');
+    document.getElementById('withdrawalsTable').innerHTML = renderWdTable(d.withdrawals||[], false);
+}
+
+function renderWdTable(list, compact) {
+    if (!list.length) return `<div class="empty-state"><div class="icon">✅</div><p>No pending withdrawals</p></div>`;
+    return `<table>
+        <thead><tr>
+            <th>User</th><th>Phone</th><th>Amount</th>
+            ${compact?'':'<th>Date</th>'}
+            <th>Status</th><th>Actions</th>
+        </tr></thead>
+        <tbody>${list.map(w => `<tr>
+            <td class="user-email">${w.userEmail}</td>
+            <td><span class="mono">${w.phone}</span></td>
+            <td><strong>KES ${(w.amount||0).toLocaleString()}</strong></td>
+            ${compact?'': `<td style="color:var(--muted);font-size:12px">${fmtDate(w.createdAt)}</td>`}
+            <td><span class="pill ${w.approved?'pill-approved':'pill-pending'}">${w.approved?'Approved':'Pending'}</span></td>
+            <td>${!w.approved ? `
+                <button class="act-btn act-approve" onclick="actWithdrawal('${w._id}','approve',this)">✅ Approve</button>
+                <button class="act-btn act-reject"  onclick="actWithdrawal('${w._id}','reject',this)"  style="margin-left:6px">❌ Reject</button>
+            ` : '<span style="color:var(--muted);font-size:12px">Done</span>'}</td>
+        </tr>`).join('')}</tbody>
+    </table>`;
+}
+
+async function actWithdrawal(id, action, btn) {
+    btn.disabled = true;
+    const d = await api('/api/admin/withdrawal/' + action, 'POST', { withdrawalId: id });
+    if (d.error) { toast(d.error, 'err'); btn.disabled=false; return; }
+    toast(action==='approve' ? 'Withdrawal approved!' : 'Withdrawal rejected');
+    loadOverview();
+    if (document.getElementById('page-withdrawals').classList.contains('active')) loadWithdrawals();
+}
+
+// ── USERS ──
+async function loadUsers() {
+    const d = await api('/api/admin/users');
+    const users = d.users||[];
+    if (!users.length) { document.getElementById('usersTable').innerHTML = `<div class="empty-state"><div class="icon">👥</div><p>No users yet</p></div>`; return; }
+    document.getElementById('usersTable').innerHTML = `<table>
+        <thead><tr>
+            <th>Email</th><th>Phone</th><th>Deposit Bal.</th><th>Earnings</th><th>Fridges</th><th>Joined</th>
+        </tr></thead>
+        <tbody>${users.map(u=>`<tr>
+            <td class="user-email" style="cursor:pointer" onclick="fillEditUser('${u.email}',${u.balance||0},${u.earning||0})">${u.email}</td>
+            <td><span class="mono">${u.phone||'—'}</span></td>
+            <td>KES ${(u.balance||0).toLocaleString()}</td>
+            <td>KES ${(u.earning||0).toLocaleString()}</td>
+            <td>${(u.fridges||[]).length}</td>
+            <td style="color:var(--muted);font-size:12px">${fmtDate(u.createdAt)}</td>
+        </tr>`).join('')}</tbody>
+    </table>`;
+}
+
+function fillEditUser(email, balance, earning) {
+    document.getElementById('editUserEmail').value  = email;
+    document.getElementById('editBalance').value    = balance;
+    document.getElementById('editEarning').value    = earning;
+    document.getElementById('editUserEmail').scrollIntoView({ behavior:'smooth', block:'center' });
+}
+
+async function editUser() {
+    const email   = document.getElementById('editUserEmail').value.trim();
+    const balance = Number(document.getElementById('editBalance').value);
+    const earning = Number(document.getElementById('editEarning').value);
+    const msg = document.getElementById('editUserMsg');
+    if (!email) { msg.className='form-msg err'; msg.textContent='Enter a user email'; return; }
+
+    const d = await api('/api/admin/user/edit', 'POST', { email, balance, earning });
+    if (d.error) { msg.className='form-msg err'; msg.textContent=d.error; return; }
+    msg.className='form-msg ok'; msg.textContent='User updated successfully!';
+    toast('User updated!');
+    loadUsers();
+}
+
+// ── FRIDGES ──
+async function loadFridges() {
+    const d = await api('/api/fridges');
+    const offers = (d.fridges||[]).filter(f=>f.id.startsWith('offer'));
+    const grid = document.getElementById('fridgeGrid');
+    grid.innerHTML = offers.map(f => `
+        <div class="fridge-tile ${f.locked?'locked':'unlocked'}">
+            <div class="f-name">${f.name}</div>
+            <div class="f-id">ID: ${f.id}</div>
+            <div class="fridge-meta">
+                <div>Status: <span style="color:${f.locked?'var(--red)':'var(--green)'}">${f.locked?'🔒 Locked':'🔓 Unlocked'}</span></div>
+                ${!f.locked ? `<div>Price: <span>KES ${f.price}</span></div>
+                <div>Total Earn: <span>KES ${f.dailyEarn}</span></div>
+                <div>Duration: <span>${f.durationHrs}h</span></div>` : ''}
+            </div>
+            <div class="fridge-actions">
+                ${f.locked
+                    ? `<button class="act-btn act-approve" onclick="prefillUnlock('${f.id}')">🔓 Unlock</button>`
+                    : `<button class="act-btn act-reject"  onclick="quickLock('${f.id}')">🔒 Lock</button>`
+                }
+            </div>
+        </div>
+    `).join('');
+}
+
+function prefillUnlock(id) {
+    document.getElementById('unlockFridgeId').value = id;
+    document.getElementById('unlockFridgeId').scrollIntoView({ behavior:'smooth', block:'center' });
+}
+
+async function unlockFridge() {
+    const id       = document.getElementById('unlockFridgeId').value;
+    const price    = Number(document.getElementById('unlockPrice').value);
+    const earn     = Number(document.getElementById('unlockEarn').value);
+    const duration = Number(document.getElementById('unlockDuration').value);
+    const msg = document.getElementById('unlockMsg');
+
+    if (!id||!price||!earn||!duration) { msg.className='form-msg err'; msg.textContent='Fill all fields'; return; }
+    const d = await api('/api/admin/unlock', 'POST', { fridgeId:id, price, dailyEarn:earn, durationHrs:duration });
+    if (d.error) { msg.className='form-msg err'; msg.textContent=d.error; return; }
+    msg.className='form-msg ok'; msg.textContent=d.message;
+    toast('Fridge unlocked!');
+    loadFridges();
+}
+
+async function quickLock(id) {
+    document.getElementById('lockFridgeId').value = id;
+    await lockFridge();
+}
+
+async function lockFridge() {
+    const id  = document.getElementById('lockFridgeId').value;
+    const msg = document.getElementById('lockMsg');
+    if (!id) { msg.className='form-msg err'; msg.textContent='Select a fridge'; return; }
+    const d = await api('/api/admin/lock', 'POST', { fridgeId:id });
+    if (d.error) { msg.className='form-msg err'; msg.textContent=d.error; return; }
+    msg.className='form-msg ok'; msg.textContent=d.message;
+    toast('Fridge locked!');
+    loadFridges();
+}
+
+// ── OFFER CODES ──
+function generateRandomCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = 'BF';
+    for (let i = 0; i < 7; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    return code;
+}
+
+async function createOfferCode() {
+    const amount = Number(document.getElementById('offerAmount').value);
+    const msg = document.getElementById('offerMsg');
+    if (!amount || amount < 1) { msg.className='form-msg err'; msg.textContent='Enter a valid amount'; return; }
+
+    const code = generateRandomCode();
+    const d = await api('/api/admin/offercode', 'POST', { code, amount });
+    if (d.error) { msg.className='form-msg err'; msg.textContent=d.error; return; }
+
+    msg.className='form-msg ok'; msg.textContent='';
+    document.getElementById('offerAmount').value = '';
+
+    // Show the generated code box
+    document.getElementById('generatedCodeBox').style.display = 'block';
+    document.getElementById('generatedCodeText').textContent = code;
+    document.getElementById('generatedCodeMeta').textContent = `KES ${amount.toLocaleString()} • Ready to share`;
+    document.getElementById('copyCodeBtn').textContent = '📋 Copy';
+    toast('Offer code generated!');
+}
+
+function copyCode() {
+    const code = document.getElementById('generatedCodeText').textContent;
+    navigator.clipboard.writeText(code).then(() => {
+        document.getElementById('copyCodeBtn').textContent = '✅ Copied!';
+        toast('Code copied to clipboard!');
+        setTimeout(() => document.getElementById('copyCodeBtn').textContent = '📋 Copy', 2500);
+    });
+}
+
+// ── LINKS ──
+async function loadLinks() {
+    try {
+        const d = await api('/api/links');
+        document.getElementById('waLink').value = d.whatsapp || '';
+        document.getElementById('tgLink').value = d.telegram || '';
+        const cur = document.getElementById('currentLinks');
+        cur.innerHTML = `
+            <div style="margin-bottom:8px">💬 <strong>WhatsApp:</strong> ${d.whatsapp ? `<a href="${d.whatsapp}" target="_blank" style="color:var(--accent)">${d.whatsapp}</a>` : '<span style="color:var(--red)">Not set</span>'}</div>
+            <div>✈️ <strong>Telegram:</strong> ${d.telegram ? `<a href="${d.telegram}" target="_blank" style="color:var(--accent)">${d.telegram}</a>` : '<span style="color:var(--red)">Not set</span>'}</div>
+        `;
+    } catch(e) {
+        document.getElementById('currentLinks').textContent = 'Could not load links';
+    }
+}
+
+async function saveLinks() {
+    const whatsapp = document.getElementById('waLink').value.trim();
+    const telegram = document.getElementById('tgLink').value.trim();
+    const msg = document.getElementById('linksMsg');
+    const d = await api('/api/admin/links', 'POST', { whatsapp, telegram });
+    if (d.error) { msg.className='form-msg err'; msg.textContent=d.error; return; }
+    msg.className='form-msg ok'; msg.textContent='Links saved successfully!';
+    toast('Community links updated!');
+    loadLinks();
+}
+
+// ── SEARCH USERS ──
+let searchTimer = null;
+function searchUsers(q) {
+    clearTimeout(searchTimer);
+    if (!q.trim()) { loadUsers(); return; }
+    searchTimer = setTimeout(async () => {
+        const d = await api('/api/admin/users/search?q=' + encodeURIComponent(q));
+        const users = d.users || [];
+        if (!users.length) {
+            document.getElementById('usersTable').innerHTML = `<div class="empty-state"><div class="icon">🔍</div><p>No users found for "${q}"</p></div>`;
+            return;
+        }
+        document.getElementById('usersTable').innerHTML = `<table>
+            <thead><tr><th>Email</th><th>Phone</th><th>Deposit</th><th>Earnings</th><th>Fridges</th><th>Joined</th></tr></thead>
+            <tbody>${users.map(u=>`<tr>
+                <td class="user-email" style="cursor:pointer" onclick="fillEditUser('${u.email}',${u.balance||0},${u.earning||0})">${u.email}</td>
+                <td><span class="mono">${u.phone||'—'}</span></td>
+                <td>KES ${(u.balance||0).toLocaleString()}</td>
+                <td>KES ${(u.earning||0).toLocaleString()}</td>
+                <td>${(u.fridges||[]).length}</td>
+                <td style="color:var(--muted);font-size:12px">${fmtDate(u.createdAt)}</td>
+            </tr>`).join('')}</tbody>
+        </table>`;
+    }, 400);
+}
+
+// ── BROADCAST ──
+async function sendBroadcast() {
+    const message = document.getElementById('broadcastMsg').value.trim();
+    const msg = document.getElementById('broadcastFormMsg');
+    if (!message) { msg.className='form-msg err'; msg.textContent='Enter a message'; return; }
+    const d = await api('/api/admin/broadcast', 'POST', { message });
+    if (d.error) { msg.className='form-msg err'; msg.textContent=d.error; return; }
+    msg.className='form-msg ok'; msg.textContent='Broadcast sent!';
+    toast('Broadcast sent to all users!');
+    document.getElementById('broadcastMsg').value = '';
+    loadBroadcastHistory();
+}
+
+async function loadBroadcastHistory() {
+    // Show recent 5 broadcasts via activity log
+    const d = await api('/api/admin/logs');
+    const logs = (d.logs||[]).filter(l => l.action === 'BROADCAST').slice(0,5);
+    const el = document.getElementById('broadcastHistory');
+    if (!logs.length) { el.textContent = 'No broadcasts sent yet.'; return; }
+    el.innerHTML = logs.map(l => `
+        <div style="padding:12px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;">
+            <div style="font-size:13px;color:var(--text);margin-bottom:4px;">${l.details}</div>
+            <div style="font-size:11px;color:var(--muted);">${fmtDate(l.createdAt)}</div>
+        </div>
+    `).join('');
+}
+
+// ── ACTIVITY LOG ──
+async function loadLogs() {
+    const d = await api('/api/admin/logs');
+    const logs = d.logs || [];
+    if (!logs.length) {
+        document.getElementById('logsTable').innerHTML = `<div class="empty-state"><div class="icon">📋</div><p>No activity yet</p></div>`;
+        return;
+    }
+    const actionColors = {
+        'ADMIN_LOGIN': 'pill-approved',
+        'BROADCAST': 'pill-pending',
+        'PAYMENT_APPROVED': 'pill-approved',
+        'PAYMENT_REJECTED': 'pill-rejected',
+        'WITHDRAWAL_APPROVED': 'pill-approved',
+        'WITHDRAWAL_REJECTED': 'pill-rejected',
+    };
+    document.getElementById('logsTable').innerHTML = `<table>
+        <thead><tr><th>Action</th><th>Details</th><th>IP</th><th>Time</th></tr></thead>
+        <tbody>${logs.map(l=>`<tr>
+            <td><span class="pill ${actionColors[l.action]||'pill-pending'}">${l.action}</span></td>
+            <td style="font-size:12px;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;">${l.details||'—'}</td>
+            <td><span class="mono" style="font-size:11px">${l.ip||'—'}</span></td>
+            <td style="color:var(--muted);font-size:12px">${fmtDate(l.createdAt)}</td>
+        </tr>`).join('')}</tbody>
+    </table>`;
+}
+
+// Initial load
+loadOverview();
+</script>
+</body>
+</html>

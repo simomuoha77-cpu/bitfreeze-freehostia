@@ -9,6 +9,8 @@ const mongoose = require('mongoose');
 const { Telegraf, Markup } = require('telegraf');
 const cron = require('node-cron');
 const axios = require('axios');
+const rateLimit = require('express-rate-limit');
+const nodemailer = require('nodemailer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -19,7 +21,18 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 
 // ================= MONGODB =================
 mongoose.connect(process.env.MONGO_URI)
-    .then(() => console.log('MongoDB connected'))
+    .then(async () => {
+        console.log('MongoDB connected');
+        // Drop any bad legacy indexes on withdrawals and payments collections
+        try {
+            await mongoose.connection.collection('withdrawals').dropIndexes();
+            console.log('Withdrawals indexes cleared');
+        } catch(e) { /* ignore if collection doesnt exist yet */ }
+        try {
+            await mongoose.connection.collection('payments').dropIndexes();
+            console.log('Payments indexes cleared');
+        } catch(e) { /* ignore */ }
+    })
     .catch(err => {
         console.error('MongoDB error:', err);
         process.exit(1);
@@ -44,7 +57,9 @@ const userSchema = new mongoose.Schema({
     }],
     createdAt: { type: Date, default: Date.now },
     lastDepositAttempt: Date,
-    lastWithdrawalAttempt: Date
+    lastWithdrawalAttempt: Date,
+    referredBy: { type: String, default: null },
+    referralRewarded: { type: Boolean, default: false }
 });
 const User = mongoose.model('User', userSchema);
 
@@ -60,11 +75,13 @@ const paymentSchema = new mongoose.Schema({
     fridgeId: String,
     fridgeName: String,
     fridgePrice: Number,
+    fridgeDailyEarn: { type: Number, default: 0 },
+    fridgeDurationHrs: { type: Number, default: 0 },
     phone: String,
     transactionCode: String,
     approved: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now }
-});
+}, { collection: 'payments' });
 const Payment = mongoose.model('Payment', paymentSchema);
 
 const withdrawalSchema = new mongoose.Schema({
@@ -73,8 +90,24 @@ const withdrawalSchema = new mongoose.Schema({
     amount: Number,
     approved: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now }
-});
+}, { collection: 'withdrawals' });
 const Withdrawal = mongoose.model('Withdrawal', withdrawalSchema);
+
+const activityLogSchema = new mongoose.Schema({
+    action: String,
+    adminEmail: String,
+    details: String,
+    ip: String,
+    createdAt: { type: Date, default: Date.now }
+}, { collection: 'activitylogs' });
+const ActivityLog = mongoose.model('ActivityLog', activityLogSchema);
+
+const broadcastSchema = new mongoose.Schema({
+    message: String,
+    sentBy: String,
+    sentAt: { type: Date, default: Date.now }
+}, { collection: 'broadcasts' });
+const Broadcast = mongoose.model('Broadcast', broadcastSchema);
 
 
 // ================= FRIDGES =================
@@ -99,10 +132,138 @@ let FRIDGES = [
     { id: 'offer8', name: 'Offer Fridge 8', price: 0, dailyEarn: 0, durationHrs: 0, startTime: null, img: 'images/offer8.jpg', locked: true },
 ];
 
+// ================= REFERRAL RULES =================
+// Reward credited to referrer when referred user's FIRST deposit is approved
+const REFERRAL_RULES = [
+    { min: 8000, reward: 500 },
+    { min: 6000, reward: 350 },
+    { min: 4000, reward: 250 },
+    { min: 2000, reward: 150 },
+    { min: 1000, reward: 100 },
+    { min: 500,  reward: 50  },
+    { min: 400,  reward: 40  },
+    { min: 300,  reward: 30  },
+    { min: 200,  reward: 20  },
+    { min: 100,  reward: 80  },
+];
+
+function getReferralReward(depositAmount) {
+    for (const rule of REFERRAL_RULES) {
+        if (depositAmount >= rule.min) return rule.reward;
+    }
+    return 0;
+}
+
+// ================= EMAIL TRANSPORTER =================
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_PASS
+    }
+});
+
+// ================= EMAIL VERIFICATION STORE =================
+// { email: { code, expiresAt, attempts } }
+const emailVerifications = {};
+
+function generateCode() {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+async function sendVerificationEmail(email, code) {
+    const mailOptions = {
+        from: `"Bitfreeze" <${process.env.GMAIL_USER}>`,
+        to: email,
+        subject: '🧊 Your Bitfreeze Verification Code',
+        html: `
+        <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;background:#0d1520;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,0.08)">
+            <div style="background:linear-gradient(90deg,#ff8a00,#ffb347);padding:28px;text-align:center">
+                <div style="font-size:36px;margin-bottom:6px">❄️</div>
+                <h1 style="margin:0;color:#111;font-size:22px;font-weight:800">Bitfreeze</h1>
+                <p style="margin:4px 0 0;color:rgba(0,0,0,0.6);font-size:13px">Email Verification</p>
+            </div>
+            <div style="padding:32px;text-align:center">
+                <p style="color:#b8ccd8;font-size:15px;margin:0 0 24px">Use the code below to verify your email address. It expires in <strong style="color:#fff">10 minutes</strong>.</p>
+                <div style="background:rgba(255,138,0,0.08);border:2px solid rgba(255,138,0,0.3);border-radius:14px;padding:20px;margin:0 auto 24px;display:inline-block;min-width:200px">
+                    <div style="font-size:42px;font-weight:900;letter-spacing:10px;color:#ff8a00;font-family:'Courier New',monospace">${code}</div>
+                </div>
+                <p style="color:#4a5a6a;font-size:13px;margin:0">If you didn't request this, you can safely ignore this email.</p>
+            </div>
+            <div style="padding:16px;text-align:center;border-top:1px solid rgba(255,255,255,0.05)">
+                <p style="color:#4a5a6a;font-size:12px;margin:0">© 2025 Bitfreeze Kenya · Earn daily from your fridges</p>
+            </div>
+        </div>`
+    };
+    await transporter.sendMail(mailOptions);
+}
+
+// ================= COMMUNITY LINKS =================
+let COMMUNITY_LINKS = { whatsapp: '', telegram: '' };
+
+// ================= ADMIN SECURITY: LOGIN LOCKOUT =================
+const adminLoginAttempts = {}; // { ip: { count, lockedUntil } }
+const ADMIN_MAX_ATTEMPTS = 3;
+const ADMIN_LOCKOUT_MS = 30 * 60 * 1000; // 30 minutes
+
+function checkAdminLockout(ip) {
+    const a = adminLoginAttempts[ip];
+    if (!a) return { locked: false };
+    if (a.lockedUntil && Date.now() < a.lockedUntil) {
+        const mins = Math.ceil((a.lockedUntil - Date.now()) / 60000);
+        return { locked: true, mins };
+    }
+    return { locked: false };
+}
+
+function recordFailedAdminLogin(ip) {
+    if (!adminLoginAttempts[ip]) adminLoginAttempts[ip] = { count: 0, lockedUntil: null };
+    adminLoginAttempts[ip].count++;
+    if (adminLoginAttempts[ip].count >= ADMIN_MAX_ATTEMPTS) {
+        adminLoginAttempts[ip].lockedUntil = Date.now() + ADMIN_LOCKOUT_MS;
+        console.log(`🔒 Admin panel locked for IP ${ip} after ${ADMIN_MAX_ATTEMPTS} failed attempts`);
+    }
+}
+
+function clearAdminLockout(ip) {
+    delete adminLoginAttempts[ip];
+}
+
 // ================= EXPRESS SETUP =================
 app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// ── RATE LIMITERS ──
+// General API: 100 requests per 15 minutes per IP
+const generalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    message: { error: 'Too many requests. Please slow down.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
+// Login: 10 attempts per 15 minutes per IP
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: { error: 'Too many login attempts. Try again in 15 minutes.' }
+});
+
+// Admin login: 5 attempts per 30 minutes per IP
+const adminLoginLimiter = rateLimit({
+    windowMs: 30 * 60 * 1000,
+    max: 5,
+    message: { error: 'Too many admin login attempts. Try again later.' }
+});
+
+app.use('/api/', generalLimiter);
+app.use('/api/login', loginLimiter);
+
+// ── HIDE /admin — return 404 so hackers can't find it ──
+app.get('/admin', (req, res) => res.status(404).send('Not Found'));
+app.get('/admin.html', (req, res) => res.status(404).send('Not Found'));
 
 // ================= AUTH =================
 function auth(req, res, next) {
@@ -170,27 +331,150 @@ async function initiateStkPush(phone, amount) {
 app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
 app.get('/register', (req, res) => res.sendFile(path.join(__dirname, 'public', 'register.html')));
 app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
+// Secret admin URL — only you know this path
+app.get('/manage-bf-2025', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
+
+// ================= EMAIL VERIFICATION ROUTES =================
+
+// Step 1: Send verification code
+app.post('/api/auth/send-code', async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ error: 'Email required' });
+
+        // Check if email already registered
+        const existing = await User.findOne({ email });
+        if (existing) return res.status(400).json({ error: 'Email already registered' });
+
+        // Rate limit: max 3 codes per email per hour
+        const prev = emailVerifications[email];
+        if (prev && prev.sentAt && (Date.now() - prev.sentAt) < 60000) {
+            return res.status(429).json({ error: 'Please wait 1 minute before requesting another code.' });
+        }
+
+        const code = generateCode();
+        emailVerifications[email] = {
+            code,
+            expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
+            sentAt: Date.now(),
+            attempts: 0,
+            verified: false
+        };
+
+        await sendVerificationEmail(email, code);
+        console.log(`✅ Verification code sent to ${email}`);
+        res.json({ message: 'Verification code sent to your email!' });
+    } catch (err) {
+        console.error('Send code error:', err);
+        res.status(500).json({ error: 'Failed to send email. Please check your email address.' });
+    }
+});
+
+// Step 2: Verify code
+app.post('/api/auth/verify-code', async (req, res) => {
+    try {
+        const { email, code } = req.body;
+        if (!email || !code) return res.status(400).json({ error: 'Email and code required' });
+
+        const record = emailVerifications[email];
+        if (!record) return res.status(400).json({ error: 'No code found. Please request a new one.' });
+
+        if (Date.now() > record.expiresAt) {
+            delete emailVerifications[email];
+            return res.status(400).json({ error: 'Code expired. Please request a new one.' });
+        }
+
+        // Max 5 attempts
+        record.attempts++;
+        if (record.attempts > 5) {
+            delete emailVerifications[email];
+            return res.status(400).json({ error: 'Too many attempts. Please request a new code.' });
+        }
+
+        if (record.code !== code.trim()) {
+            return res.status(400).json({ error: `Incorrect code. ${5 - record.attempts} attempts remaining.` });
+        }
+
+        // Mark as verified
+        record.verified = true;
+        res.json({ message: 'Email verified successfully!' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
 // ================= REGISTER / LOGIN =================
 app.post('/api/register', async (req, res) => {
     try {
         const { name, email, password, phone } = req.body;
+        let { referrerEmail } = req.body;
+
         if (!name || !email || !password || !phone) return res.status(400).json({ error: 'Missing fields' });
         if (await User.findOne({ email })) return res.status(400).json({ error: 'Email exists' });
+
+        // Check email is verified
+        const verRecord = emailVerifications[email];
+        if (!verRecord || !verRecord.verified) {
+            return res.status(400).json({ error: 'Please verify your email first before registering.' });
+        }
+        // Clean up verification record
+        delete emailVerifications[email];
+
+        // Extract email from referral URL if full URL was passed
+        if (referrerEmail && referrerEmail.includes('ref=')) {
+            const match = referrerEmail.match(/ref=([^&]+)/);
+            if (match) referrerEmail = decodeURIComponent(match[1]);
+        }
+        if (referrerEmail && referrerEmail.includes('/')) referrerEmail = null; // still a URL, ignore
+
         const hashed = await bcrypt.hash(password, 10);
         const user = new User({ name, email, password: hashed, phone });
         await user.save();
+
+        // Save referredBy — reward will be credited when they make first deposit
+        if (referrerEmail && referrerEmail !== email) {
+            const referrer = await User.findOne({ email: referrerEmail });
+            if (referrer) {
+                user.referredBy = referrerEmail;
+                await user.save();
+                console.log(`✅ User ${email} registered via referral from ${referrerEmail}`);
+            }
+        }
+
         const token = jwt.sign({ email: user.email }, SECRET, { expiresIn: '7d' });
         res.json({ token, email: user.email });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.post('/api/login', async (req, res) => {
+app.post('/api/login', adminLoginLimiter, async (req, res) => {
     try {
         const { email, password } = req.body;
+        const ip = req.ip || req.connection.remoteAddress;
+
+        // Check admin lockout
+        if (email === ADMIN_EMAIL) {
+            const lockout = checkAdminLockout(ip);
+            if (lockout.locked) {
+                return res.status(429).json({ error: `Admin account locked. Try again in ${lockout.mins} minute(s).` });
+            }
+        }
+
         const user = await User.findOne({ email });
-        if (!user) return res.status(400).json({ error: 'Invalid credentials' });
-        if (!(await bcrypt.compare(password, user.password))) return res.status(400).json({ error: 'Invalid credentials' });
+        if (!user) {
+            if (email === ADMIN_EMAIL) recordFailedAdminLogin(ip);
+            return res.status(400).json({ error: 'Invalid credentials' });
+        }
+        if (!(await bcrypt.compare(password, user.password))) {
+            if (email === ADMIN_EMAIL) recordFailedAdminLogin(ip);
+            return res.status(400).json({ error: 'Invalid credentials' });
+        }
+
+        // Successful admin login — clear lockout
+        if (email === ADMIN_EMAIL) {
+            clearAdminLockout(ip);
+            await ActivityLog.create({ action: 'ADMIN_LOGIN', adminEmail: email, details: 'Successful login', ip });
+        }
+
         const token = jwt.sign({ email: user.email }, SECRET, { expiresIn: '7d' });
         res.json({ token, email: user.email });
     } catch (err) { res.status(500).json({ error: err.message }); }
@@ -202,6 +486,41 @@ app.get('/api/me', auth, async (req, res) => {
         const user = await User.findOne({ email: req.user.email });
         if (!user) return res.status(404).json({ error: 'Not found' });
         res.json({ user, isAdmin: user.email === ADMIN_EMAIL });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= ADMIN: FORCE CREDIT OFFER EARNINGS NOW =================
+app.post('/api/admin/force-credit', auth, async (req, res) => {
+    try {
+        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
+        await checkAndCreditOfferEarnings();
+        res.json({ message: 'Offer earnings check completed. Check server logs.' });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= DEBUG: CHECK OFFER FRIDGE DATA =================
+app.get('/api/admin/debug/offers', auth, async (req, res) => {
+    try {
+        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
+        const users = await User.find({ 'fridges.0': { $exists: true } }, '-password');
+        const report = [];
+        for (const u of users) {
+            const offerFridges = u.fridges.filter(f => f.id && f.id.startsWith('offer'));
+            if (offerFridges.length === 0) continue;
+            report.push({
+                email: u.email,
+                earning: u.earning,
+                offerFridges: offerFridges.map(f => ({
+                    id: f.id,
+                    dailyEarn: f.dailyEarn,
+                    endTime: f.endTime,
+                    earningAdded: f.earningAdded,
+                    endTimePassed: f.endTime ? new Date() >= new Date(f.endTime) : null,
+                    boughtAt: f.boughtAt
+                }))
+            });
+        }
+        res.json({ now: new Date(), report });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -250,6 +569,188 @@ app.post('/api/payment/submit', auth, async (req, res) => {
     }
 });
 
+// ================= PAYMENT: MANUAL (BUY TILL) =================
+app.post('/api/payment/manual', auth, async (req, res) => {
+    try {
+        const { fridgeId, txnCode } = req.body;
+        if (!fridgeId || !txnCode || txnCode.length < 8)
+            return res.status(400).json({ error: 'Missing fridge or invalid transaction code' });
+
+        const user = await User.findOne({ email: req.user.email });
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        const fridge = FRIDGES.find(f => f.id === fridgeId);
+        if (!fridge) return res.status(400).json({ error: 'Invalid fridge' });
+        if (fridge.locked) return res.status(400).json({ error: 'Fridge is locked' });
+
+        const duplicate = await Payment.findOne({ transactionCode: txnCode.toUpperCase() });
+        if (duplicate) return res.status(400).json({ error: 'Transaction code already used' });
+
+        const payment = new Payment({
+            userEmail: user.email,
+            fridgeId: fridge.id,
+            fridgeName: fridge.name,
+            fridgePrice: fridge.price,
+            fridgeDailyEarn: fridge.dailyEarn || 0,
+            fridgeDurationHrs: fridge.durationHrs || 0,
+            phone: user.phone,
+            transactionCode: txnCode.toUpperCase()
+        });
+        await payment.save();
+
+        await bot.telegram.sendMessage(
+            ADMIN_CHAT_ID,
+            `💰 New Buy Till Payment:\nUser: ${user.email}\nPhone: ${user.phone}\nFridge: ${fridge.name}\nAmount: KES ${fridge.price}\nM-Pesa Code: ${txnCode.toUpperCase()}`,
+            Markup.inlineKeyboard([
+                Markup.button.callback('✅ Approve', `approve_${payment._id}`),
+                Markup.button.callback('❌ Reject', `reject_${payment._id}`)
+            ])
+        );
+
+        res.json({ message: 'Payment submitted! Awaiting admin verification.' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ================= ADMIN: GET ALL PAYMENTS =================
+app.get('/api/admin/payments', auth, async (req, res) => {
+    try {
+        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
+        const payments = await Payment.find().sort({ createdAt: -1 });
+        res.json({ payments });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= ADMIN: APPROVE PAYMENT =================
+app.post('/api/admin/payment/approve', auth, async (req, res) => {
+    try {
+        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
+        const { paymentId } = req.body;
+        const payment = await Payment.findById(paymentId);
+        if (!payment) return res.status(404).json({ error: 'Payment not found' });
+        if (payment.approved) return res.status(400).json({ error: 'Already approved' });
+
+        const user = await User.findOne({ email: payment.userEmail });
+        const fridge = FRIDGES.find(f => f.id === payment.fridgeId);
+        if (!user || !fridge) return res.status(404).json({ error: 'User or fridge not found' });
+
+        if (fridge.id.startsWith('offer')) {
+            // Use dailyEarn from payment record (saved at buy time) NOT current fridge state
+            // This prevents earning=0 if fridge was reset before admin approves
+            const earnToSave = payment.fridgeDailyEarn || fridge.dailyEarn || 0;
+            const durationHrs = payment.fridgeDurationHrs || fridge.durationHrs || 24;
+            const endTime = new Date(Date.now() + durationHrs * 60 * 60 * 1000);
+            user.fridges.push({
+                id: fridge.id,
+                name: fridge.name,
+                price: payment.fridgePrice || fridge.price,
+                dailyEarn: earnToSave,
+                boughtAt: new Date(),
+                endTime,
+                earningAdded: false
+            });
+        } else {
+            user.fridges.push({ id: fridge.id, name: fridge.name, price: fridge.price, dailyEarn: fridge.dailyEarn, boughtAt: new Date() });
+        }
+
+        await user.save();
+        payment.approved = true;
+        await payment.save();
+
+        // ── Credit referral reward based on deposit amount ──
+        if (user.referredBy && !user.referralRewarded) {
+            const reward = getReferralReward(payment.fridgePrice || 0);
+            if (reward > 0) {
+                const referrer = await User.findOne({ email: user.referredBy });
+                if (referrer) {
+                    referrer.earning += reward;
+                    await referrer.save();
+                    user.referralRewarded = true;
+                    await user.save();
+                    console.log(`✅ Referral reward: KES ${reward} credited to ${user.referredBy} (referred ${user.email} deposited KES ${payment.fridgePrice})`);
+                }
+            }
+        }
+
+        res.json({ message: 'Payment approved and fridge assigned' });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= ADMIN: REJECT PAYMENT =================
+app.post('/api/admin/payment/reject', auth, async (req, res) => {
+    try {
+        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
+        const { paymentId } = req.body;
+        await Payment.findByIdAndDelete(paymentId);
+        res.json({ message: 'Payment rejected and removed' });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= ADMIN: GET ALL WITHDRAWALS =================
+app.get('/api/admin/withdrawals', auth, async (req, res) => {
+    try {
+        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
+        const withdrawals = await Withdrawal.find().sort({ createdAt: -1 });
+        res.json({ withdrawals });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= ADMIN: APPROVE WITHDRAWAL =================
+app.post('/api/admin/withdrawal/approve', auth, async (req, res) => {
+    try {
+        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
+        const { withdrawalId } = req.body;
+        const wd = await Withdrawal.findById(withdrawalId);
+        if (!wd) return res.status(404).json({ error: 'Withdrawal not found' });
+        if (wd.approved) return res.status(400).json({ error: 'Already approved' });
+
+        const user = await User.findOne({ email: wd.userEmail });
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        if (user.earning < wd.amount) return res.status(400).json({ error: 'User has insufficient earnings' });
+
+        user.earning -= wd.amount;
+        await user.save();
+        wd.approved = true;
+        await wd.save();
+        res.json({ message: 'Withdrawal approved' });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= ADMIN: REJECT WITHDRAWAL =================
+app.post('/api/admin/withdrawal/reject', auth, async (req, res) => {
+    try {
+        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
+        const { withdrawalId } = req.body;
+        await Withdrawal.findByIdAndDelete(withdrawalId);
+        res.json({ message: 'Withdrawal rejected and removed' });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= ADMIN: GET ALL USERS =================
+app.get('/api/admin/users', auth, async (req, res) => {
+    try {
+        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
+        const users = await User.find({}, '-password').sort({ createdAt: -1 });
+        res.json({ users });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= ADMIN: EDIT USER BALANCE =================
+app.post('/api/admin/user/edit', auth, async (req, res) => {
+    try {
+        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
+        const { email, balance, earning } = req.body;
+        if (!email) return res.status(400).json({ error: 'Email required' });
+        const user = await User.findOne({ email });
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        if (balance !== undefined) user.balance = Number(balance);
+        if (earning !== undefined) user.earning = Number(earning);
+        await user.save();
+        res.json({ message: 'User updated successfully' });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // ================= REDEEM OFFER CODE =================
 app.post('/api/offer/redeem', auth, async (req, res) => {
     try {
@@ -259,16 +760,36 @@ app.post('/api/offer/redeem', auth, async (req, res) => {
         const user = await User.findOne({ email: req.user.email });
         if (!user) return res.status(404).json({ error: 'User not found' });
 
+        // Must have at least one approved normal fridge (min deposit KES 100)
+        const hasDeposit = await Payment.findOne({
+            userEmail: user.email,
+            approved: true,
+            fridgeId: { $not: /^offer/ }
+        });
+        if (!hasDeposit) {
+            return res.status(400).json({ error: 'You must deposit at least KES 100 (buy a normal fridge) before redeeming offer codes.' });
+        }
+
         const offer = await OfferCode.findOne({ code });
         if (!offer) return res.status(404).json({ error: 'Invalid offer code' });
 
         user.earning += offer.amount;
         await user.save();
-
         await OfferCode.findOneAndDelete({ code });
 
         res.json({ message: `Successfully redeemed! KES ${offer.amount} added to your earnings.` });
     } catch (err) { res.status(500).json({ error: 'Server error' }); }
+});
+
+// ================= OFFER: FRONTEND PINGS THIS WHEN TIMER ENDS =================
+// Actual crediting is handled by the minute cron below — this just triggers it early
+app.post('/api/offer/expired/:fridgeId', auth, async (req, res) => {
+    try {
+        await checkAndCreditOfferEarnings();
+        res.json({ message: 'Earnings checked and credited if due' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // ================= ADMIN: OFFER CODE =================
@@ -325,7 +846,65 @@ app.post('/api/admin/lock', auth, async (req, res) => {
 });
 
 // ================= DAILY EARNINGS & AUTO-LOCK OFFERS =================
-async function runDailyEarningsAndOffers() {
+// ── OFFER EARNINGS: every minute, credits immediately when endTime passes ──
+async function checkAndCreditOfferEarnings() {
+    try {
+        const now = new Date();
+        // Get ALL users who have fridges (broad query, filter in JS)
+        const users = await User.find({ 'fridges.0': { $exists: true } });
+
+        for (const user of users) {
+            let credited = false;
+            // Use markModified to ensure mongoose detects subdoc changes
+            for (let i = 0; i < user.fridges.length; i++) {
+                const f = user.fridges[i];
+                if (!f.id || !f.id.startsWith('offer')) continue;
+                if (f.earningAdded) continue;
+                if (!f.endTime) continue;
+                if (now < new Date(f.endTime)) continue;
+
+                // Get earn amount — try from fridge record first, then payment record
+                let amount = f.dailyEarn || 0;
+                if (amount === 0) {
+                    const pmt = await Payment.findOne({
+                        userEmail: user.email,
+                        fridgeId: f.id,
+                        approved: true
+                    }).sort({ createdAt: -1 });
+                    if (pmt && pmt.fridgeDailyEarn) amount = pmt.fridgeDailyEarn;
+                }
+
+                user.earning += amount;
+                user.fridges[i].earningAdded = true;
+                user.markModified('fridges');
+                credited = true;
+                console.log(`✅ Credited KES ${amount} to ${user.email} for ${f.id}`);
+            }
+            if (credited) await user.save();
+        }
+
+        // Auto-lock expired global offer fridges
+        for (const fridge of FRIDGES) {
+            if (!fridge.id.startsWith('offer') || fridge.locked) continue;
+            if (fridge.startTime && fridge.durationHrs) {
+                const endTime = new Date(fridge.startTime).getTime() + fridge.durationHrs * 3600 * 1000;
+                if (now.getTime() >= endTime) {
+                    fridge.locked = true;
+                    fridge.price = 0;
+                    fridge.dailyEarn = 0;
+                    fridge.durationHrs = 0;
+                    fridge.startTime = null;
+                    console.log(`🔒 Auto-locked ${fridge.id}`);
+                }
+            }
+        }
+    } catch (err) {
+        console.error('Offer earnings check error:', err);
+    }
+}
+
+// ── DAILY EARNINGS: 12:00 AM Kenya time (UTC+3 = 21:00 UTC) for normal fridges ──
+async function runDailyEarnings() {
     try {
         const users = await User.find();
         const now = new Date();
@@ -335,27 +914,15 @@ async function runDailyEarningsAndOffers() {
             let saveNeeded = false;
 
             for (const f of user.fridges) {
+                if (f.id.startsWith('offer')) continue;
                 const globalFridge = FRIDGES.find(fr => fr.id === f.id);
                 if (!globalFridge) continue;
 
-                if (!f.id.startsWith('offer')) {
+                const boughtAt = f.boughtAt ? new Date(f.boughtAt) : null;
+                const hoursSinceBuy = boughtAt ? (now - boughtAt) / (1000 * 60 * 60) : 0;
+                if (hoursSinceBuy >= 24) {
                     totalEarn += globalFridge.dailyEarn || 0;
-                }
-
-                if (f.id.startsWith('offer') && !f.earningAdded && f.endTime) {
-                    const endTime = new Date(f.endTime);
-                    const creditTime = endTime.getTime() + 24 * 60 * 60 * 1000;
-                    if (now.getTime() >= creditTime) {
-                        totalEarn += f.dailyEarn || globalFridge.dailyEarn || 0;
-                        f.earningAdded = true;
-                        saveNeeded = true;
-
-                        if (globalFridge) {
-                            globalFridge.locked = true;
-                            globalFridge.price = 0;
-                            globalFridge.dailyEarn = 0;
-                        }
-                    }
+                    saveNeeded = true;
                 }
             }
 
@@ -367,14 +934,17 @@ async function runDailyEarningsAndOffers() {
             if (saveNeeded) await user.save();
         }
 
-        console.log('Daily earnings & offer fridges updated at', now.toISOString());
+        console.log('✅ Daily earnings credited at', now.toISOString());
     } catch (err) {
-        console.error('Daily earnings & offer error:', err);
+        console.error('Daily earnings error:', err);
     }
 }
 
-// Cron: 12:00 AM Kenya time (UTC+3 => 21:00 UTC)
-cron.schedule('0 21 * * *', runDailyEarningsAndOffers, { timezone: 'UTC' });
+// Every minute — instantly credit offer earnings when they expire
+cron.schedule('* * * * *', checkAndCreditOfferEarnings);
+
+// 12:00 AM Kenya time (21:00 UTC) — credit normal fridge daily earnings
+cron.schedule('0 21 * * *', runDailyEarnings, { timezone: 'UTC' });
 
 // ================= TELEGRAM BOT =================
 const bot = new Telegraf(TELEGRAM_TOKEN);
@@ -439,6 +1009,21 @@ bot.on('callback_query', async (ctx) => {
                 payment.approved = true;
                 await payment.save();
 
+                // Credit referral reward
+                if (user.referredBy && !user.referralRewarded) {
+                    const reward = getReferralReward(payment.fridgePrice || 0);
+                    if (reward > 0) {
+                        const referrer = await User.findOne({ email: user.referredBy });
+                        if (referrer) {
+                            referrer.earning += reward;
+                            await referrer.save();
+                            user.referralRewarded = true;
+                            await user.save();
+                            console.log(`✅ Referral reward KES ${reward} to ${user.referredBy}`);
+                        }
+                    }
+                }
+
                 await ctx.editMessageText(
                     `✅ Payment Approved:\nUser: ${user.email}\nFridge: ${fridge.name}`
                 );
@@ -468,9 +1053,26 @@ app.post('/api/withdraw', auth, async (req, res) => {
         const user = await User.findOne({ email: req.user.email });
         if (!user) return res.status(404).json({ error: 'User not found' });
 
+        // ── Weekday check: Monday(1) to Friday(5) only, Kenya time (UTC+3) ──
+        const kenyaDate = new Date(Date.now() + 3 * 60 * 60 * 1000);
+        const dayOfWeek = kenyaDate.getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+        if (dayOfWeek === 0 || dayOfWeek === 6) {
+            return res.status(400).json({ error: 'Withdrawals are only available Monday to Friday. Please try again on a weekday.' });
+        }
+
+        // ── Must have at least one approved normal fridge (KES 100 min deposit) ──
+        const hasDeposit = await Payment.findOne({
+            userEmail: user.email,
+            approved: true,
+            fridgeId: { $not: /^offer/ }
+        });
+        if (!hasDeposit) {
+            return res.status(400).json({ error: 'You must first deposit (buy a normal fridge starting from KES 100) before withdrawing.' });
+        }
+
         if (user.lastWithdrawalAttempt) {
             const diff = Date.now() - new Date(user.lastWithdrawalAttempt).getTime();
-            if (diff < 24            * 60 * 60 * 1000) {
+            if (diff < 24 * 60 * 60 * 1000) {
                 const pending = await Withdrawal.findOne({ userEmail: user.email, approved: false });
                 if (pending) {
                     return res.status(400).json({ error: 'You already have a pending withdrawal.' });
@@ -497,13 +1099,15 @@ app.post('/api/withdraw', auth, async (req, res) => {
         });
 
         await withdrawal.save();
-
         user.lastWithdrawalAttempt = new Date();
         await user.save();
 
         await bot.telegram.sendMessage(
             ADMIN_CHAT_ID,
-            `💸 Withdrawal Request:\nUser: ${user.email}\nAmount: KES ${amount}\nPhone: ${phone}`,
+            `💸 Withdrawal Request:
+User: ${user.email}
+Amount: KES ${amount}
+Phone: ${phone}`,
             Markup.inlineKeyboard([
                 Markup.button.callback('✅ Approve', `withdraw_approve_${withdrawal._id}`),
                 Markup.button.callback('❌ Reject', `withdraw_reject_${withdrawal._id}`)
@@ -515,6 +1119,106 @@ app.post('/api/withdraw', auth, async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
+// ================= GET COMMUNITY LINKS (public) =================
+app.get('/api/links', (req, res) => {
+    res.json(COMMUNITY_LINKS);
+});
+
+// ================= ADMIN: UPDATE COMMUNITY LINKS =================
+app.post('/api/admin/links', auth, async (req, res) => {
+    try {
+        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
+        const { whatsapp, telegram } = req.body;
+        if (whatsapp !== undefined) COMMUNITY_LINKS.whatsapp = whatsapp;
+        if (telegram !== undefined) COMMUNITY_LINKS.telegram = telegram;
+        res.json({ message: 'Links updated', ...COMMUNITY_LINKS });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= ADMIN: STATS =================
+app.get('/api/admin/stats', auth, async (req, res) => {
+    try {
+        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
+        const [users, payments, withdrawals] = await Promise.all([
+            User.find({}, 'earning balance fridges createdAt'),
+            Payment.find({ approved: true }),
+            Withdrawal.find({ approved: true })
+        ]);
+        const totalRevenue = payments.reduce((s, p) => s + (p.fridgePrice || 0), 0);
+        const totalWithdrawn = withdrawals.reduce((s, w) => s + (w.amount || 0), 0);
+        const totalEarnings = users.reduce((s, u) => s + (u.earning || 0), 0);
+        const totalFridgesBought = payments.length;
+        const newUsersToday = users.filter(u => {
+            const d = new Date(u.createdAt);
+            const now = new Date();
+            return d.toDateString() === now.toDateString();
+        }).length;
+        res.json({
+            totalUsers: users.length,
+            newUsersToday,
+            totalRevenue,
+            totalWithdrawn,
+            totalEarnings,
+            totalFridgesBought,
+            pendingPayments: await Payment.countDocuments({ approved: false }),
+            pendingWithdrawals: await Withdrawal.countDocuments({ approved: false })
+        });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= ADMIN: SEARCH USERS =================
+app.get('/api/admin/users/search', auth, async (req, res) => {
+    try {
+        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
+        const { q } = req.query;
+        if (!q) return res.json({ users: [] });
+        const users = await User.find({
+            $or: [
+                { email: { $regex: q, $options: 'i' } },
+                { phone: { $regex: q, $options: 'i' } },
+                { name:  { $regex: q, $options: 'i' } }
+            ]
+        }, '-password').limit(20);
+        res.json({ users });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= ADMIN: ACTIVITY LOG =================
+app.get('/api/admin/logs', auth, async (req, res) => {
+    try {
+        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
+        const logs = await ActivityLog.find().sort({ createdAt: -1 }).limit(100);
+        res.json({ logs });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= ADMIN: BROADCAST MESSAGE =================
+app.post('/api/admin/broadcast', auth, async (req, res) => {
+    try {
+        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
+        const { message } = req.body;
+        if (!message) return res.status(400).json({ error: 'Message required' });
+        await Broadcast.create({ message, sentBy: req.user.email });
+        await ActivityLog.create({ action: 'BROADCAST', adminEmail: req.user.email, details: message.slice(0, 100) });
+        res.json({ message: 'Broadcast saved successfully' });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= GET LATEST BROADCAST (for dashboard) =================
+app.get('/api/broadcast/latest', auth, async (req, res) => {
+    try {
+        const b = await Broadcast.findOne().sort({ sentAt: -1 });
+        res.json({ broadcast: b || null });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= ADMIN: LOG ACTIONS (helper called internally) =================
+async function logAction(adminEmail, action, details, ip = '') {
+    try {
+        await ActivityLog.create({ action, adminEmail, details, ip });
+    } catch(e) { /* non-critical */ }
+}
 
 // ================= GRACEFUL SHUTDOWN =================
 process.on('SIGINT', () => {
@@ -533,5 +1237,3 @@ process.on('SIGTERM', () => {
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
-
-

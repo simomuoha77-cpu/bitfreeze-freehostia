@@ -169,30 +169,201 @@
 
         /* PAYMENT MODAL */
         #paymentModal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, .8);
-            justify-content: center;
-            align-items: center;
+            display: none; position: fixed; top:0; left:0;
+            width:100%; height:100%;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(6px);
+            justify-content: center; align-items: center;
             z-index: 999;
         }
-
         #paymentModal .modalContent {
-            background: #0f1620;
-            padding: 20px;
-            border-radius: 12px;
-            max-width: 400px;
-            width: 90%;
+            background: linear-gradient(160deg,#0f1a2a,#0b1220);
+            border: 1px solid rgba(255,138,0,0.25);
+            border-radius: 20px; max-width:420px; width:92%;
+            overflow:hidden;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+            animation: slideUp 0.3s cubic-bezier(0.16,1,0.3,1);
         }
+        @keyframes slideUp { from{transform:translateY(30px);opacity:0} to{transform:translateY(0);opacity:1} }
+        .modal-header {
+            background: linear-gradient(90deg,#ff8a00,#ffb347);
+            padding:18px 24px; display:flex; align-items:center; gap:12px;
+        }
+        .brand-logo { width:38px;height:38px;background:rgba(0,0,0,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px; }
+        .modal-body { padding:24px; }
+        .fridge-order-row { display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:12px 16px;margin-bottom:10px; }
+        .order-label { font-size:13px;color:#9aa6b2; }
+        .order-value { font-size:15px;font-weight:700;color:#fff; }
+        .till-card { background:linear-gradient(135deg,#0d2137,#102040);border:1px solid rgba(255,138,0,0.3);border-radius:14px;padding:20px;margin:16px 0;position:relative;overflow:hidden; }
+        .till-card::before { content:'';position:absolute;top:-40px;right:-40px;width:120px;height:120px;background:radial-gradient(circle,rgba(255,138,0,0.12),transparent 70%);border-radius:50%; }
+        .mpesa-badge { display:inline-flex;align-items:center;gap:6px;background:#4caf50;color:#fff;font-size:11px;font-weight:800;letter-spacing:1px;padding:4px 10px;border-radius:20px;margin-bottom:12px; }
+        .till-label { font-size:11px;color:#9aa6b2;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px; }
+        .till-number { font-size:34px;font-weight:900;color:#ff8a00;letter-spacing:4px;font-family:'Courier New',monospace;line-height:1; }
+        .till-name { font-size:12px;color:rgba(255,255,255,0.4);margin-top:4px; }
+        .copy-btn { position:absolute;bottom:14px;right:14px;background:rgba(255,138,0,0.15);border:1px solid rgba(255,138,0,0.4);color:#ff8a00;font-size:12px;font-weight:700;padding:5px 12px;border-radius:7px;cursor:pointer;width:auto;margin:0;transition:all 0.2s; }
+        .copy-btn:hover { background:rgba(255,138,0,0.3); }
+        .steps-list { margin-bottom:16px; }
+        .steps-title { font-size:11px;color:#9aa6b2;text-transform:uppercase;letter-spacing:1px;font-weight:600;margin:0 0 10px; }
+        .step { display:flex;align-items:flex-start;gap:10px;margin-bottom:8px; }
+        .step-num { width:22px;height:22px;background:linear-gradient(90deg,#ff8a00,#ffb347);color:#111;font-size:11px;font-weight:800;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px; }
+        .step span { font-size:13px;color:#c8d4e0;line-height:1.5; }
+        .step strong { color:#fff; }
+        .txn-input-wrap { margin-bottom:16px; }
+        .txn-input-wrap label { font-size:11px;color:#9aa6b2;text-transform:uppercase;letter-spacing:0.8px;font-weight:600;margin-bottom:7px;display:block;margin-top:0; }
+        .txn-input-wrap input { width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px 16px;color:#fff;font-size:14px;font-family:'Courier New',monospace;letter-spacing:1px;box-sizing:border-box; }
+        .txn-input-wrap input:focus { outline:none;border-color:rgba(255,138,0,0.5); }
+        .modal-actions { display:flex;gap:10px; }
+        .btn-confirm { flex:1;background:linear-gradient(90deg,#ff8a00,#ffb347);color:#111;font-weight:800;font-size:14px;padding:13px;border-radius:10px;border:none;cursor:pointer;width:auto;margin:0; }
+        .btn-cancel { background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:#9aa6b2;font-size:14px;font-weight:600;padding:13px 20px;border-radius:10px;cursor:pointer;width:auto;margin:0; }
+        #paymentMsg { font-size:13px;text-align:center;margin-top:10px;min-height:18px;color:#ffb347; }
+        .secure-badge { display:flex;align-items:center;justify-content:center;gap:6px;margin-top:12px;font-size:11px;color:rgba(255,255,255,0.2); }
+
+        /* SUPPORT TAB */
+        .support-hero {
+            background: linear-gradient(135deg, #0d1f35 0%, #0f2040 100%);
+            border: 1px solid rgba(255,138,0,0.2);
+            border-radius: 14px;
+            padding: 28px 20px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .support-hero .hero-icon { font-size: 48px; margin-bottom: 12px; }
+        .support-hero h2 { margin: 0 0 8px; font-size: 22px; color: #fff; }
+        .support-hero p { color: #9aa6b2; font-size: 14px; margin: 0; }
+
+        .community-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+        .community-card {
+            border-radius: 14px;
+            padding: 20px;
+            text-align: center;
+            text-decoration: none;
+            display: block;
+            transition: transform 0.2s, opacity 0.2s;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .community-card:hover { transform: translateY(-2px); opacity: 0.9; }
+        .community-card.whatsapp { background: linear-gradient(135deg, #075e54, #128c7e); }
+        .community-card.telegram { background: linear-gradient(135deg, #0077b5, #229ed9); }
+        .community-card .c-icon { font-size: 32px; margin-bottom: 8px; }
+        .community-card .c-title { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+        .community-card .c-sub { font-size: 12px; color: rgba(255,255,255,0.7); }
+
+        .how-steps { margin-bottom: 20px; }
+        .how-step {
+            display: flex;
+            gap: 14px;
+            align-items: flex-start;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 10px;
+        }
+        .how-step .step-icon {
+            width: 42px; height: 42px;
+            background: linear-gradient(135deg, #ff8a00, #ffb347);
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+        .how-step .step-body h4 { margin: 0 0 4px; font-size: 15px; color: #fff; }
+        .how-step .step-body p  { margin: 0; font-size: 13px; color: #9aa6b2; line-height: 1.5; }
+
+        .faq-item {
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 12px;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+        .faq-q {
+            padding: 15px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #e6eef6;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255,255,255,0.02);
+        }
+        .faq-q:hover { background: rgba(255,255,255,0.04); }
+        .faq-q .arrow { transition: transform 0.2s; font-size: 12px; color: #ff8a00; }
+        .faq-q.open .arrow { transform: rotate(180deg); }
+        .faq-a {
+            display: none;
+            padding: 0 16px 15px;
+            font-size: 13px;
+            color: #9aa6b2;
+            line-height: 1.6;
+            border-top: 1px solid rgba(255,255,255,0.04);
+        }
+        .faq-a.open { display: block; }
+
+        .about-section { margin-bottom: 20px; }
+        .about-section h3 { color: #ff8a00; font-size: 16px; margin: 0 0 10px; }
+        .about-section p  { color: #9aa6b2; font-size: 13px; line-height: 1.7; margin: 0 0 10px; }
+
+        .terms-section p  { color: #9aa6b2; font-size: 13px; line-height: 1.7; margin: 0 0 10px; }
+        .terms-section h4 { color: #e6eef6; font-size: 14px; margin: 16px 0 6px; }
+
+        .contact-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 10px;
+            margin-bottom: 10px;
+            text-decoration: none;
+            color: #e6eef6;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        .contact-row:hover { background: rgba(255,138,0,0.08); }
+        .contact-row .ci { font-size: 22px; }
+
+
+        /* BROADCAST BANNER */
+        #broadcastBanner {
+            display: none;
+            background: linear-gradient(90deg, rgba(255,138,0,0.15), rgba(255,179,71,0.1));
+            border: 1px solid rgba(255,138,0,0.35);
+            border-radius: 12px;
+            padding: 13px 18px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            color: #ffe0a0;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            animation: fadeIn 0.4s ease;
+        }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+        #broadcastBanner .b-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+        #broadcastBanner .b-close {
+            margin-left: auto; background: none; border: none;
+            color: #9aa6b2; cursor: pointer; font-size: 16px;
+            width: auto; padding: 0; margin-top: 0;
+        }
+
     </style>
 </head>
 
 <body>
 <div class="wrap">
+    <!-- BROADCAST BANNER -->
+    <div id="broadcastBanner" style="display:none">
+        <span class="b-icon">📢</span>
+        <span id="broadcastText"></span>
+        <button class="b-close" onclick="document.getElementById('broadcastBanner').style.display='none'">✕</button>
+    </div>
     <!-- TABS -->
     <div class="tabs">
         <button class="tab active" onclick="showTab('home', this)">Home</button>
@@ -200,7 +371,7 @@
         <button class="tab" onclick="showTab('offer', this)">Offer</button>
         <button class="tab" onclick="showTab('withdraw', this)">Withdraw</button>
         <button class="tab" onclick="showTab('profile', this)">Profile</button>
-        <button id="adminTab" class="tab" style="display:none;" onclick="showTab('admin', this)">Admin Panel</button>
+        <button class="tab" onclick="showTab('support', this)">Support</button>
     </div>
 
     <!-- HOME -->
@@ -287,41 +458,250 @@
         </div>
     </div>
 
-    <!-- ADMIN -->
-    <div id="admin" class="tab-content">
-        <div class="card">
-            <h2>Admin Panel</h2>
-            <h3>Create Offer Code</h3>
-            <input type="text" id="adminCode" placeholder="Code">
-            <input type="number" id="adminAmount" placeholder="Amount">
-            <button onclick="createOfferCode()">Create Code</button>
-            <p id="adminMsg"></p>
+    <!-- SUPPORT -->
+    <div id="support" class="tab-content">
 
-            <h3>Unlock Offer Fridge</h3>
-            <input type="text" id="unlockFridgeId" placeholder="Fridge ID (offer1, offer2...)">
-            <input type="number" id="unlockPrice" placeholder="Price">
-            <input type="number" id="unlockEarn" placeholder="Daily Earn">
-            <input type="number" id="unlockDuration" placeholder="Duration (hours)">
-            <button onclick="unlockFridge()">Unlock Fridge</button>
-            <p id="unlockMsg"></p>
-
-            <h3>Lock Offer Fridge</h3>
-            <input type="text" id="lockFridgeId" placeholder="Fridge ID (offer1, offer2...)">
-            <button onclick="lockFridge()">Lock Fridge</button>
-            <p id="lockMsg"></p>
+        <!-- Hero -->
+        <div class="support-hero">
+            <div class="hero-icon">❄️</div>
+            <h2>Bitfreeze Support Center</h2>
+            <p>Get help, learn how it works, and join our community</p>
         </div>
+
+        <!-- Community Links -->
+        <div class="card">
+            <h2>Join Our Community</h2>
+            <p style="font-size:13px;color:#9aa6b2;margin-bottom:16px">Connect with other Bitfreeze members for tips, updates and support.</p>
+            <div class="community-grid">
+                <a id="whatsappLink" href="#" target="_blank" class="community-card whatsapp">
+                    <div class="c-icon">💬</div>
+                    <div class="c-title">WhatsApp Group</div>
+                    <div class="c-sub">Tap to join</div>
+                </a>
+                <a id="telegramLink" href="#" target="_blank" class="community-card telegram">
+                    <div class="c-icon">✈️</div>
+                    <div class="c-title">Telegram Channel</div>
+                    <div class="c-sub">Tap to join</div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Referral Rewards -->
+        <div class="card">
+            <h2>🎁 Referral Rewards</h2>
+            <p style="font-size:13px;color:#9aa6b2;margin-bottom:16px;">Share your referral link! When your friend signs up and makes their <strong style="color:#fff">first deposit</strong>, you earn a reward based on how much they deposit.</p>
+            <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                    <thead>
+                        <tr style="border-bottom:1px solid rgba(255,255,255,0.06)">
+                            <th style="text-align:left;padding:10px 12px;color:#9aa6b2;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:1px">Friend Deposits</th>
+                            <th style="text-align:right;padding:10px 12px;color:#9aa6b2;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:1px">You Earn</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="border-bottom:1px solid rgba(255,255,255,0.03)"><td style="padding:10px 12px;color:#e6eef6">KES 100</td><td style="padding:10px 12px;text-align:right;color:#ff8a00;font-weight:700">KES 10</td></tr>
+                        <tr style="border-bottom:1px solid rgba(255,255,255,0.03)"><td style="padding:10px 12px;color:#e6eef6">KES 200</td><td style="padding:10px 12px;text-align:right;color:#ff8a00;font-weight:700">KES 20</td></tr>
+                        <tr style="border-bottom:1px solid rgba(255,255,255,0.03)"><td style="padding:10px 12px;color:#e6eef6">KES 300</td><td style="padding:10px 12px;text-align:right;color:#ff8a00;font-weight:700">KES 30</td></tr>
+                        <tr style="border-bottom:1px solid rgba(255,255,255,0.03)"><td style="padding:10px 12px;color:#e6eef6">KES 400</td><td style="padding:10px 12px;text-align:right;color:#ff8a00;font-weight:700">KES 40</td></tr>
+                        <tr style="border-bottom:1px solid rgba(255,255,255,0.03)"><td style="padding:10px 12px;color:#e6eef6">KES 500</td><td style="padding:10px 12px;text-align:right;color:#ff8a00;font-weight:700">KES 50</td></tr>
+                        <tr style="border-bottom:1px solid rgba(255,255,255,0.03)"><td style="padding:10px 12px;color:#e6eef6">KES 1,000</td><td style="padding:10px 12px;text-align:right;color:#ff8a00;font-weight:700">KES 100</td></tr>
+                        <tr style="border-bottom:1px solid rgba(255,255,255,0.03)"><td style="padding:10px 12px;color:#e6eef6">KES 2,000</td><td style="padding:10px 12px;text-align:right;color:#ff8a00;font-weight:700">KES 150</td></tr>
+                        <tr style="border-bottom:1px solid rgba(255,255,255,0.03)"><td style="padding:10px 12px;color:#e6eef6">KES 4,000</td><td style="padding:10px 12px;text-align:right;color:#ff8a00;font-weight:700">KES 250</td></tr>
+                        <tr style="border-bottom:1px solid rgba(255,255,255,0.03)"><td style="padding:10px 12px;color:#e6eef6">KES 6,000</td><td style="padding:10px 12px;text-align:right;color:#ff8a00;font-weight:700">KES 350</td></tr>
+                        <tr><td style="padding:10px 12px;color:#e6eef6">KES 8,000</td><td style="padding:10p 12px;text-align:right;color:#00e676;font-weight:700">KES 500 🏆</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div style="margin-top:14px;padding:12px;background:rgba(255,138,0,0.06);border:1px solid rgba(255,138,0,0.15);border-radius:10px;font-size:12px;color:#9aa6b2;">
+                💡 <strong style="color:#fff">How it works:</strong> Share your referral link from the Profile tab. When your friend registers using your link and their first deposit is approved by admin, your reward is instantly credited to your earnings balance.
+            </div>
+        </div>
+
+        <!-- How It Works -->
+        <div class="card">
+            <h2>How Bitfreeze Works</h2>
+            <div class="how-steps">
+                <div class="how-step">
+                    <div class="step-icon">📝</div>
+                    <div class="step-body">
+                        <h4>1. Register & Verify</h4>
+                        <p>Create your free Bitfreeze account using your email and M-Pesa phone number. Your account is secured and verified instantly.</p>
+                    </div>
+                </div>
+                <div class="how-step">
+                    <div class="step-icon">🧊</div>
+                    <div class="step-body">
+                        <h4>2. Choose a Fridge</h4>
+                        <p>Browse our range of earning fridges — from KES 100 starters to KES 8,000 premium fridges. Each fridge earns you a fixed daily income.</p>
+                    </div>
+                </div>
+                <div class="how-step">
+                    <div class="step-icon">💰</div>
+                    <div class="step-body">
+                        <h4>3. Pay via M-Pesa Till</h4>
+                        <p>Pay using M-Pesa Buy Goods — Till Number <strong style="color:#ff8a00">6992349</strong>. Submit your transaction code and wait for admin approval.</p>
+                    </div>
+                </div>
+                <div class="how-step">
+                    <div class="step-icon">📈</div>
+                    <div class="step-body">
+                        <h4>4. Earn Daily</h4>
+                        <p>After 24 hours your fridge starts earning. Daily earnings are credited to your account every night at 12:00 AM Kenya time automatically.</p>
+                    </div>
+                </div>
+                <div class="how-step">
+                    <div class="step-icon">🎁</div>
+                    <div class="step-body">
+                        <h4>5. Grab Special Offers</h4>
+                        <p>Admin unlocks special Offer Fridges for a limited time. These give you a higher total return over a short period — grab them fast!</p>
+                    </div>
+                </div>
+                <div class="how-step">
+                    <div class="step-icon">💸</div>
+                    <div class="step-body">
+                        <h4>6. Withdraw Anytime</h4>
+                        <p>Withdraw your earnings to your M-Pesa number anytime. Minimum withdrawal is KES 200. Withdrawals are processed within 24 hours.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FAQ -->
+        <div class="card">
+            <h2>Frequently Asked Questions</h2>
+            <div class="faq-item">
+                <div class="faq-q" onclick="toggleFaq(this)">Is Bitfreeze safe to use? <span class="arrow">▼</span></div>
+                <div class="faq-a">Yes. Bitfreeze uses secure JWT authentication, encrypted passwords, and all payments are manually verified by our admin team before any fridge is activated.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q" onclick="toggleFaq(this)">When do I start earning? <span class="arrow">▼</span></div>
+                <div class="faq-a">You start earning 24 hours after your fridge purchase is approved by admin. Earnings are then credited to your account every night at midnight Kenya time.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q" onclick="toggleFaq(this)">How do I pay for a fridge? <span class="arrow">▼</span></div>
+                <div class="faq-a">Go to M-Pesa → Lipa na M-Pesa → Buy Goods & Services → Enter Till Number 6992349 → Enter the exact fridge price → Submit your M-Pesa transaction code in the app.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q" onclick="toggleFaq(this)">How long does approval take? <span class="arrow">▼</span></div>
+                <div class="faq-a">Payments are typically approved within a few hours. Our admin team verifies every M-Pesa code manually to protect all users from fraud.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q" onclick="toggleFaq(this)">Can I own multiple fridges? <span class="arrow">▼</span></div>
+                <div class="faq-a">Yes! You can own as many fridges as you like. Each fridge earns independently, so more fridges means more daily income.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q" onclick="toggleFaq(this)">What are Offer Fridges? <span class="arrow">▼</span></div>
+                <div class="faq-a">Offer Fridges are special limited-time fridges unlocked by the admin. They run for a set number of hours and pay out their full total earning to your balance the moment the timer ends.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q" onclick="toggleFaq(this)">What is the minimum withdrawal? <span class="arrow">▼</span></div>
+                <div class="faq-a">The minimum withdrawal amount is KES 200. Your withdrawal phone number must match the phone number registered on your account.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q" onclick="toggleFaq(this)">I submitted the wrong M-Pesa code. What do I do? <span class="arrow">▼</span></div>
+                <div class="faq-a">Contact us immediately via WhatsApp or Telegram with your correct transaction code. Our admin will update your payment record.</div>
+            </div>
+        </div>
+
+        <!-- About -->
+        <div class="card">
+            <h2>About Bitfreeze</h2>
+            <div class="about-section">
+                <h3>Our Story</h3>
+                <p>Bitfreeze was founded in 2024 in Nairobi, Kenya, with a simple mission — give everyday Kenyans access to a simple, transparent, and reliable daily earning platform.</p>
+                <p>We noticed that most investment platforms were too complicated, required large capital, or weren't built for the Kenyan market. Bitfreeze was built differently — using M-Pesa, the payment system Kenyans already trust, and keeping the process as simple as buying goods at a shop.</p>
+                <h3>Our Mission</h3>
+                <p>To empower Kenyans with a simple passive income stream. Whether you invest KES 100 or KES 8,000 — Bitfreeze works for you every single day.</p>
+                <h3>Why "Bitfreeze"?</h3>
+                <p>Just like a fridge preserves and grows value over time, Bitfreeze preserves your money and grows it daily. The "Bit" represents the digital nature of our platform — modern, fast, and always available.</p>
+                <h3>Our Values</h3>
+                <p>🔒 <strong>Transparency</strong> — Every payment is manually verified. No hidden fees.<br>
+                ⚡ <strong>Speed</strong> — Fast approvals, instant earnings at midnight.<br>
+                🤝 <strong>Trust</strong> — We've served hundreds of Kenyan users since launch.<br>
+                📱 <strong>Accessibility</strong> — Works on any phone, anywhere in Kenya.</p>
+            </div>
+        </div>
+
+        <!-- Terms -->
+        <div class="card">
+            <h2>Terms & Conditions</h2>
+            <div class="terms-section">
+                <p>By using Bitfreeze, you agree to the following terms. Please read carefully.</p>
+                <h4>1. Eligibility</h4>
+                <p>You must be at least 18 years old and a resident of Kenya to use Bitfreeze. You must provide a valid M-Pesa registered phone number.</p>
+                <h4>2. Payments</h4>
+                <p>All payments are made via M-Pesa Buy Goods Till Number 6992349. Bitfreeze is not responsible for payments sent to the wrong till number. Always verify the till number before paying.</p>
+                <h4>3. Earnings</h4>
+                <p>Daily earnings are credited every night at 12:00 AM Kenya time for normal fridges. Offer fridge earnings are credited immediately when the offer timer ends. Earnings are estimates based on fridge type and may not be guaranteed in extraordinary circumstances.</p>
+                <h4>4. Withdrawals</h4>
+                <p>Minimum withdrawal is KES 200. Withdrawals are processed within 24 hours. Your withdrawal phone must match your registered account phone number.</p>
+                <h4>5. Account Security</h4>
+                <p>You are responsible for keeping your login credentials secure. Bitfreeze will never ask for your password. Report any suspicious activity immediately.</p>
+                <h4>6. Prohibited Activities</h4>
+                <p>Submitting fake M-Pesa transaction codes, creating multiple accounts, or attempting to manipulate the platform in any way will result in permanent account suspension.</p>
+                <h4>7. Changes to Terms</h4>
+                <p>Bitfreeze reserves the right to update these terms at any time. Continued use of the platform constitutes acceptance of the updated terms.</p>
+                <p style="margin-top:16px;color:#ff8a00;font-size:12px;">Last updated: January 2025 · Bitfreeze Kenya</p>
+            </div>
+        </div>
+
+        <!-- Contact -->
+        <div class="card">
+            <h2>Contact Us</h2>
+            <a id="contactWhatsapp" href="#" target="_blank" class="contact-row">
+                <span class="ci">💬</span> Chat us on WhatsApp
+            </a>
+            <a id="contactTelegram" href="#" target="_blank" class="contact-row">
+                <span class="ci">✈️</span> Message us on Telegram
+            </a>
+        </div>
+
     </div>
-</div>
 
 <!-- PAYMENT MODAL -->
 <div id="paymentModal">
     <div class="modalContent">
-        <h3 id="modalFridgeName"></h3>
-        <label>Phone Number Used:</label>
-        <input type="text" id="modalPhone" placeholder="e.g. 0712345678" readonly>
-        <p id="paymentMsg"></p>
-        <button id="submitPaymentBtn">Confirm Purchase</button>
-        <button onclick="closeModal()" style="background:#ff4444;">Cancel</button>
+        <div class="modal-header">
+            <div class="brand-logo">❄️</div>
+            <div>
+                <h3 style="margin:0;font-size:16px;font-weight:800;color:#111;">Complete Your Purchase</h3>
+                <p style="margin:2px 0 0;font-size:12px;color:rgba(0,0,0,0.6);">Secure M-Pesa Buy Goods Payment</p>
+            </div>
+        </div>
+        <div class="modal-body">
+            <div class="fridge-order-row">
+                <span class="order-label">📦 Item</span>
+                <span class="order-value" id="modalFridgeName">—</span>
+            </div>
+            <div class="fridge-order-row">
+                <span class="order-label">💰 Amount</span>
+                <span class="order-value" id="modalAmount" style="color:#ff8a00;">KES —</span>
+            </div>
+            <div class="till-card">
+                <div class="mpesa-badge">● M-Pesa</div>
+                <div class="till-label">Buy Goods Till Number</div>
+                <div class="till-number">6992349</div>
+                <div class="till-name">Bitfreeze Business</div>
+                <button class="copy-btn" onclick="copyTill()">📋 Copy</button>
+            </div>
+            <div class="steps-list">
+                <p class="steps-title">How to Pay</p>
+                <div class="step"><div class="step-num">1</div><span>Go to <strong>M-Pesa</strong> → <strong>Lipa na M-Pesa</strong> → <strong>Buy Goods & Services</strong></span></div>
+                <div class="step"><div class="step-num">2</div><span>Enter Till <strong>6992349</strong> and the exact amount above</span></div>
+                <div class="step"><div class="step-num">3</div><span>Enter your M-Pesa PIN — you'll get an <strong>SMS confirmation</strong></span></div>
+                <div class="step"><div class="step-num">4</div><span>Paste your <strong>M-Pesa transaction code</strong> below</span></div>
+            </div>
+            <div class="txn-input-wrap">
+                <label>M-Pesa Transaction Code</label>
+                <input type="text" id="txnCode" placeholder="e.g. QHX4K82LPR" maxlength="20" oninput="this.value=this.value.toUpperCase()">
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+                <button class="btn-confirm" id="submitPaymentBtn">✅ I Have Paid</button>
+            </div>
+            <p id="paymentMsg"></p>
+            <div class="secure-badge">🔒 Payments are verified and secure</div>
+        </div>
     </div>
 </div>
 
@@ -339,15 +719,26 @@ function showTab(id, btn) {
 }
 
 // MODAL
+let currentFridgeId = '';
 function buyFridge(fridgeId, fridgeName, fridgePrice) {
+    currentFridgeId = fridgeId;
     document.getElementById('modalFridgeName').textContent = fridgeName;
-    document.getElementById('modalPhone').value = document.getElementById('userPhone').textContent; // Pre-fill with registered phone number
+    document.getElementById('modalAmount').textContent = 'KES ' + Number(fridgePrice).toLocaleString();
     document.getElementById('paymentMsg').textContent = '';
+    document.getElementById('txnCode').value = '';
     document.getElementById('paymentModal').style.display = 'flex';
 }
 
 function closeModal() {
     document.getElementById('paymentModal').style.display = 'none';
+}
+
+function copyTill() {
+    navigator.clipboard.writeText('6992349').then(() => {
+        const btn = document.querySelector('.copy-btn');
+        btn.textContent = '✅ Copied!';
+        setTimeout(() => btn.textContent = '📋 Copy', 2000);
+    });
 }
 
 // REDEEM OFFER CODE
@@ -389,7 +780,7 @@ async function getUser() {
         animateEarnings(0, Number(u.earning) || 0);
         loadEarningFridges(u.fridges);
         loadOfferFridges();
-        if (d.isAdmin) document.getElementById('adminTab').style.display = 'block';
+
     } catch (e) { console.error(e); }
 }
 getUser();
@@ -433,13 +824,30 @@ async function loadEarningFridges(userFridges) {
 }
 
 async function loadOfferFridges() {
-    const res = await fetch(DOMAIN + '/api/fridges', { headers: { Authorization: 'Bearer ' + token } });
-    const data = await res.json();
+    const resF = await fetch(DOMAIN + '/api/fridges', { headers: { Authorization: 'Bearer ' + token } });
+    const resMe = await fetch(DOMAIN + '/api/me', { headers: { Authorization: 'Bearer ' + token } });
+    const data = await resF.json();
+    const meData = await resMe.json();
+    const myFridges = meData.user ? meData.user.fridges : [];
+
     const list = document.getElementById('offerFridgeList'); list.innerHTML = '';
     data.fridges.forEach(f => {
         if (!f.id.startsWith('offer')) return;
         const div = document.createElement('div'); div.className = 'fridge';
-        const locked = f.locked ? 'Locked' : 'Buy';
+
+        // Check if user already owns this active offer fridge
+        const owned = myFridges.some(uf => {
+            if (uf.id !== f.id) return false;
+            // If it has an endTime, check if it's still active
+            if (uf.endTime) return new Date(uf.endTime) > new Date();
+            return true;
+        });
+
+        let btnLabel, btnDisabled;
+        if (f.locked) { btnLabel = 'Locked'; btnDisabled = true; }
+        else if (owned) { btnLabel = 'Already Owned'; btnDisabled = true; }
+        else { btnLabel = 'Buy'; btnDisabled = false; }
+
         let remaining = '';
         if (!f.locked && f.startTime && f.durationHrs) {
             remaining = `<p id="timer-${f.id}">Calculating time...</p>`;
@@ -451,7 +859,8 @@ async function loadOfferFridges() {
                 <p>Price: ${f.locked ? 'Locked' : 'KES ' + f.price}</p>
                 <p>Total Earn: ${f.locked ? 'Locked' : 'KES ' + f.dailyEarn}</p>
                 ${remaining}
-                <button ${f.locked ? 'disabled' : ''} onclick="buyFridge('${f.id}', '${f.name}', ${f.price})">${locked}</button>
+                <button ${btnDisabled ? 'disabled style="opacity:0.5;cursor:not-allowed"' : ''} 
+                    onclick="${btnDisabled ? '' : `buyFridge('${f.id}', '${f.name}', ${f.price})`}">${btnLabel}</button>
             </div>`;
         list.appendChild(div);
         if (!f.locked && f.startTime && f.durationHrs) startCountdown(f.id, new Date(f.startTime), f.durationHrs);
@@ -483,30 +892,46 @@ function startCountdown(id, startTime, durationHrs) {
     }, 1000);
 }
 
-// INITIATE PAYMENT
+// SUBMIT PAYMENT (Buy Till)
 document.getElementById('submitPaymentBtn').addEventListener('click', async () => {
-    const fridgeId = document.getElementById('modalFridgeName').textContent; // Use fridge ID from context
-    const phone = document.getElementById('modalPhone').value.trim();
+    const txnCode = document.getElementById('txnCode').value.trim().toUpperCase();
+    const paymentMsg = document.getElementById('paymentMsg');
 
-    if (!phone) {
-        paymentMsg.textContent = 'Enter phone number';
+    if (!txnCode || txnCode.length < 8) {
+        paymentMsg.style.color = '#ff4444';
+        paymentMsg.textContent = '⚠️ Enter a valid M-Pesa transaction code.';
         return;
     }
 
+    const btn = document.getElementById('submitPaymentBtn');
+    btn.disabled = true;
+    btn.textContent = 'Submitting...';
+    paymentMsg.style.color = '#ffb347';
+    paymentMsg.textContent = 'Verifying payment, please wait...';
+
     try {
-        const res = await fetch(DOMAIN + '/api/payment/initiate', {
+        const res = await fetch(DOMAIN + '/api/payment/manual', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-            body: JSON.stringify({ fridgeId, phone })
+            body: JSON.stringify({ fridgeId: currentFridgeId, txnCode })
         });
         const d = await res.json();
-        paymentMsg.textContent = d.message || d.error;
 
-        if (!d.error) setTimeout(closeModal, 2000);
-        getUser(); // Refresh the user info
+        if (d.error) {
+            paymentMsg.style.color = '#ff4444';
+            paymentMsg.textContent = '❌ ' + d.error;
+            btn.disabled = false;
+            btn.textContent = '✅ I Have Paid';
+        } else {
+            paymentMsg.style.color = '#00ffb0';
+            paymentMsg.textContent = '✅ Payment submitted! Your fridge will be activated after verification.';
+            setTimeout(() => { closeModal(); getUser(); }, 2500);
+        }
     } catch (err) {
-        console.error(err);
-        paymentMsg.textContent = 'Network error';
+        paymentMsg.style.color = '#ff4444';
+        paymentMsg.textContent = '❌ Network error. Please try again.';
+        btn.disabled = false;
+        btn.textContent = '✅ I Have Paid';
     }
 });
 
@@ -609,8 +1034,51 @@ async function lockFridge() {
         lockMsg.textContent = 'Network error';
     }
 }
+
+// FAQ TOGGLE
+function toggleFaq(el) {
+    el.classList.toggle('open');
+    el.nextElementSibling.classList.toggle('open');
+}
+
+// LOAD COMMUNITY LINKS FROM SERVER
+async function loadCommunityLinks() {
+    try {
+        const res = await fetch(DOMAIN + '/api/links');
+        const d = await res.json();
+        if (d.whatsapp) {
+            document.getElementById('whatsappLink').href = d.whatsapp;
+            document.getElementById('contactWhatsapp').href = d.whatsapp;
+        }
+        if (d.telegram) {
+            document.getElementById('telegramLink').href = d.telegram;
+            document.getElementById('contactTelegram').href = d.telegram;
+        }
+    } catch(e) { console.log('Links not set yet'); }
+}
+loadCommunityLinks();
+
+// LOAD BROADCAST BANNER
+async function loadBroadcast() {
+    try {
+        const res = await fetch(DOMAIN + '/api/broadcast/latest', { headers: { Authorization: 'Bearer ' + token } });
+        const d = await res.json();
+        if (d.broadcast && d.broadcast.message) {
+            const dismissed = localStorage.getItem('bf_dismissed_broadcast');
+            const bId = d.broadcast._id || d.broadcast.sentAt;
+            if (dismissed !== String(bId)) {
+                document.getElementById('broadcastText').textContent = d.broadcast.message;
+                document.getElementById('broadcastBanner').style.display = 'flex';
+                document.querySelector('.b-close').onclick = () => {
+                    document.getElementById('broadcastBanner').style.display = 'none';
+                    localStorage.setItem('bf_dismissed_broadcast', String(bId));
+                };
+            }
+        }
+    } catch(e) {}
+}
+loadBroadcast();
+
 </script>
 </body>
 </html>
-
-

@@ -1,61 +1,842 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bitfreeze</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: 'Arial', sans-serif;
-      background: #0b0f14;
-      color: #ffffff;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
-    .container {
-      text-align: center;
-      background-color: #11151f;
-      padding: 50px 30px;
-      border-radius: 12px;
-      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
-      max-width: 400px;
-      width: 90%;
-    }
-    h1 {
-      font-size: 36px;
-      margin-bottom: 25px;
-      background: linear-gradient(90deg, #f7931a, #ffb84d);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    .links a {
-      display: inline-block;
-      margin: 12px 10px;
-      padding: 14px 28px;
-      font-weight: bold;
-      border-radius: 8px;
-      text-decoration: none;
-      color: #111;
-      background: linear-gradient(90deg, #f7931a, #ffb84d);
-      transition: all 0.3s ease;
-    }
-    .links a:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 5px 15px rgba(255, 184, 77, 0.4);
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bitfreeze — Earn Daily from Your Fridge</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+:root {
+    --bg: #060a0f;
+    --accent: #ff8a00;
+    --accent2: #ffb347;
+    --muted: #4a5a6a;
+    --text: #b8ccd8;
+    --heading: #ffffff;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow-x: hidden;
+}
+
+/* ── ANIMATED BG ── */
+.bg-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.15;
+    animation: drift 20s ease-in-out infinite;
+}
+
+.orb-1 { width: 600px; height: 600px; background: #ff8a00; top: -200px; right: -100px; animation-delay: 0s; }
+.orb-2 { width: 400px; height: 400px; background: #0066ff; bottom: -100px; left: -100px; animation-delay: -8s; }
+.orb-3 { width: 300px; height: 300px; background: #ff4400; top: 50%; left: 30%; animation-delay: -14s; }
+
+@keyframes drift {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(30px, -40px) scale(1.05); }
+    66% { transform: translate(-20px, 30px) scale(0.95); }
+}
+
+/* Grid overlay */
+.bg-grid {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image:
+        linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 60px 60px;
+}
+
+/* ── NAV ── */
+nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(6,10,15,0.8);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+}
+
+.nav-logo {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, #ff8a00, #ffb347);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+}
+
+.nav-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--heading);
+    letter-spacing: -0.3px;
+}
+
+.nav-links {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.btn-nav-secondary {
+    padding: 9px 20px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.04);
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.2s;
+}
+.btn-nav-secondary:hover { background: rgba(255,255,255,0.08); color: #fff; }
+
+.btn-nav-primary {
+    padding: 9px 20px;
+    border-radius: 8px;
+    background: linear-gradient(90deg, #ff8a00, #ffb347);
+    color: #111;
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+    font-family: 'Syne', sans-serif;
+    transition: opacity 0.2s;
+}
+.btn-nav-primary:hover { opacity: 0.88; }
+
+/* ── HERO ── */
+.hero {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 120px 24px 80px;
+}
+
+.hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,138,0,0.1);
+    border: 1px solid rgba(255,138,0,0.25);
+    border-radius: 30px;
+    padding: 6px 16px;
+    font-size: 13px;
+    color: var(--accent2);
+    font-weight: 500;
+    margin-bottom: 28px;
+    animation: fadeUp 0.6s ease both;
+}
+
+.hero-badge .dot {
+    width: 7px; height: 7px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
+
+.hero h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(42px, 10vw, 80px);
+    font-weight: 900;
+    color: var(--heading);
+    line-height: 1.05;
+    letter-spacing: -2px;
+    margin-bottom: 24px;
+    animation: fadeUp 0.6s ease 0.1s both;
+}
+
+.hero h1 .highlight {
+    background: linear-gradient(90deg, #ff8a00, #ffb347, #ff6600);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.hero-sub {
+    font-size: clamp(16px, 3vw, 20px);
+    color: var(--text);
+    max-width: 520px;
+    line-height: 1.6;
+    margin-bottom: 40px;
+    font-weight: 300;
+    animation: fadeUp 0.6s ease 0.2s both;
+}
+
+.hero-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 60px;
+    animation: fadeUp 0.6s ease 0.3s both;
+}
+
+.btn-hero-primary {
+    padding: 16px 36px;
+    background: linear-gradient(90deg, #ff8a00, #ffb347);
+    border-radius: 12px;
+    color: #111;
+    font-family: 'Syne', sans-serif;
+    font-size: 16px;
+    font-weight: 800;
+    text-decoration: none;
+    letter-spacing: 0.2px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 8px 30px rgba(255,138,0,0.3);
+}
+.btn-hero-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(255,138,0,0.4); }
+
+.btn-hero-secondary {
+    padding: 16px 36px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    color: var(--heading);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background 0.2s;
+}
+.btn-hero-secondary:hover { background: rgba(255,255,255,0.09); }
+
+/* Hero stats */
+.hero-stats {
+    display: flex;
+    gap: 40px;
+    flex-wrap: wrap;
+    justify-content: center;
+    animation: fadeUp 0.6s ease 0.4s both;
+}
+
+.hero-stat { text-align: center; }
+.hero-stat .stat-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--heading);
+}
+.hero-stat .stat-num span { color: var(--accent); }
+.hero-stat .stat-label { font-size: 12px; color: var(--muted); margin-top: 2px; letter-spacing: 1px; text-transform: uppercase; }
+
+@keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+
+/* Scroll indicator */
+.scroll-indicator {
+    position: absolute;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    animation: bounce 2s ease-in-out infinite;
+}
+
+.scroll-indicator .arrow { font-size: 18px; }
+
+@keyframes bounce { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(6px)} }
+
+/* ── SECTION BASE ── */
+section {
+    position: relative;
+    z-index: 1;
+    padding: 80px 24px;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+.section-label {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+.section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(28px, 5vw, 44px);
+    font-weight: 800;
+    color: var(--heading);
+    letter-spacing: -1px;
+    margin-bottom: 14px;
+    line-height: 1.1;
+}
+
+.section-sub {
+    font-size: 16px;
+    color: var(--text);
+    max-width: 500px;
+    line-height: 1.6;
+    font-weight: 300;
+}
+
+/* ── HOW IT WORKS ── */
+.how-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin-top: 48px;
+}
+
+.how-card {
+    background: linear-gradient(160deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 18px;
+    padding: 28px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, border-color 0.2s;
+}
+
+.how-card:hover { transform: translateY(-4px); border-color: rgba(255,138,0,0.2); }
+
+.how-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #ff8a00, #ffb347);
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+.how-card:hover::before { opacity: 1; }
+
+.how-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 48px;
+    font-weight: 900;
+    color: rgba(255,138,0,0.12);
+    line-height: 1;
+    margin-bottom: 16px;
+}
+
+.how-icon {
+    font-size: 28px;
+    margin-bottom: 14px;
+    display: block;
+}
+
+.how-card h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--heading);
+    margin-bottom: 8px;
+}
+
+.how-card p { font-size: 14px; color: var(--text); line-height: 1.6; }
+
+/* ── FRIDGES ── */
+.fridges-section { text-align: center; }
+
+.fridges-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+    margin-top: 48px;
+}
+
+.fridge-card {
+    background: linear-gradient(160deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 14px;
+    padding: 20px 16px;
+    text-align: center;
+    transition: transform 0.2s, border-color 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+.fridge-card:hover { transform: translateY(-4px); border-color: rgba(255,138,0,0.25); }
+
+.fridge-card.featured {
+    border-color: rgba(255,138,0,0.3);
+    background: linear-gradient(160deg, rgba(255,138,0,0.08), rgba(255,138,0,0.02));
+}
+
+.fridge-card .badge {
+    position: absolute;
+    top: 10px; right: 10px;
+    background: var(--accent);
+    color: #111;
+    font-size: 9px;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+}
+
+.fridge-card .f-emoji { font-size: 28px; margin-bottom: 10px; }
+.fridge-card .f-name { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; color: var(--heading); margin-bottom: 6px; }
+.fridge-card .f-price { font-size: 18px; font-weight: 700; color: var(--accent); font-family: 'Syne', sans-serif; }
+.fridge-card .f-earn { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.fridge-card .f-earn span { color: #00e676; font-weight: 600; }
+
+/* ── FEATURES ── */
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 14px;
+    margin-top: 48px;
+}
+
+.feature-card {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 16px;
+    padding: 24px;
+    transition: background 0.2s;
+}
+.feature-card:hover { background: rgba(255,255,255,0.04); }
+
+.feature-card .f-icon {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    background: rgba(255,138,0,0.12);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    margin-bottom: 16px;
+}
+
+.feature-card h3 { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; color: var(--heading); margin-bottom: 8px; }
+.feature-card p { font-size: 13px; color: var(--text); line-height: 1.6; }
+
+/* ── REFERRAL SECTION ── */
+.referral-section {
+    background: linear-gradient(135deg, rgba(255,138,0,0.08) 0%, rgba(255,100,0,0.04) 100%);
+    border: 1px solid rgba(255,138,0,0.15);
+    border-radius: 24px;
+    padding: 48px 32px;
+    text-align: center;
+    margin: 0 auto;
+    max-width: 1100px;
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+}
+
+.referral-section::before {
+    content: '🎁';
+    position: absolute;
+    font-size: 200px;
+    top: -40px; right: -20px;
+    opacity: 0.04;
+    pointer-events: none;
+}
+
+.ref-table {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 28px 0;
+}
+
+.ref-pill {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 30px;
+    padding: 8px 18px;
+    font-size: 13px;
+    color: var(--text);
+}
+
+.ref-pill strong { color: var(--accent); font-family: 'Syne', sans-serif; }
+
+/* ── CTA ── */
+.cta-section {
+    text-align: center;
+    padding: 80px 24px 120px;
+    position: relative;
+    z-index: 1;
+}
+
+.cta-box {
+    max-width: 600px;
+    margin: 0 auto;
+    background: linear-gradient(160deg, rgba(255,138,0,0.1), rgba(255,138,0,0.03));
+    border: 1px solid rgba(255,138,0,0.2);
+    border-radius: 28px;
+    padding: 56px 40px;
+    position: relative;
+    overflow: hidden;
+}
+
+.cta-box::after {
+    content: '';
+    position: absolute;
+    bottom: -60px; left: 50%;
+    transform: translateX(-50%);
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(255,138,0,0.15), transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.cta-box h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(28px, 5vw, 40px);
+    font-weight: 900;
+    color: var(--heading);
+    letter-spacing: -1px;
+    margin-bottom: 16px;
+}
+
+.cta-box p { font-size: 16px; color: var(--text); margin-bottom: 32px; line-height: 1.6; font-weight: 300; }
+
+/* ── FOOTER ── */
+footer {
+    position: relative;
+    z-index: 1;
+    border-top: 1px solid rgba(255,255,255,0.04);
+    padding: 32px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+.footer-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+}
+
+.footer-logo {
+    width: 30px; height: 30px;
+    background: linear-gradient(135deg, #ff8a00, #ffb347);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+}
+
+.footer-name { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; color: var(--heading); }
+
+.footer-copy { font-size: 12px; color: var(--muted); }
+
+.footer-links { display: flex; gap: 20px; }
+.footer-links a { font-size: 13px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+.footer-links a:hover { color: var(--accent); }
+
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+    .hero-stats { gap: 24px; }
+    .how-grid, .features-grid { grid-template-columns: 1fr; }
+    .fridges-grid { grid-template-columns: repeat(2, 1fr); }
+    .cta-box { padding: 36px 24px; }
+    .btn-hero-primary, .btn-hero-secondary { width: 100%; text-align: center; padding: 15px 24px; }
+    .hero-actions { flex-direction: column; width: 100%; max-width: 300px; }
+    footer { flex-direction: column; text-align: center; }
+    .footer-links { justify-content: center; }
+    .referral-section { padding: 32px 20px; }
+    nav { padding: 12px 16px; }
+    .btn-nav-secondary { display: none; }
+}
+</style>
 </head>
 <body>
-  <div class="container">
-    <h1>Bitfreeze</h1>
-    <div class="links">
-      <a href="register.html">Register</a>
-      <a href="login.html">Login</a>
-      <a href="dashboard.html">Dashboard</a>
+
+<div class="bg-layer">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+</div>
+<div class="bg-grid"></div>
+
+<!-- NAV -->
+<nav>
+    <a class="nav-brand" href="/">
+        <div class="nav-logo">❄️</div>
+        <span class="nav-name">Bitfreeze</span>
+    </a>
+    <div class="nav-links">
+        <a href="/login" class="btn-nav-secondary">Sign In</a>
+        <a href="/register" class="btn-nav-primary">Start Earning</a>
     </div>
-  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+    <div class="hero-badge">
+        <span class="dot"></span>
+        Now live in Kenya — Earn from KES 100
+    </div>
+
+    <h1>Your Fridge.<br><span class="highlight">Your Income.</span></h1>
+
+    <p class="hero-sub">
+        Buy a virtual fridge, earn daily passive income, and withdraw to your M-Pesa. Simple, transparent, and built for Kenyans.
+    </p>
+
+    <div class="hero-actions">
+        <a href="/register" class="btn-hero-primary">🚀 Create Free Account</a>
+        <a href="#how" class="btn-hero-secondary">See How It Works</a>
+    </div>
+
+    <div class="hero-stats">
+        <div class="hero-stat">
+            <div class="stat-num">KES <span>100</span></div>
+            <div class="stat-label">Minimum deposit</div>
+        </div>
+        <div class="hero-stat">
+            <div class="stat-num"><span>Daily</span></div>
+            <div class="stat-label">Earnings credited</div>
+        </div>
+        <div class="hero-stat">
+            <div class="stat-num">M-<span>Pesa</span></div>
+            <div class="stat-label">Easy payments</div>
+        </div>
+        <div class="hero-stat">
+            <div class="stat-num">Mon–<span>Fri</span></div>
+            <div class="stat-label">Withdrawals</div>
+        </div>
+    </div>
+
+    <div class="scroll-indicator">
+        <span>Scroll</span>
+        <span class="arrow">↓</span>
+    </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<section id="how">
+    <div class="section-label">Simple Process</div>
+    <div class="section-title">How Bitfreeze Works</div>
+    <p class="section-sub">Start earning in 3 easy steps. No experience needed — just a phone and M-Pesa.</p>
+
+    <div class="how-grid">
+        <div class="how-card">
+            <div class="how-num">01</div>
+            <span class="how-icon">📝</span>
+            <h3>Create Account</h3>
+            <p>Register for free with your email and M-Pesa number. Takes less than 2 minutes.</p>
+        </div>
+        <div class="how-card">
+            <div class="how-num">02</div>
+            <span class="how-icon">🧊</span>
+            <h3>Buy a Fridge</h3>
+            <p>Choose any fridge from KES 100 to KES 8,000. Pay via M-Pesa Buy Goods — Till 6992349.</p>
+        </div>
+        <div class="how-card">
+            <div class="how-num">03</div>
+            <span class="how-icon">📈</span>
+            <h3>Earn Daily</h3>
+            <p>Your fridge earns automatically every day. Earnings are credited at midnight Kenya time.</p>
+        </div>
+        <div class="how-card">
+            <div class="how-num">04</div>
+            <span class="how-icon">💸</span>
+            <h3>Withdraw Anytime</h3>
+            <p>Withdraw your earnings to M-Pesa Monday to Friday. Minimum KES 200.</p>
+        </div>
+    </div>
+</section>
+
+<!-- FRIDGES -->
+<section class="fridges-section">
+    <div class="section-label">Our Products</div>
+    <div class="section-title">Choose Your Fridge</div>
+    <p class="section-sub" style="margin:0 auto">From starter fridges to premium earners — there's a fridge for every budget.</p>
+
+    <div class="fridges-grid">
+        <div class="fridge-card">
+            <div class="f-emoji">🧊</div>
+            <div class="f-name">Starter 100</div>
+            <div class="f-price">KES 100</div>
+            <div class="f-earn">Earns <span>KES 5/day</span></div>
+        </div>
+        <div class="fridge-card">
+            <div class="f-emoji">🧊</div>
+            <div class="f-name">Starter 200</div>
+            <div class="f-price">KES 200</div>
+            <div class="f-earn">Earns <span>KES 10/day</span></div>
+        </div>
+        <div class="fridge-card">
+            <div class="f-emoji">❄️</div>
+            <div class="f-name">Fridge 300</div>
+            <div class="f-price">KES 300</div>
+            <div class="f-earn">Earns <span>KES 15/day</span></div>
+        </div>
+        <div class="fridge-card">
+            <div class="f-emoji">❄️</div>
+            <div class="f-name">Fridge 400</div>
+            <div class="f-price">KES 400</div>
+            <div class="f-earn">Earns <span>KES 20/day</span></div>
+        </div>
+        <div class="fridge-card featured">
+            <div class="badge">POPULAR</div>
+            <div class="f-emoji">🏔️</div>
+            <div class="f-name">2ft Fridge</div>
+            <div class="f-price">KES 500</div>
+            <div class="f-earn">Earns <span>KES 25/day</span></div>
+        </div>
+        <div class="fridge-card">
+            <div class="f-emoji">🏔️</div>
+            <div class="f-name">4ft Fridge</div>
+            <div class="f-price">KES 1,000</div>
+            <div class="f-earn">Earns <span>KES 55/day</span></div>
+        </div>
+        <div class="fridge-card">
+            <div class="f-emoji">🏔️</div>
+            <div class="f-name">6ft Fridge</div>
+            <div class="f-price">KES 2,000</div>
+            <div class="f-earn">Earns <span>KES 100/day</span></div>
+        </div>
+        <div class="fridge-card featured">
+            <div class="badge">BEST ROI</div>
+            <div class="f-emoji">👑</div>
+            <div class="f-name">12ft Premium</div>
+            <div class="f-price">KES 8,000</div>
+            <div class="f-earn">Earns <span>KES 350/day</span></div>
+        </div>
+    </div>
+
+    <p style="margin-top:24px;font-size:13px;color:var(--muted)">+ Special Offer Fridges unlocked by admin for limited time 🎁</p>
+</section>
+
+<!-- FEATURES -->
+<section>
+    <div class="section-label">Why Bitfreeze</div>
+    <div class="section-title">Built for Kenya</div>
+    <p class="section-sub">Everything you need — nothing you don't.</p>
+
+    <div class="features-grid">
+        <div class="feature-card">
+            <div class="f-icon">📱</div>
+            <h3>M-Pesa Powered</h3>
+            <p>Pay and withdraw using M-Pesa. The payment system every Kenyan already trusts.</p>
+        </div>
+        <div class="feature-card">
+            <div class="f-icon">🔒</div>
+            <h3>Manual Verification</h3>
+            <p>Every payment is manually verified by our admin team. No fake approvals, ever.</p>
+        </div>
+        <div class="feature-card">
+            <div class="f-icon">⏱️</div>
+            <h3>Daily Auto-Earnings</h3>
+            <p>Sit back. Earnings are automatically credited to your account every midnight.</p>
+        </div>
+        <div class="feature-card">
+            <div class="f-icon">🎁</div>
+            <h3>Special Offers</h3>
+            <p>Admin unlocks limited-time Offer Fridges with high total returns. Grab them fast!</p>
+        </div>
+        <div class="feature-card">
+            <div class="f-icon">👥</div>
+            <h3>Referral Rewards</h3>
+            <p>Earn up to KES 500 for every friend you refer. Rewards scale with their deposit.</p>
+        </div>
+        <div class="feature-card">
+            <div class="f-icon">📊</div>
+            <h3>Live Dashboard</h3>
+            <p>Track your fridges, earnings, and withdrawals in real-time from your personal dashboard.</p>
+        </div>
+    </div>
+</section>
+
+<!-- REFERRAL -->
+<div style="padding:0 24px;position:relative;z-index:1;">
+<div class="referral-section">
+    <div class="section-label" style="margin-bottom:12px">Earn More Together</div>
+    <div class="section-title" style="margin-bottom:12px">Refer & Earn Up to KES 500</div>
+    <p style="color:var(--text);font-size:16px;font-weight:300;max-width:480px;margin:0 auto;line-height:1.6">
+        Share your unique referral link. When your friend makes their first deposit, you earn instantly — based on how much they deposit.
+    </p>
+
+    <div class="ref-table">
+        <div class="ref-pill">KES 100 → <strong>KES 80</strong></div>
+        <div class="ref-pill">KES 300 → <strong>KES 30</strong></div>
+        <div class="ref-pill">KES 500 → <strong>KES 50</strong></div>
+        <div class="ref-pill">KES 1,000 → <strong>KES 100</strong></div>
+        <div class="ref-pill">KES 2,000 → <strong>KES 150</strong></div>
+        <div class="ref-pill">KES 4,000 → <strong>KES 250</strong></div>
+        <div class="ref-pill">KES 8,000 → <strong>KES 500 🏆</strong></div>
+    </div>
+
+    <a href="/register" class="btn-hero-primary" style="display:inline-block">Join & Start Referring →</a>
+</div>
+</div>
+
+<!-- CTA -->
+<div class="cta-section">
+    <div class="cta-box">
+        <h2>Ready to Start<br>Earning Today?</h2>
+        <p>Join Bitfreeze for free. Your first fridge could be earning by tonight.</p>
+        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+            <a href="/register" class="btn-hero-primary">🚀 Create Free Account</a>
+            <a href="/login" class="btn-hero-secondary">Sign In</a>
+        </div>
+        <p style="margin-top:20px;font-size:12px;color:var(--muted)">
+            🔒 Secure · 📱 M-Pesa Verified · 🇰🇪 Kenya Based
+        </p>
+    </div>
+</div>
+
+<!-- FOOTER -->
+<div style="position:relative;z-index:1;border-top:1px solid rgba(255,255,255,0.04);">
+<footer>
+    <a class="footer-brand" href="/">
+        <div class="footer-logo">❄️</div>
+        <span class="footer-name">Bitfreeze</span>
+    </a>
+    <div class="footer-links">
+        <a href="/register">Register</a>
+        <a href="/login">Login</a>
+        <a href="/dashboard">Dashboard</a>
+    </div>
+    <div class="footer-copy">© 2025 Bitfreeze Kenya. All rights reserved.</div>
+</footer>
+</div>
+
 </body>
 </html>
