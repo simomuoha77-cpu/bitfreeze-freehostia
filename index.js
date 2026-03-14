@@ -230,6 +230,7 @@ function clearAdminLockout(ip) {
 }
 
 // ================= EXPRESS SETUP =================
+app.set('trust proxy', 1); // Required for Render/proxied hosting
 app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
