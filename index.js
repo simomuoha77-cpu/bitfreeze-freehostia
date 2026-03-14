@@ -22,15 +22,11 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 mongoose.connect(process.env.MONGO_URI)
     .then(async () => {
         console.log('MongoDB connected');
-        // Drop any bad legacy indexes on withdrawals and payments collections
-        try {
-            await mongoose.connection.collection('withdrawals').dropIndexes();
-            console.log('Withdrawals indexes cleared');
-        } catch(e) { /* ignore if collection doesnt exist yet */ }
-        try {
-            await mongoose.connection.collection('payments').dropIndexes();
-            console.log('Payments indexes cleared');
-        } catch(e) { /* ignore */ }
+        // Drop any bad legacy indexes
+        try { await mongoose.connection.collection('withdrawals').dropIndexes(); console.log('Withdrawals indexes cleared'); } catch(e) {}
+        try { await mongoose.connection.collection('payments').dropIndexes(); console.log('Payments indexes cleared'); } catch(e) {}
+        // Load saved fridge states from MongoDB
+        await loadFridgeStates();
     })
     .catch(err => {
         console.error('MongoDB error:', err);
@@ -108,6 +104,16 @@ const broadcastSchema = new mongoose.Schema({
 }, { collection: 'broadcasts' });
 const Broadcast = mongoose.model('Broadcast', broadcastSchema);
 
+// ================= FRIDGE STATE SCHEMA (persisted to MongoDB) =================
+const fridgeStateSchema = new mongoose.Schema({
+    id: { type: String, unique: true },
+    locked: { type: Boolean, default: true },
+    price: { type: Number, default: 0 },
+    dailyEarn: { type: Number, default: 0 },
+    durationHrs: { type: Number, default: 0 },
+    startTime: { type: Date, default: null }
+}, { collection: 'fridgestates' });
+const FridgeState = mongoose.model('FridgeState', fridgeStateSchema);
 
 // ================= FRIDGES =================
 let FRIDGES = [
@@ -130,6 +136,44 @@ let FRIDGES = [
     { id: 'offer7', name: 'Offer Fridge 7', price: 0, dailyEarn: 0, durationHrs: 0, startTime: null, img: 'images/offer7.jpg', locked: true },
     { id: 'offer8', name: 'Offer Fridge 8', price: 0, dailyEarn: 0, durationHrs: 0, startTime: null, img: 'images/offer8.jpg', locked: true },
 ];
+
+// ================= FRIDGE STATE PERSISTENCE =================
+async function loadFridgeStates() {
+    try {
+        const states = await FridgeState.find();
+        for (const state of states) {
+            const fridge = FRIDGES.find(f => f.id === state.id);
+            if (fridge) {
+                fridge.locked     = state.locked;
+                fridge.price      = state.price;
+                fridge.dailyEarn  = state.dailyEarn;
+                fridge.durationHrs = state.durationHrs;
+                fridge.startTime  = state.startTime;
+            }
+        }
+        console.log(`✅ Loaded ${states.length} fridge states from MongoDB`);
+    } catch(err) {
+        console.error('loadFridgeStates error:', err);
+    }
+}
+
+async function saveFridgeState(fridge) {
+    try {
+        await FridgeState.findOneAndUpdate(
+            { id: fridge.id },
+            {
+                locked:      fridge.locked,
+                price:       fridge.price,
+                dailyEarn:   fridge.dailyEarn,
+                durationHrs: fridge.durationHrs,
+                startTime:   fridge.startTime
+            },
+            { upsert: true, new: true }
+        );
+    } catch(err) {
+        console.error('saveFridgeState error:', err);
+    }
+}
 
 // ================= REFERRAL RULES =================
 // Reward credited to referrer when referred user's FIRST deposit is approved
@@ -707,6 +751,7 @@ app.post('/api/admin/unlock', auth, async (req, res) => {
         fridge.dailyEarn = dailyEarn;
         fridge.durationHrs = durationHrs;
         fridge.startTime = new Date();
+        await saveFridgeState(fridge);
 
         res.json({ message: `${fridge.name} unlocked for ${durationHrs} hours` });
     } catch (err) { res.status(500).json({ error: err.message }); }
@@ -725,6 +770,7 @@ app.post('/api/admin/lock', auth, async (req, res) => {
         fridge.dailyEarn = 0;
         fridge.durationHrs = 0;
         fridge.startTime = null;
+        await saveFridgeState(fridge);
 
         res.json({ message: `${fridge.name} locked` });
     } catch (err) { res.status(500).json({ error: err.message }); }
@@ -779,6 +825,7 @@ async function checkAndCreditOfferEarnings() {
                     fridge.dailyEarn = 0;
                     fridge.durationHrs = 0;
                     fridge.startTime = null;
+                    await saveFridgeState(fridge);
                     console.log(`🔒 Auto-locked ${fridge.id}`);
                 }
             }
