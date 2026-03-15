@@ -415,7 +415,7 @@ body {
     <!-- Card -->
     <div class="card">
         <!-- Step indicator -->
-        <div id="stepIndicator" style="display:flex;gap:8px;align-items:center;margin-bottom:20px;">
+        <div id="stepIndicator" style="display:none;gap:8px;align-items:center;margin-bottom:20px;">
             <div class="step-dot active" id="dot1">1</div>
             <div class="step-line"></div>
             <div class="step-dot" id="dot2">2</div>
@@ -487,31 +487,6 @@ body {
 
             </div><!-- end step1Section -->
 
-            <!-- STEP 2: Verify email -->
-            <div class="step-section" id="step2Section">
-                <div style="text-align:center;">
-                    <div style="font-size:48px;margin-bottom:16px;">📧</div>
-                    <p style="font-size:14px;color:var(--muted);margin-bottom:6px;">Enter the 6-digit code we sent to</p>
-                    <p style="font-size:14px;font-weight:600;color:#fff;margin-bottom:20px;" id="emailDisplay"></p>
-                </div>
-                <div class="code-inputs">
-                    <input class="code-digit" id="digit1" type="tel" maxlength="1" inputmode="numeric">
-                    <input class="code-digit" id="digit2" type="tel" maxlength="1" inputmode="numeric">
-                    <input class="code-digit" id="digit3" type="tel" maxlength="1" inputmode="numeric">
-                    <input class="code-digit" id="digit4" type="tel" maxlength="1" inputmode="numeric">
-                    <input class="code-digit" id="digit5" type="tel" maxlength="1" inputmode="numeric">
-                    <input class="code-digit" id="digit6" type="tel" maxlength="1" inputmode="numeric">
-                </div>
-                <button type="button" class="btn-submit" id="verifyBtn" style="margin-top:0">
-                    Verify Code ✓
-                </button>
-                <div class="resend-row" style="margin-top:14px;">
-                    Didn't get it?
-                    <button type="button" class="resend-btn" id="resendBtn" disabled>Resend code</button>
-                    <span id="resendCount" style="color:var(--muted);font-size:12px;"></span>
-                </div>
-            </div><!-- end step2Section -->
-
             <button class="btn-submit" type="submit" id="submitBtn">
                 Create Account — Start Earning
             </button>
@@ -536,15 +511,9 @@ body {
 </div>
 
 <script>
-// ── STATE ──
-let currentStep = 1;
-let verifiedEmail = '';
-let resendTimer = null;
-
 const msgEl = document.getElementById('message');
 const submitBtn = document.getElementById('submitBtn');
 
-// Auto-fill referral from URL
 window.addEventListener('load', () => {
     const params = new URLSearchParams(window.location.search);
     const ref = params.get('ref');
@@ -559,166 +528,32 @@ function showMsg(type, text) {
     msgEl.textContent = (type === 'ok' ? '✅ ' : '❌ ') + text;
 }
 
-function setStep(step) {
-    currentStep = step;
-    // Update dots
-    [1,2,3].forEach(i => {
-        const dot = document.getElementById('dot' + i);
-        dot.className = 'step-dot' + (i < step ? ' done' : i === step ? ' active' : '');
-        if (i < step) dot.textContent = '✓';
-        else dot.textContent = i;
-    });
-    // Update labels
-    const labels = { 1:'Enter Details', 2:'Verify Email', 3:'Finishing Up' };
-    document.getElementById('stepLabel').textContent = labels[step];
-}
-
-// ── STEP 1: Collect details → send code ──
 document.getElementById('form').addEventListener('submit', async (e) => {
     e.preventDefault();
     msgEl.className = 'message';
 
-    if (currentStep === 1) {
-        const name     = document.getElementById('name').value.trim();
-        const email    = document.getElementById('email').value.trim();
-        const phone    = document.getElementById('phone').value.trim();
-        const password = document.getElementById('password').value;
-        const terms    = document.getElementById('terms').checked;
-        const robot    = document.getElementById('robot').checked;
-
-        if (!name || !email || !phone || !password) { showMsg('err', 'Please fill in all required fields.'); return; }
-        if (password.length < 4) { showMsg('err', 'Password must be at least 4 characters.'); return; }
-        if (!terms) { showMsg('err', 'You must agree to the Terms & Conditions.'); return; }
-        if (!robot) { showMsg('err', 'Please confirm you are not a robot.'); return; }
-
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span class="spinner"></span>Sending code...';
-
-        try {
-            const res = await fetch('/api/auth/send-code', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email })
-            });
-            const data = await res.json();
-
-            if (!res.ok) {
-                showMsg('err', data.error || 'Failed to send code.');
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Create Account — Start Earning';
-                return;
-            }
-
-            verifiedEmail = email;
-            // Switch to step 2
-            setStep(2);
-            document.getElementById('cardTitle').textContent = 'Check your email 📧';
-            document.getElementById('cardSub').textContent = `We sent a 6-digit code to ${email}`;
-            document.querySelector('.step-section.active').classList.remove('active');
-            document.getElementById('step2Section').classList.add('active');
-            submitBtn.style.display = 'none';
-            msgEl.className = 'message';
-            startResendTimer();
-            document.getElementById('digit1').focus();
-            document.getElementById('emailDisplay').textContent = email;
-
-        } catch(err) {
-            showMsg('err', 'Network error. Please try again.');
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Create Account — Start Earning';
-        }
-        return;
-    }
-});
-
-// ── STEP 2: Code input auto-advance ──
-function setupCodeInputs() {
-    const digits = document.querySelectorAll('.code-digit');
-    digits.forEach((input, i) => {
-        input.addEventListener('input', (e) => {
-            // Only allow numbers
-            input.value = input.value.replace(/[^0-9]/g, '').slice(0,1);
-            if (input.value && i < digits.length - 1) digits[i+1].focus();
-            // Auto verify when all filled
-            const code = Array.from(digits).map(d => d.value).join('');
-            if (code.length === 6) verifyCode(code);
-        });
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Backspace' && !input.value && i > 0) digits[i-1].focus();
-        });
-        input.addEventListener('paste', (e) => {
-            e.preventDefault();
-            const pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g,'').slice(0,6);
-            pasted.split('').forEach((ch, idx) => { if (digits[idx]) digits[idx].value = ch; });
-            if (pasted.length === 6) verifyCode(pasted);
-            else if (digits[pasted.length]) digits[pasted.length].focus();
-        });
-    });
-}
-
-async function verifyCode(code) {
-    const verifyBtn = document.getElementById('verifyBtn');
-    verifyBtn.disabled = true;
-    verifyBtn.innerHTML = '<span class="spinner"></span>Verifying...';
-    msgEl.className = 'message';
-
-    try {
-        const res = await fetch('/api/auth/verify-code', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: verifiedEmail, code })
-        });
-        const data = await res.json();
-
-        if (!res.ok) {
-            showMsg('err', data.error);
-            verifyBtn.disabled = false;
-            verifyBtn.textContent = 'Verify Code';
-            // Shake effect
-            document.querySelectorAll('.code-digit').forEach(d => {
-                d.style.borderColor = 'rgba(255,60,80,0.5)';
-                setTimeout(() => d.style.borderColor = '', 1500);
-            });
-            return;
-        }
-
-        // Success — go to step 3 (register)
-        setStep(3);
-        document.getElementById('cardTitle').textContent = 'Almost there! 🎉';
-        document.getElementById('cardSub').textContent = 'Email verified. Creating your account...';
-        document.getElementById('step2Section').classList.remove('active');
-        msgEl.className = 'message';
-        clearInterval(resendTimer);
-        // Auto-submit registration
-        await completeRegistration();
-
-    } catch(err) {
-        showMsg('err', 'Network error. Please try again.');
-        verifyBtn.disabled = false;
-        verifyBtn.textContent = 'Verify Code';
-    }
-}
-
-document.getElementById('verifyBtn').addEventListener('click', () => {
-    const code = Array.from(document.querySelectorAll('.code-digit')).map(d => d.value).join('');
-    if (code.length < 6) { showMsg('err', 'Please enter the full 6-digit code.'); return; }
-    verifyCode(code);
-});
-
-// ── STEP 3: Complete registration ──
-async function completeRegistration() {
     const name     = document.getElementById('name').value.trim();
     const email    = document.getElementById('email').value.trim();
     const phone    = document.getElementById('phone').value.trim();
     const password = document.getElementById('password').value;
     const refVal   = document.getElementById('ref').value.trim();
+    const terms    = document.getElementById('terms').checked;
+    const robot    = document.getElementById('robot').checked;
+
+    if (!name || !email || !phone || !password) { showMsg('err', 'Please fill in all required fields.'); return; }
+    if (password.length < 4) { showMsg('err', 'Password must be at least 4 characters.'); return; }
+    if (!terms) { showMsg('err', 'You must agree to the Terms & Conditions.'); return; }
+    if (!robot) { showMsg('err', 'Please confirm you are not a robot.'); return; }
 
     let referrerEmail = refVal || undefined;
     if (referrerEmail && referrerEmail.includes('ref=')) {
-        const match = referrerEmail.match(/ref=([^&\s]+)/);
+        const match = referrerEmail.match(/ref=([^&]+)/);
         if (match) referrerEmail = decodeURIComponent(match[1]);
     }
     if (referrerEmail && referrerEmail.includes('/')) referrerEmail = undefined;
+
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner"></span>Creating account...';
 
     try {
         const res = await fetch('/api/register', {
@@ -727,62 +562,21 @@ async function completeRegistration() {
             body: JSON.stringify({ name, email, phone, password, referrerEmail })
         });
         const data = await res.json();
-
         if (!res.ok) {
             showMsg('err', data.error || 'Registration failed.');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Create Account — Start Earning';
             return;
         }
-
         if (data.token) localStorage.setItem('bf_token', data.token);
         showMsg('ok', 'Account created! Taking you to your dashboard...');
         setTimeout(() => location.href = '/dashboard', 1200);
-
     } catch(err) {
-        showMsg('err', 'Network error. Please try again.');
+        showMsg('err', 'Network error. Please check your connection.');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Create Account — Start Earning';
     }
-}
-
-// ── RESEND TIMER ──
-function startResendTimer() {
-    let secs = 60;
-    const resendBtn = document.getElementById('resendBtn');
-    const resendCount = document.getElementById('resendCount');
-    resendBtn.disabled = true;
-    resendCount.textContent = `(${secs}s)`;
-
-    resendTimer = setInterval(() => {
-        secs--;
-        resendCount.textContent = `(${secs}s)`;
-        if (secs <= 0) {
-            clearInterval(resendTimer);
-            resendBtn.disabled = false;
-            resendCount.textContent = '';
-        }
-    }, 1000);
-}
-
-document.getElementById('resendBtn').addEventListener('click', async () => {
-    const email = document.getElementById('email').value.trim();
-    document.getElementById('resendBtn').disabled = true;
-    try {
-        const res = await fetch('/api/auth/send-code', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email })
-        });
-        const data = await res.json();
-        showMsg(res.ok ? 'ok' : 'err', data.message || data.error);
-        if (res.ok) {
-            startResendTimer();
-            document.querySelectorAll('.code-digit').forEach(d => d.value = '');
-            document.getElementById('digit1').focus();
-            document.getElementById('emailDisplay').textContent = email;
-        }
-    } catch(e) { showMsg('err', 'Network error.'); }
 });
-
-setupCodeInputs();
 </script>
-
 </body>
 </html>

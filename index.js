@@ -10,7 +10,6 @@ const { Telegraf, Markup } = require('telegraf');
 const cron = require('node-cron');
 const axios = require('axios');
 const rateLimit = require('express-rate-limit');
-const nodemailer = require('nodemailer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -154,50 +153,6 @@ function getReferralReward(depositAmount) {
     return 0;
 }
 
-// ================= EMAIL TRANSPORTER =================
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_PASS
-    }
-});
-
-// ================= EMAIL VERIFICATION STORE =================
-// { email: { code, expiresAt, attempts } }
-const emailVerifications = {};
-
-function generateCode() {
-    return Math.floor(100000 + Math.random() * 900000).toString();
-}
-
-async function sendVerificationEmail(email, code) {
-    const mailOptions = {
-        from: `"Bitfreeze" <${process.env.GMAIL_USER}>`,
-        to: email,
-        subject: '🧊 Your Bitfreeze Verification Code',
-        html: `
-        <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;background:#0d1520;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,0.08)">
-            <div style="background:linear-gradient(90deg,#ff8a00,#ffb347);padding:28px;text-align:center">
-                <div style="font-size:36px;margin-bottom:6px">❄️</div>
-                <h1 style="margin:0;color:#111;font-size:22px;font-weight:800">Bitfreeze</h1>
-                <p style="margin:4px 0 0;color:rgba(0,0,0,0.6);font-size:13px">Email Verification</p>
-            </div>
-            <div style="padding:32px;text-align:center">
-                <p style="color:#b8ccd8;font-size:15px;margin:0 0 24px">Use the code below to verify your email address. It expires in <strong style="color:#fff">10 minutes</strong>.</p>
-                <div style="background:rgba(255,138,0,0.08);border:2px solid rgba(255,138,0,0.3);border-radius:14px;padding:20px;margin:0 auto 24px;display:inline-block;min-width:200px">
-                    <div style="font-size:42px;font-weight:900;letter-spacing:10px;color:#ff8a00;font-family:'Courier New',monospace">${code}</div>
-                </div>
-                <p style="color:#4a5a6a;font-size:13px;margin:0">If you didn't request this, you can safely ignore this email.</p>
-            </div>
-            <div style="padding:16px;text-align:center;border-top:1px solid rgba(255,255,255,0.05)">
-                <p style="color:#4a5a6a;font-size:12px;margin:0">© 2025 Bitfreeze Kenya · Earn daily from your fridges</p>
-            </div>
-        </div>`
-    };
-    await transporter.sendMail(mailOptions);
-}
-
 // ================= COMMUNITY LINKS =================
 let COMMUNITY_LINKS = { whatsapp: '', telegram: '' };
 
@@ -335,75 +290,6 @@ app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'public', 
 // Secret admin URL — only you know this path
 app.get('/manage-bf-2025', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
 
-// ================= EMAIL VERIFICATION ROUTES =================
-
-// Step 1: Send verification code
-app.post('/api/auth/send-code', async (req, res) => {
-    try {
-        const { email } = req.body;
-        if (!email) return res.status(400).json({ error: 'Email required' });
-
-        // Check if email already registered
-        const existing = await User.findOne({ email });
-        if (existing) return res.status(400).json({ error: 'Email already registered' });
-
-        // Rate limit: max 3 codes per email per hour
-        const prev = emailVerifications[email];
-        if (prev && prev.sentAt && (Date.now() - prev.sentAt) < 60000) {
-            return res.status(429).json({ error: 'Please wait 1 minute before requesting another code.' });
-        }
-
-        const code = generateCode();
-        emailVerifications[email] = {
-            code,
-            expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
-            sentAt: Date.now(),
-            attempts: 0,
-            verified: false
-        };
-
-        await sendVerificationEmail(email, code);
-        console.log(`✅ Verification code sent to ${email}`);
-        res.json({ message: 'Verification code sent to your email!' });
-    } catch (err) {
-        console.error('Send code error:', err);
-        res.status(500).json({ error: 'Failed to send email. Please check your email address.' });
-    }
-});
-
-// Step 2: Verify code
-app.post('/api/auth/verify-code', async (req, res) => {
-    try {
-        const { email, code } = req.body;
-        if (!email || !code) return res.status(400).json({ error: 'Email and code required' });
-
-        const record = emailVerifications[email];
-        if (!record) return res.status(400).json({ error: 'No code found. Please request a new one.' });
-
-        if (Date.now() > record.expiresAt) {
-            delete emailVerifications[email];
-            return res.status(400).json({ error: 'Code expired. Please request a new one.' });
-        }
-
-        // Max 5 attempts
-        record.attempts++;
-        if (record.attempts > 5) {
-            delete emailVerifications[email];
-            return res.status(400).json({ error: 'Too many attempts. Please request a new code.' });
-        }
-
-        if (record.code !== code.trim()) {
-            return res.status(400).json({ error: `Incorrect code. ${5 - record.attempts} attempts remaining.` });
-        }
-
-        // Mark as verified
-        record.verified = true;
-        res.json({ message: 'Email verified successfully!' });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
 // ================= REGISTER / LOGIN =================
 app.post('/api/register', async (req, res) => {
     try {
@@ -413,13 +299,11 @@ app.post('/api/register', async (req, res) => {
         if (!name || !email || !password || !phone) return res.status(400).json({ error: 'Missing fields' });
         if (await User.findOne({ email })) return res.status(400).json({ error: 'Email exists' });
 
-        // Check email is verified
-        const verRecord = emailVerifications[email];
-        if (!verRecord || !verRecord.verified) {
-            return res.status(400).json({ error: 'Please verify your email first before registering.' });
+        // Phone validation - must be valid Kenyan number
+        const cleanPhone = phone.replace(/\s/g, '');
+        if (!cleanPhone.match(/^(\+254|0)[17]\d{8}$/)) {
+            return res.status(400).json({ error: 'Please enter a valid Kenyan M-Pesa number (e.g. 0712345678)' });
         }
-        // Clean up verification record
-        delete emailVerifications[email];
 
         // Extract email from referral URL if full URL was passed
         if (referrerEmail && referrerEmail.includes('ref=')) {
