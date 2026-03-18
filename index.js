@@ -27,6 +27,8 @@ mongoose.connect(process.env.MONGO_URI)
         try { await mongoose.connection.collection('payments').dropIndexes(); console.log('Payments indexes cleared'); } catch(e) {}
         // Load saved fridge states from MongoDB
         await loadFridgeStates();
+        // Load community links from MongoDB
+        await loadCommunityLinks();
     })
     .catch(err => {
         console.error('MongoDB error:', err);
@@ -103,6 +105,12 @@ const broadcastSchema = new mongoose.Schema({
     sentAt: { type: Date, default: Date.now }
 }, { collection: 'broadcasts' });
 const Broadcast = mongoose.model('Broadcast', broadcastSchema);
+
+const settingsSchema = new mongoose.Schema({
+    key: { type: String, unique: true },
+    value: { type: String, default: '' }
+}, { collection: 'settings' });
+const Settings = mongoose.model('Settings', settingsSchema);
 
 // ================= FRIDGE STATE SCHEMA (persisted to MongoDB) =================
 const fridgeStateSchema = new mongoose.Schema({
@@ -198,7 +206,18 @@ function getReferralReward(depositAmount) {
 }
 
 // ================= COMMUNITY LINKS =================
+// Community links loaded from MongoDB on startup
 let COMMUNITY_LINKS = { whatsapp: '', telegram: '' };
+
+async function loadCommunityLinks() {
+    try {
+        const wa = await Settings.findOne({ key: 'whatsapp' });
+        const tg = await Settings.findOne({ key: 'telegram' });
+        if (wa) COMMUNITY_LINKS.whatsapp = wa.value;
+        if (tg) COMMUNITY_LINKS.telegram = tg.value;
+        console.log('✅ Community links loaded from MongoDB');
+    } catch(err) { console.error('loadCommunityLinks error:', err); }
+}
 
 // ================= ADMIN SECURITY: LOGIN LOCKOUT =================
 const adminLoginAttempts = {}; // { ip: { count, lockedUntil } }
@@ -329,6 +348,8 @@ async function initiateStkPush(phone, amount) {
 
 // ================= ROUTES =================
 app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
+app.get('/manifest.json', (req, res) => res.sendFile(path.join(__dirname, 'public', 'manifest.json')));
+app.get('/sw.js', (req, res) => res.sendFile(path.join(__dirname, 'public', 'sw.js')));
 app.get('/register', (req, res) => res.sendFile(path.join(__dirname, 'public', 'register.html')));
 app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
 // Secret admin URL — only you know this path
@@ -418,6 +439,19 @@ app.get('/api/me', auth, async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ================= ADMIN: MANUALLY TRIGGER DAILY EARNINGS =================
+app.post('/api/admin/run-earnings', auth, async (req, res) => {
+    try {
+        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
+        await runDailyEarnings();
+        // Reset the daily check so it can run again today if needed
+        const today = new Date();
+        const todayKey = new Date(today.getTime() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        await Settings.findOneAndUpdate({ key: 'last_earnings_date' }, { value: todayKey }, { upsert: true });
+        res.json({ message: 'Daily earnings run successfully!' });
+    } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
 // ================= ADMIN: FORCE CREDIT OFFER EARNINGS NOW =================
 app.post('/api/admin/force-credit', auth, async (req, res) => {
     try {
@@ -425,6 +459,164 @@ app.post('/api/admin/force-credit', auth, async (req, res) => {
         await checkAndCreditOfferEarnings();
         res.json({ message: 'Offer earnings check completed. Check server logs.' });
     } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= ONE-TIME FIX: Repair missing boughtAt and dailyEarn =================
+app.post('/api/admin/fix-user-fridges', async (req, res) => {
+    try {
+        const now = new Date();
+        const users = await User.find({ 'fridges.0': { $exists: true } });
+        let fixed = 0;
+        let skipped = 0;
+
+        for (const user of users) {
+            let changed = false;
+
+            for (let i = 0; i < user.fridges.length; i++) {
+                const f = user.fridges[i];
+
+                // Fix missing boughtAt
+                if (!f.boughtAt) {
+                    user.fridges[i].boughtAt = new Date('2026-01-01T00:00:00Z');
+                    changed = true;
+                }
+
+                // Fix missing/null dailyEarn for normal fridges
+                if (!f.id.startsWith('offer') && (!f.dailyEarn || f.dailyEarn === 0)) {
+                    // Find dailyEarn from approved payment record
+                    const pmt = await Payment.findOne({
+                        userEmail: user.email,
+                        fridgeId: f.id,
+                        approved: true
+                    }).sort({ createdAt: -1 });
+
+                    if (pmt && pmt.fridgeDailyEarn) {
+                        user.fridges[i].dailyEarn = pmt.fridgeDailyEarn;
+                        changed = true;
+                    } else {
+                        // Fallback: get from FRIDGES array
+                        const gf = FRIDGES.find(fr => fr.id === f.id);
+                        if (gf && gf.dailyEarn) {
+                            user.fridges[i].dailyEarn = gf.dailyEarn;
+                            changed = true;
+                        }
+                    }
+                }
+            }
+
+            if (changed) {
+                user.markModified('fridges');
+                await user.save();
+                fixed++;
+            } else {
+                skipped++;
+            }
+        }
+
+        res.json({
+            message: `Fixed ${fixed} users, skipped ${skipped} users`,
+            fixed,
+            skipped
+        });
+    } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= EMERGENCY: RUN EARNINGS NOW (temporary) =================
+app.get('/api/run-earnings-now-bf2025', async (req, res) => {
+    try {
+        const users = await User.find();
+        const now = new Date();
+        let totalCredited = 0;
+        let usersUpdated = 0;
+        const details = [];
+
+        for (const user of users) {
+            let earnThisRun = 0;
+
+            for (let i = 0; i < user.fridges.length; i++) {
+                const f = user.fridges[i];
+                if (!f.id || f.id.startsWith('offer')) continue;
+
+                const dailyEarn = f.dailyEarn || 0;
+                if (dailyEarn <= 0) continue;
+
+                const boughtAt = f.boughtAt ? new Date(f.boughtAt) : null;
+                if (!boughtAt) continue;
+
+                const hoursSinceBuy = (now - boughtAt) / (1000 * 60 * 60);
+                if (hoursSinceBuy >= 24) {
+                    earnThisRun += dailyEarn;
+                }
+            }
+
+            if (earnThisRun > 0) {
+                // Use $inc for reliable MongoDB update
+                await User.updateOne({ _id: user._id }, { $inc: { earning: earnThisRun } });
+                totalCredited += earnThisRun;
+                usersUpdated++;
+                details.push({ email: user.email, credited: earnThisRun });
+            }
+        }
+
+        // Save today's date so it doesn't double-credit
+        const todayKey = new Date(now.getTime() + 3*60*60*1000).toISOString().slice(0,10);
+        await Settings.findOneAndUpdate({ key: 'last_earnings_date' }, { value: todayKey }, { upsert: true });
+
+        console.log(`✅ EMERGENCY earnings run: KES ${totalCredited} to ${usersUpdated} users`);
+        res.json({ success: true, totalCredited, usersUpdated, details });
+    } catch(err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ================= TEMP DEBUG (remove after fixing) =================
+app.get('/api/debug/fridges-check', async (req, res) => {
+    try {
+        const now = new Date();
+        const users = await User.find({ 'fridges.0': { $exists: true } }, '-password');
+        const report = users.map(u => ({
+            email: u.email,
+            earning: u.earning,
+            fridges: u.fridges.map(f => ({
+                id: f.id,
+                dailyEarn: f.dailyEarn,
+                boughtAt: f.boughtAt,
+                hoursSinceBuy: f.boughtAt
+                    ? ((now - new Date(f.boughtAt)) / (1000*60*60)).toFixed(1) + ' hrs'
+                    : '❌ NO boughtAt saved!',
+                qualifiesForEarning: f.boughtAt
+                    ? ((now - new Date(f.boughtAt)) / (1000*60*60)) >= 24
+                    : false,
+                isOffer: f.id.startsWith('offer')
+            }))
+        }));
+        res.json({ now, totalUsers: users.length, report });
+    } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= DEBUG: CHECK ALL USER FRIDGES =================
+app.get('/api/admin/debug/all-fridges', auth, async (req, res) => {
+    try {
+        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
+        const now = new Date();
+        const users = await User.find({ 'fridges.0': { $exists: true } }, '-password');
+        const report = users.map(u => ({
+            email: u.email,
+            earning: u.earning,
+            fridges: u.fridges.map(f => ({
+                id: f.id,
+                name: f.name,
+                dailyEarn: f.dailyEarn,
+                boughtAt: f.boughtAt,
+                hoursSinceBuy: f.boughtAt ? ((now - new Date(f.boughtAt)) / (1000*60*60)).toFixed(1) : 'NO boughtAt!',
+                qualifies: f.boughtAt ? ((now - new Date(f.boughtAt)) / (1000*60*60)) >= 24 : false,
+                isOffer: f.id.startsWith('offer'),
+                earningAdded: f.earningAdded
+            }))
+        }));
+        res.json({ now, report });
+    } catch(err) { res.status(500).json({ error: err.message }); }
 });
 
 // ================= DEBUG: CHECK OFFER FRIDGE DATA =================
@@ -485,11 +677,7 @@ app.post('/api/payment/submit', auth, async (req, res) => {
 
         await bot.telegram.sendMessage(
             ADMIN_CHAT_ID,
-            `💰 New Payment:\nUser: ${user.email}\nFridge: ${fridge.name}\nAmount: KES ${fridge.price}\nPhone: ${user.phone}\nTxn: ${stkResponse.ResponseCode}`,
-            Markup.inlineKeyboard([
-                Markup.button.callback('✅ Approve', `approve_${payment._id}`),
-                Markup.button.callback('❌ Reject', `reject_${payment._id}`)
-            ])
+            `💰 New Fridge Payment\n━━━━━━━━━━━━━━━━━━\nUser: ${user.email}\nFridge: ${fridge.name}\nAmount: KES ${fridge.price}\nPhone: ${user.phone}\n\n👉 Go to Admin Panel to approve`
         );
 
         res.json({ message: 'Payment submitted. Awaiting admin approval.' });
@@ -529,11 +717,7 @@ app.post('/api/payment/manual', auth, async (req, res) => {
 
         await bot.telegram.sendMessage(
             ADMIN_CHAT_ID,
-            `💰 New Buy Till Payment:\nUser: ${user.email}\nPhone: ${user.phone}\nFridge: ${fridge.name}\nAmount: KES ${fridge.price}\nM-Pesa Code: ${txnCode.toUpperCase()}`,
-            Markup.inlineKeyboard([
-                Markup.button.callback('✅ Approve', `approve_${payment._id}`),
-                Markup.button.callback('❌ Reject', `reject_${payment._id}`)
-            ])
+            `💰 New Fridge Payment\n━━━━━━━━━━━━━━━━━━\nUser: ${user.email}\nPhone: ${user.phone}\nFridge: ${fridge.name}\nAmount: KES ${fridge.price}\nM-Pesa Code: ${txnCode.toUpperCase()}\n\n👉 Go to Admin Panel to approve`
         );
 
         res.json({ message: 'Payment submitted! Awaiting admin verification.' });
@@ -580,9 +764,18 @@ app.post('/api/admin/payment/approve', auth, async (req, res) => {
                 earningAdded: false
             });
         } else {
-            user.fridges.push({ id: fridge.id, name: fridge.name, price: fridge.price, dailyEarn: fridge.dailyEarn, boughtAt: new Date() });
+            // Use dailyEarn from payment record to ensure correct amount is saved
+            const earnToSave = payment.fridgeDailyEarn || fridge.dailyEarn || 0;
+            user.fridges.push({
+                id: fridge.id,
+                name: fridge.name,
+                price: payment.fridgePrice || fridge.price,
+                dailyEarn: earnToSave,
+                boughtAt: new Date()
+            });
         }
 
+        user.markModified('fridges');
         await user.save();
         payment.approved = true;
         await payment.save();
@@ -840,143 +1033,104 @@ async function runDailyEarnings() {
     try {
         const users = await User.find();
         const now = new Date();
+        let totalCredited = 0;
+        let usersUpdated = 0;
 
         for (const user of users) {
-            let totalEarn = 0;
-            let saveNeeded = false;
+            let earnThisRun = 0;
 
             for (const f of user.fridges) {
-                if (f.id.startsWith('offer')) continue;
-                const globalFridge = FRIDGES.find(fr => fr.id === f.id);
-                if (!globalFridge) continue;
-
+                if (!f.id || f.id.startsWith('offer')) continue;
+                const dailyEarn = f.dailyEarn || 0;
+                if (dailyEarn <= 0) continue;
                 const boughtAt = f.boughtAt ? new Date(f.boughtAt) : null;
-                const hoursSinceBuy = boughtAt ? (now - boughtAt) / (1000 * 60 * 60) : 0;
+                if (!boughtAt) continue;
+                const hoursSinceBuy = (now - boughtAt) / (1000 * 60 * 60);
                 if (hoursSinceBuy >= 24) {
-                    totalEarn += globalFridge.dailyEarn || 0;
-                    saveNeeded = true;
+                    earnThisRun += dailyEarn;
                 }
             }
 
-            if (totalEarn > 0) {
-                user.earning += totalEarn;
-                saveNeeded = true;
+            if (earnThisRun > 0) {
+                // Use direct MongoDB $inc — most reliable way to update
+                await User.updateOne(
+                    { _id: user._id },
+                    { $inc: { earning: earnThisRun } }
+                );
+                totalCredited += earnThisRun;
+                usersUpdated++;
+                console.log(`✅ Credited KES ${earnThisRun} to ${user.email} (new total: ${user.earning + earnThisRun})`);
             }
-
-            if (saveNeeded) await user.save();
         }
 
-        console.log('✅ Daily earnings credited at', now.toISOString());
+        console.log(`✅ Daily earnings DONE: KES ${totalCredited} to ${usersUpdated} users at ${now.toISOString()}`);
+
+        // Notify admin
+        try {
+            if (typeof bot !== 'undefined' && usersUpdated > 0) {
+                await bot.telegram.sendMessage(
+                    ADMIN_CHAT_ID,
+                    `💰 Daily Earnings Credited\n━━━━━━━━━━━━━━━━━━\nUsers: ${usersUpdated}\nTotal: KES ${totalCredited}\nTime: ${now.toLocaleString('en-KE', {timeZone:'Africa/Nairobi'})}`
+                );
+            }
+        } catch(e) {}
     } catch (err) {
         console.error('Daily earnings error:', err);
     }
 }
 
-// Every minute — instantly credit offer earnings when they expire
-cron.schedule('* * * * *', checkAndCreditOfferEarnings);
-
-// 12:00 AM Kenya time (21:00 UTC) — credit normal fridge daily earnings
-cron.schedule('0 21 * * *', runDailyEarnings, { timezone: 'UTC' });
+// ── MISSED CRON RECOVERY: runs every hour to catch any missed midnight cron ──
+// This is critical for Render free tier which may sleep and miss the midnight cron
+async function checkMissedEarnings() {
+    try {
+        const now = new Date();
+        // Only run between 12:00 AM - 2:00 AM Kenya time to catch missed midnight cron
+        const kenyaHour = new Date(now.getTime() + 3 * 60 * 60 * 1000).getUTCHours();
+        if (kenyaHour >= 0 && kenyaHour <= 2) {
+            // Check if earnings were already credited today
+            const todayKey = new Date(now.getTime() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
+            const alreadyRan = await Settings.findOne({ key: 'last_earnings_date' });
+            if (!alreadyRan || alreadyRan.value !== todayKey) {
+                console.log('🔄 Running missed daily earnings for', todayKey);
+                await runDailyEarnings();
+                await Settings.findOneAndUpdate(
+                    { key: 'last_earnings_date' },
+                    { value: todayKey },
+                    { upsert: true }
+                );
+            }
+        }
+    } catch(err) {
+        console.error('checkMissedEarnings error:', err);
+    }
+}
 
 // ================= TELEGRAM BOT =================
 const bot = new Telegraf(TELEGRAM_TOKEN);
 
-// Telegram callback handling (approvals for payments/withdrawals)
-bot.on('callback_query', async (ctx) => {
-    try {
-        const data = ctx.callbackQuery.data;
-        if (data.startsWith('withdraw_')) {
-            const [ , action, id ] = data.split('_');
-            const wd = await Withdrawal.findById(id);
-            if (!wd) return ctx.answerCbQuery('Withdrawal not found');
-            const user = await User.findOne({ email: wd.userEmail });
-            if (!user) return ctx.answerCbQuery('User not found');
+// All approvals handled in admin panel
 
-            if (action === 'approve') {
-                if (user.earning < wd.amount) return ctx.answerCbQuery('Insufficient earnings');
-                user.earning -= wd.amount;
-                await user.save();
-                wd.approved = true;
-                await wd.save();
-                await ctx.editMessageText(`✅ Withdrawal Approved:\nUser: ${user.email}\nAmount: KES ${wd.amount}`);
-            }
-            if (action === 'reject') {
-                await Withdrawal.findByIdAndDelete(id);
-                await ctx.editMessageText(`❌ Withdrawal Rejected:\nUser: ${wd.userEmail}\nAmount: KES ${wd.amount}`);
-            }
-            return ctx.answerCbQuery();
-        }
 
-        const [actionType, paymentId] = data.split('_');
-        if (actionType === 'approve' || actionType === 'reject') {
-            const payment = await Payment.findById(paymentId);
-            if (!payment) return ctx.answerCbQuery('Payment not found');
-            const user = await User.findOne({ email: payment.userEmail });
-            const fridge = FRIDGES.find(f => f.id === payment.fridgeId);
-            if (!user || !fridge) return ctx.answerCbQuery('User or fridge not found');
-
-            if (actionType === 'approve') {
-                if (fridge.id.startsWith('offer')) {
-                    const endTime = new Date(Date.now() + fridge.durationHrs * 60 * 60 * 1000);
-                    user.fridges.push({
-                        id: fridge.id,
-                        name: fridge.name,
-                        price: fridge.price,
-                        dailyEarn: fridge.dailyEarn,
-                        boughtAt: new Date(),
-                        endTime,
-                        earningAdded: false
-                    });
-                } else {
-                    user.fridges.push({
-                        id: fridge.id,
-                        name: fridge.name,
-                        price: fridge.price,
-                        dailyEarn: fridge.dailyEarn,
-                        boughtAt: new Date()
-                    });
-                }
-
-                await user.save();
-                payment.approved = true;
-                await payment.save();
-
-                // Credit referral reward
-                if (user.referredBy && !user.referralRewarded) {
-                    const reward = getReferralReward(payment.fridgePrice || 0);
-                    if (reward > 0) {
-                        const referrer = await User.findOne({ email: user.referredBy });
-                        if (referrer) {
-                            referrer.earning += reward;
-                            await referrer.save();
-                            user.referralRewarded = true;
-                            await user.save();
-                            console.log(`✅ Referral reward KES ${reward} to ${user.referredBy}`);
-                        }
-                    }
-                }
-
-                await ctx.editMessageText(
-                    `✅ Payment Approved:\nUser: ${user.email}\nFridge: ${fridge.name}`
-                );
-            }
-
-            if (actionType === 'reject') {
-                await Payment.findByIdAndDelete(paymentId);
-                await ctx.editMessageText(
-                    `❌ Payment Rejected:\nUser: ${payment.userEmail}\nFridge: ${fridge.name}`
-                );
-            }
-
-            return ctx.answerCbQuery();
-        }
-    } catch (err) {
-        console.error('Telegram callback error:', err);
-        ctx.answerCbQuery('Error processing action');
+bot.launch().then(() => console.log('Telegram bot running'))
+.catch(err => {
+    if (err.message && err.message.includes('409')) {
+        console.log('⚠️ Telegram bot already running elsewhere (Render). Skipping local bot launch.');
+    } else {
+        console.error('Telegram bot error:', err.message);
     }
 });
 
-bot.launch().then(() => console.log('Telegram bot running'));
+// ================= CRON JOBS =================
+// Every minute — instantly credit offer earnings when they expire
+cron.schedule('* * * * *', checkAndCreditOfferEarnings);
+
+// 12:00 AM Kenya time (UTC+3 = 21:00 UTC)
+cron.schedule('0 21 * * *', runDailyEarnings, { timezone: 'UTC' });
+
+// Every hour — catch missed midnight cron (critical for Render free tier)
+cron.schedule('0 * * * *', checkMissedEarnings, { timezone: 'UTC' });
+
+console.log('✅ All cron jobs scheduled');
 
 // ================= USER WITHDRAWAL REQUEST =================
 app.post('/api/withdraw', auth, async (req, res) => {
@@ -1036,20 +1190,50 @@ app.post('/api/withdraw', auth, async (req, res) => {
 
         await bot.telegram.sendMessage(
             ADMIN_CHAT_ID,
-            `💸 Withdrawal Request:
-User: ${user.email}
-Amount: KES ${amount}
-Phone: ${phone}`,
-            Markup.inlineKeyboard([
-                Markup.button.callback('✅ Approve', `withdraw_approve_${withdrawal._id}`),
-                Markup.button.callback('❌ Reject', `withdraw_reject_${withdrawal._id}`)
-            ])
+            `💸 Withdrawal Request\n━━━━━━━━━━━━━━━━━━\nUser: ${user.email}\nAmount: KES ${amount}\nPhone: ${phone}\n\n👉 Go to Admin Panel to approve`
         );
 
         res.json({ message: 'Withdrawal request submitted' });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
+});
+
+// ================= ADMIN: GET TRADING DEPOSITS =================
+app.get('/api/admin/trade-deposits', auth, async (req, res) => {
+    try {
+        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
+        const deposits = await TradeDeposit.find().sort({ createdAt: -1 });
+        res.json({ deposits });
+    } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= ADMIN: APPROVE TRADING DEPOSIT =================
+app.post('/api/admin/trade-deposit/approve', auth, async (req, res) => {
+    try {
+        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
+        const { depositId } = req.body;
+        const deposit = await TradeDeposit.findById(depositId);
+        if (!deposit) return res.status(404).json({ error: 'Deposit not found' });
+        deposit.approved = true;
+        await deposit.save();
+        res.json({ message: 'Trading deposit approved' });
+    } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= ADMIN: REJECT TRADING DEPOSIT =================
+app.post('/api/admin/trade-deposit/reject', auth, async (req, res) => {
+    try {
+        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
+        const { depositId } = req.body;
+        const deposit = await TradeDeposit.findById(depositId);
+        if (!deposit) return res.status(404).json({ error: 'Deposit not found' });
+        // Refund
+        const user = await User.findOne({ email: deposit.userEmail });
+        if (user) { user.earning += deposit.amountKES; await user.save(); }
+        await TradeDeposit.findByIdAndDelete(depositId);
+        res.json({ message: 'Deposit rejected and refunded' });
+    } catch(err) { res.status(500).json({ error: err.message }); }
 });
 
 // ================= GET COMMUNITY LINKS (public) =================
@@ -1062,8 +1246,14 @@ app.post('/api/admin/links', auth, async (req, res) => {
     try {
         if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
         const { whatsapp, telegram } = req.body;
-        if (whatsapp !== undefined) COMMUNITY_LINKS.whatsapp = whatsapp;
-        if (telegram !== undefined) COMMUNITY_LINKS.telegram = telegram;
+        if (whatsapp !== undefined) {
+            COMMUNITY_LINKS.whatsapp = whatsapp;
+            await Settings.findOneAndUpdate({ key: 'whatsapp' }, { value: whatsapp }, { upsert: true });
+        }
+        if (telegram !== undefined) {
+            COMMUNITY_LINKS.telegram = telegram;
+            await Settings.findOneAndUpdate({ key: 'telegram' }, { value: telegram }, { upsert: true });
+        }
         res.json({ message: 'Links updated', ...COMMUNITY_LINKS });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -1151,6 +1341,101 @@ async function logAction(adminEmail, action, details, ip = '') {
         await ActivityLog.create({ action, adminEmail, details, ip });
     } catch(e) { /* non-critical */ }
 }
+
+// ================= TRADING: DEPOSIT KES → USD =================
+app.post('/api/trade/deposit', auth, async (req, res) => {
+    try {
+        const { amountKES } = req.body;
+        if (!amountKES || amountKES < 130)
+            return res.status(400).json({ error: 'Minimum deposit is KES 130' });
+
+        const user = await User.findOne({ email: req.user.email });
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        if (user.earning < amountKES)
+            return res.status(400).json({ error: 'Insufficient earnings balance' });
+
+        user.earning -= amountKES;
+        await user.save();
+
+        const usd = (amountKES / 130).toFixed(2);
+        res.json({ message: `Deposited $${usd} to trading balance`, usdAmount: parseFloat(usd) });
+    } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= TRADING: WITHDRAW USD → KES =================
+app.post('/api/trade/withdraw', auth, async (req, res) => {
+    try {
+        const { amountUSD } = req.body;
+        if (!amountUSD || amountUSD < 1)
+            return res.status(400).json({ error: 'Minimum withdrawal is $1.00' });
+
+        const user = await User.findOne({ email: req.user.email });
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        const kes = Math.floor(amountUSD * 125);
+        user.earning += kes;
+        await user.save();
+
+        res.json({ message: `Withdrawn KES ${kes} from trading balance`, kesAmount: kes });
+    } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= TRADING DEPOSIT SCHEMA =================
+const tradeDepositSchema = new mongoose.Schema({
+    userEmail: String,
+    amountKES: Number,
+    amountUSD: Number,
+    approved: { type: Boolean, default: false },
+    createdAt: { type: Date, default: Date.now }
+}, { collection: 'tradedeposits' });
+const TradeDeposit = mongoose.model('TradeDeposit', tradeDepositSchema);
+
+// ================= TRADING: REQUEST DEPOSIT =================
+app.post('/api/trade/deposit-request', auth, async (req, res) => {
+    try {
+        const { amountKES } = req.body;
+        if (!amountKES || amountKES < 130)
+            return res.status(400).json({ error: 'Minimum deposit is KES 130' });
+
+        const user = await User.findOne({ email: req.user.email });
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        if (user.earning < amountKES)
+            return res.status(400).json({ error: 'Insufficient earnings balance' });
+
+        // Deduct from earnings immediately (hold)
+        user.earning -= amountKES;
+        await user.save();
+
+        const amountUSD = parseFloat((amountKES / 130).toFixed(2));
+        const deposit = new TradeDeposit({ userEmail: user.email, amountKES, amountUSD });
+        await deposit.save();
+
+        // Notify admin on Telegram
+        await bot.telegram.sendMessage(
+            ADMIN_CHAT_ID,
+            `📊 Trading Deposit Request\n━━━━━━━━━━━━━━━━━━\nUser: ${user.email}\nAmount: KES ${amountKES} ($${amountUSD})\n\n👉 Go to Admin Panel to approve`
+        );
+
+        res.json({ message: 'Deposit request submitted. Awaiting admin approval.' });
+    } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= TRADING: CHECK PENDING =================
+app.get('/api/trade/pending', auth, async (req, res) => {
+    try {
+        const pending = await TradeDeposit.findOne({ userEmail: req.user.email, approved: false });
+        res.json({ hasPending: !!pending });
+    } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= TRADING: GET BALANCE (approved deposits) =================
+app.get('/api/trade/balance', auth, async (req, res) => {
+    try {
+        const deposits = await TradeDeposit.find({ userEmail: req.user.email, approved: true });
+        const totalUSD = deposits.reduce((s, d) => s + d.amountUSD, 0);
+        res.json({ balanceUSD: parseFloat(totalUSD.toFixed(2)) });
+    } catch(err) { res.status(500).json({ error: err.message }); }
+});
 
 // ================= GRACEFUL SHUTDOWN =================
 process.on('SIGINT', () => {
