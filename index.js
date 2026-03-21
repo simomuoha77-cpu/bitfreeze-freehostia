@@ -521,55 +521,6 @@ app.post('/api/admin/fix-user-fridges', async (req, res) => {
     } catch(err) { res.status(500).json({ error: err.message }); }
 });
 
-// ================= EMERGENCY: RUN EARNINGS NOW (temporary) =================
-app.get('/api/run-earnings-now-bf2025', async (req, res) => {
-    try {
-        const users = await User.find();
-        const now = new Date();
-        let totalCredited = 0;
-        let usersUpdated = 0;
-        const details = [];
-
-        for (const user of users) {
-            let earnThisRun = 0;
-
-            for (let i = 0; i < user.fridges.length; i++) {
-                const f = user.fridges[i];
-                if (!f.id || f.id.startsWith('offer')) continue;
-
-                const dailyEarn = f.dailyEarn || 0;
-                if (dailyEarn <= 0) continue;
-
-                const boughtAt = f.boughtAt ? new Date(f.boughtAt) : null;
-                if (!boughtAt) continue;
-
-                const hoursSinceBuy = (now - boughtAt) / (1000 * 60 * 60);
-                if (hoursSinceBuy >= 24) {
-                    earnThisRun += dailyEarn;
-                }
-            }
-
-            if (earnThisRun > 0) {
-                // Use $inc for reliable MongoDB update
-                await User.updateOne({ _id: user._id }, { $inc: { earning: earnThisRun } });
-                totalCredited += earnThisRun;
-                usersUpdated++;
-                details.push({ email: user.email, credited: earnThisRun });
-            }
-        }
-
-        // Save today's date so it doesn't double-credit
-        const todayKey = new Date(now.getTime() + 3*60*60*1000).toISOString().slice(0,10);
-        await Settings.findOneAndUpdate({ key: 'last_earnings_date' }, { value: todayKey }, { upsert: true });
-
-        console.log(`✅ EMERGENCY earnings run: KES ${totalCredited} to ${usersUpdated} users`);
-        res.json({ success: true, totalCredited, usersUpdated, details });
-    } catch(err) {
-        console.error(err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
 // ================= TEMP DEBUG (remove after fixing) =================
 app.get('/api/debug/fridges-check', async (req, res) => {
     try {
@@ -1124,11 +1075,8 @@ bot.launch().then(() => console.log('Telegram bot running'))
 // Every minute — instantly credit offer earnings when they expire
 cron.schedule('* * * * *', checkAndCreditOfferEarnings);
 
-// 12:00 AM Kenya time (UTC+3 = 21:00 UTC)
+// 12:00 AM Kenya time (UTC+3 = 21:00 UTC) — ONE cron only, no recovery to avoid double credits
 cron.schedule('0 21 * * *', runDailyEarnings, { timezone: 'UTC' });
-
-// Every hour — catch missed midnight cron (critical for Render free tier)
-cron.schedule('0 * * * *', checkMissedEarnings, { timezone: 'UTC' });
 
 console.log('✅ All cron jobs scheduled');
 
@@ -1197,43 +1145,6 @@ app.post('/api/withdraw', auth, async (req, res) => {
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
-});
-
-// ================= ADMIN: GET TRADING DEPOSITS =================
-app.get('/api/admin/trade-deposits', auth, async (req, res) => {
-    try {
-        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
-        const deposits = await TradeDeposit.find().sort({ createdAt: -1 });
-        res.json({ deposits });
-    } catch(err) { res.status(500).json({ error: err.message }); }
-});
-
-// ================= ADMIN: APPROVE TRADING DEPOSIT =================
-app.post('/api/admin/trade-deposit/approve', auth, async (req, res) => {
-    try {
-        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
-        const { depositId } = req.body;
-        const deposit = await TradeDeposit.findById(depositId);
-        if (!deposit) return res.status(404).json({ error: 'Deposit not found' });
-        deposit.approved = true;
-        await deposit.save();
-        res.json({ message: 'Trading deposit approved' });
-    } catch(err) { res.status(500).json({ error: err.message }); }
-});
-
-// ================= ADMIN: REJECT TRADING DEPOSIT =================
-app.post('/api/admin/trade-deposit/reject', auth, async (req, res) => {
-    try {
-        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
-        const { depositId } = req.body;
-        const deposit = await TradeDeposit.findById(depositId);
-        if (!deposit) return res.status(404).json({ error: 'Deposit not found' });
-        // Refund
-        const user = await User.findOne({ email: deposit.userEmail });
-        if (user) { user.earning += deposit.amountKES; await user.save(); }
-        await TradeDeposit.findByIdAndDelete(depositId);
-        res.json({ message: 'Deposit rejected and refunded' });
-    } catch(err) { res.status(500).json({ error: err.message }); }
 });
 
 // ================= GET COMMUNITY LINKS (public) =================
@@ -1377,63 +1288,6 @@ app.post('/api/trade/withdraw', auth, async (req, res) => {
         await user.save();
 
         res.json({ message: `Withdrawn KES ${kes} from trading balance`, kesAmount: kes });
-    } catch(err) { res.status(500).json({ error: err.message }); }
-});
-
-// ================= TRADING DEPOSIT SCHEMA =================
-const tradeDepositSchema = new mongoose.Schema({
-    userEmail: String,
-    amountKES: Number,
-    amountUSD: Number,
-    approved: { type: Boolean, default: false },
-    createdAt: { type: Date, default: Date.now }
-}, { collection: 'tradedeposits' });
-const TradeDeposit = mongoose.model('TradeDeposit', tradeDepositSchema);
-
-// ================= TRADING: REQUEST DEPOSIT =================
-app.post('/api/trade/deposit-request', auth, async (req, res) => {
-    try {
-        const { amountKES } = req.body;
-        if (!amountKES || amountKES < 130)
-            return res.status(400).json({ error: 'Minimum deposit is KES 130' });
-
-        const user = await User.findOne({ email: req.user.email });
-        if (!user) return res.status(404).json({ error: 'User not found' });
-        if (user.earning < amountKES)
-            return res.status(400).json({ error: 'Insufficient earnings balance' });
-
-        // Deduct from earnings immediately (hold)
-        user.earning -= amountKES;
-        await user.save();
-
-        const amountUSD = parseFloat((amountKES / 130).toFixed(2));
-        const deposit = new TradeDeposit({ userEmail: user.email, amountKES, amountUSD });
-        await deposit.save();
-
-        // Notify admin on Telegram
-        await bot.telegram.sendMessage(
-            ADMIN_CHAT_ID,
-            `📊 Trading Deposit Request\n━━━━━━━━━━━━━━━━━━\nUser: ${user.email}\nAmount: KES ${amountKES} ($${amountUSD})\n\n👉 Go to Admin Panel to approve`
-        );
-
-        res.json({ message: 'Deposit request submitted. Awaiting admin approval.' });
-    } catch(err) { res.status(500).json({ error: err.message }); }
-});
-
-// ================= TRADING: CHECK PENDING =================
-app.get('/api/trade/pending', auth, async (req, res) => {
-    try {
-        const pending = await TradeDeposit.findOne({ userEmail: req.user.email, approved: false });
-        res.json({ hasPending: !!pending });
-    } catch(err) { res.status(500).json({ error: err.message }); }
-});
-
-// ================= TRADING: GET BALANCE (approved deposits) =================
-app.get('/api/trade/balance', auth, async (req, res) => {
-    try {
-        const deposits = await TradeDeposit.find({ userEmail: req.user.email, approved: true });
-        const totalUSD = deposits.reduce((s, d) => s + d.amountUSD, 0);
-        res.json({ balanceUSD: parseFloat(totalUSD.toFixed(2)) });
     } catch(err) { res.status(500).json({ error: err.message }); }
 });
 

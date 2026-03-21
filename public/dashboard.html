@@ -3,6 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#ff8a00">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Bitfreeze">
     <title>Bitfreeze — Dashboard</title>
     <style>
         :root {
@@ -355,352 +361,100 @@
 
 
         /* ── TRADING TAB ── */
-        .trade-layout { display:flex; flex-direction:column; gap:14px; }
 
-        .trade-balances {
-            display:grid; grid-template-columns:1fr 1fr; gap:12px;
+        /* ── TRADE TAB ── */
+        .trade-hero {
+            background: linear-gradient(135deg,#0d1a2a,#0f2040);
+            border:1px solid rgba(255,138,0,0.2);
+            border-radius:14px; padding:16px 20px; margin-bottom:14px;
+            display:flex; justify-content:space-between; align-items:center;
+            flex-wrap:wrap; gap:12px;
         }
-        .trade-bal-card {
-            background:rgba(255,255,255,0.03);
-            border:1px solid rgba(255,255,255,0.06);
-            border-radius:12px; padding:16px; text-align:center;
-        }
-        .trade-bal-card .tbl { font-size:11px;color:#9aa6b2;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px; }
-        .trade-bal-card .tbv { font-size:22px;font-weight:800;color:#fff;font-family:'Courier New',monospace; }
-        .trade-bal-card .tbv.green { color:#00e676; }
-        .trade-bal-card .tbv.orange { color:#ff8a00; }
+        .trade-bal-item { text-align:center; }
+        .trade-bal-label { font-size:10px;color:#9aa6b2;text-transform:uppercase;letter-spacing:1px; }
+        .trade-bal-val { font-size:20px;font-weight:800;color:#00e676;font-family:'Courier New',monospace; }
 
-        .pair-selector {
-            display:flex; gap:8px; flex-wrap:wrap; margin-bottom:4px;
+        .pair-scroll {
+            display:flex; gap:8px; overflow-x:auto; padding-bottom:6px;
+            margin-bottom:12px; scrollbar-width:none;
         }
-        .pair-btn {
-            padding:8px 14px; border-radius:8px; font-size:12px; font-weight:700;
-            border:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.03);
-            color:#9aa6b2; cursor:pointer; transition:all 0.15s; width:auto; margin:0;
-        }
-        .pair-btn.active {
-            background:rgba(255,138,0,0.15); border-color:rgba(255,138,0,0.4); color:#ff8a00;
-        }
-
-        .chart-wrap {
-            background:rgba(255,255,255,0.02);
-            border:1px solid rgba(255,255,255,0.06);
-            border-radius:14px; overflow:hidden; height:300px;
-        }
-        .chart-wrap iframe { width:100%; height:100%; border:0; }
-
-        .trade-panel {
-            background:linear-gradient(160deg,#0f1a2a,#0b1220);
-            border:1px solid rgba(255,255,255,0.06);
-            border-radius:14px; padding:20px;
-        }
-        .trade-panel h3 {
-            font-size:15px; font-weight:700; color:#fff; margin:0 0 16px;
-            padding-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.06);
-        }
-
-        .trade-price-row {
-            display:flex; gap:10px; margin-bottom:16px;
-        }
-        .price-box {
-            flex:1; background:rgba(255,255,255,0.03); border-radius:10px;
-            padding:12px; text-align:center; border:1px solid rgba(255,255,255,0.05);
-        }
-        .price-box .pl { font-size:11px;color:#9aa6b2;margin-bottom:4px; }
-        .price-box .pv { font-size:18px;font-weight:800;font-family:'Courier New',monospace; }
-        .price-box.buy-box .pv { color:#00e676; }
-        .price-box.sell-box .pv { color:#ff3d5a; }
-        .price-box .spread { font-size:10px;color:#9aa6b2;margin-top:2px; }
-
-        .trade-form .form-row-trade {
-            display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;
-        }
-        .trade-form .tf-group label {
-            display:block; font-size:11px; color:#9aa6b2;
-            text-transform:uppercase; letter-spacing:0.8px;
-            font-weight:600; margin-bottom:6px;
-        }
-        .trade-form .tf-group input, .trade-form .tf-group select {
-            width:100%; background:rgba(255,255,255,0.04);
-            border:1px solid rgba(255,255,255,0.08); border-radius:9px;
-            padding:10px 12px; color:#fff; font-size:13px;
-            font-family:inherit; outline:none; transition:border 0.2s;
-            box-sizing:border-box;
-        }
-        .trade-form .tf-group input:focus { border-color:rgba(255,138,0,0.4); }
-        .trade-form .tf-group select option { background:#0d1520; }
-
-        .trade-btns { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:4px; }
-
-        .btn-buy {
-            padding:14px; border:none; border-radius:10px;
-            background:linear-gradient(135deg,#00c853,#00e676);
-            color:#111; font-weight:800; font-size:14px; cursor:pointer;
-            transition:opacity 0.2s; width:auto; margin:0;
-        }
-        .btn-buy:hover { opacity:0.88; }
-
-        .btn-sell {
-            padding:14px; border:none; border-radius:10px;
-            background:linear-gradient(135deg,#ff1744,#ff3d5a);
-            color:#fff; font-weight:800; font-size:14px; cursor:pointer;
-            transition:opacity 0.2s; width:auto; margin:0;
-        }
-        .btn-sell:hover { opacity:0.88; }
-
-        .trade-msg { font-size:13px; margin-top:10px; min-height:18px; text-align:center; }
-        .trade-msg.ok { color:#00e676; }
-        .trade-msg.err { color:#ff3d5a; }
-
-        /* Open trades table */
-        .trades-table-wrap {
-            background:rgba(255,255,255,0.02);
-            border:1px solid rgba(255,255,255,0.06);
-            border-radius:12px; overflow:hidden; margin-top:4px;
-        }
-        .trades-table-wrap table { width:100%; border-collapse:collapse; font-size:12px; }
-        .trades-table-wrap thead th {
-            padding:10px 12px; text-align:left; color:#9aa6b2;
-            font-size:10px; text-transform:uppercase; letter-spacing:1px;
-            border-bottom:1px solid rgba(255,255,255,0.05);
-            background:rgba(255,255,255,0.02);
-        }
-        .trades-table-wrap tbody td { padding:10px 12px; color:#e6eef6; border-bottom:1px solid rgba(255,255,255,0.03); }
-        .trades-table-wrap tbody tr:last-child td { border-bottom:none; }
-        .pnl-pos { color:#00e676; font-weight:700; }
-        .pnl-neg { color:#ff3d5a; font-weight:700; }
-
-        .btn-close-trade {
-            padding:4px 10px; border-radius:6px; font-size:11px; font-weight:700;
-            background:rgba(255,61,90,0.12); border:1px solid rgba(255,61,90,0.25);
-            color:#ff3d5a; cursor:pointer; width:auto; margin:0; transition:all 0.15s;
-        }
-        .btn-close-trade:hover { background:rgba(255,61,90,0.25); }
-
-        /* Deposit/Withdraw trading */
-        .trade-transfer-row { display:flex; gap:10px; margin-top:4px; }
-        .btn-trade-deposit {
-            flex:1; padding:11px; border-radius:9px; font-size:13px; font-weight:700;
-            background:rgba(255,138,0,0.12); border:1px solid rgba(255,138,0,0.25);
-            color:#ff8a00; cursor:pointer; width:auto; margin:0; transition:all 0.15s;
-        }
-        .btn-trade-deposit:hover { background:rgba(255,138,0,0.22); }
-        .btn-trade-withdraw {
-            flex:1; padding:11px; border-radius:9px; font-size:13px; font-weight:700;
-            background:rgba(0,230,118,0.08); border:1px solid rgba(0,230,118,0.2);
-            color:#00e676; cursor:pointer; width:auto; margin:0; transition:all 0.15s;
-        }
-        .btn-trade-withdraw:hover { background:rgba(0,230,118,0.15); }
-
-
-        /* ════════════════════════════
-           TRADING PLATFORM STYLES
-        ════════════════════════════ */
-        #trade * { box-sizing: border-box; }
-
-        .trade-header {
-            display: flex; justify-content: space-between; align-items: center;
-            background: linear-gradient(135deg, #0d1a2a, #0f2040);
-            border: 1px solid rgba(255,138,0,0.2);
-            border-radius: 14px; padding: 16px 20px; margin-bottom: 14px;
-        }
-        .trade-header .bal-group { text-align: center; }
-        .trade-header .bal-label { font-size: 10px; color: #9aa6b2; text-transform: uppercase; letter-spacing: 1px; }
-        .trade-header .bal-val { font-size: 20px; font-weight: 800; font-family: 'Courier New', monospace; }
-        .trade-header .bal-val.green { color: #00e676; }
-        .trade-header .bal-val.orange { color: #ff8a00; }
-        .trade-header .bal-val.red { color: #ff3d5a; }
-        .trade-header .dep-btn {
-            background: linear-gradient(90deg,#ff8a00,#ffb347); border: none;
-            border-radius: 10px; padding: 10px 18px; color: #111;
-            font-weight: 800; font-size: 13px; cursor: pointer;
-            width: auto; margin: 0;
-        }
-
-        .pair-bar {
-            display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px;
-            margin-bottom: 10px; scrollbar-width: none;
-        }
-        .pair-bar::-webkit-scrollbar { display: none; }
+        .pair-scroll::-webkit-scrollbar { display:none; }
         .pair-chip {
-            flex-shrink: 0; padding: 8px 14px; border-radius: 20px;
-            font-size: 12px; font-weight: 700; cursor: pointer;
-            border: 1px solid rgba(255,255,255,0.08);
-            background: rgba(255,255,255,0.03); color: #9aa6b2;
-            width: auto; margin: 0; transition: all 0.15s;
-            white-space: nowrap;
+            flex-shrink:0; padding:8px 16px; border-radius:20px;
+            font-size:12px; font-weight:700; cursor:pointer;
+            border:1px solid rgba(255,255,255,0.08);
+            background:rgba(255,255,255,0.03); color:#9aa6b2;
+            width:auto; margin:0; transition:all 0.15s; white-space:nowrap;
         }
         .pair-chip.active {
-            background: rgba(255,138,0,0.15);
-            border-color: rgba(255,138,0,0.4); color: #ff8a00;
-        }
-        .pair-chip .chip-change {
-            font-size: 10px; margin-left: 4px;
-        }
-        .pair-chip .chip-change.up { color: #00e676; }
-        .pair-chip .chip-change.down { color: #ff3d5a; }
-
-        .trade-chart-box {
-            border-radius: 14px; overflow: hidden;
-            border: 1px solid rgba(255,255,255,0.06);
-            margin-bottom: 10px; height: 320px;
-        }
-        .trade-chart-box iframe { width: 100%; height: 100%; border: 0; }
-
-        .price-ticker {
-            display: grid; grid-template-columns: 1fr auto 1fr;
-            gap: 6px; margin-bottom: 10px; align-items: center;
-        }
-        .tick-sell, .tick-buy {
-            border-radius: 12px; padding: 14px; text-align: center; cursor: pointer;
-            transition: transform 0.1s, opacity 0.1s; border: 2px solid transparent;
-        }
-        .tick-sell { background: linear-gradient(135deg,rgba(255,29,68,0.15),rgba(255,29,68,0.05)); border-color: rgba(255,29,68,0.3); }
-        .tick-buy  { background: linear-gradient(135deg,rgba(0,200,83,0.15),rgba(0,200,83,0.05));  border-color: rgba(0,200,83,0.3); }
-        .tick-sell:hover { transform: scale(1.02); border-color: #ff1744; }
-        .tick-buy:hover  { transform: scale(1.02); border-color: #00c853; }
-        .tick-label { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; }
-        .tick-sell .tick-label { color: #ff3d5a; }
-        .tick-buy  .tick-label { color: #00e676; }
-        .tick-price { font-size: 20px; font-weight: 900; font-family: 'Courier New', monospace; }
-        .tick-sell .tick-price { color: #ff3d5a; }
-        .tick-buy  .tick-price { color: #00e676; }
-        .tick-spread-box { text-align: center; }
-        .tick-spread-box .sp-label { font-size: 9px; color: #9aa6b2; text-transform: uppercase; letter-spacing: 1px; }
-        .tick-spread-box .sp-val { font-size: 14px; font-weight: 700; color: #ffb347; font-family: 'Courier New', monospace; }
-
-        /* Trade modal overlay */
-        .trade-modal-overlay {
-            display: none; position: fixed; inset: 0;
-            background: rgba(0,0,0,0.88); backdrop-filter: blur(8px);
-            z-index: 2000; justify-content: center; align-items: flex-end;
-        }
-        .trade-modal-overlay.show { display: flex; }
-        .trade-modal-sheet {
-            background: linear-gradient(160deg,#0f1a2a,#0b1220);
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 24px 24px 0 0; padding: 28px 24px 36px;
-            width: 100%; max-width: 480px;
-            animation: slideUp 0.3s cubic-bezier(0.16,1,0.3,1);
-        }
-        @keyframes slideUp { from{transform:translateY(100%);opacity:0} to{transform:translateY(0);opacity:1} }
-
-        .sheet-handle { width: 40px; height: 4px; background: rgba(255,255,255,0.15); border-radius: 2px; margin: 0 auto 20px; }
-        .sheet-title { font-size: 18px; font-weight: 800; color: #fff; margin-bottom: 4px; }
-        .sheet-sub { font-size: 13px; color: #9aa6b2; margin-bottom: 20px; }
-
-        .lot-grid {
-            display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 16px;
-        }
-        .lot-btn {
-            padding: 10px; border-radius: 10px; font-size: 13px; font-weight: 700;
-            border: 1px solid rgba(255,255,255,0.08);
-            background: rgba(255,255,255,0.04); color: #9aa6b2;
-            cursor: pointer; width: auto; margin: 0; text-align: center; transition: all 0.15s;
-        }
-        .lot-btn.active { background: rgba(255,138,0,0.15); border-color: rgba(255,138,0,0.4); color: #ff8a00; }
-
-        .sl-tp-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
-        .sl-tp-group label { font-size: 10px; color: #9aa6b2; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; display: block; margin-bottom: 6px; }
-        .sl-tp-group input {
-            width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 9px; padding: 10px 12px; color: #fff; font-size: 13px; font-family: inherit; outline: none;
-        }
-        .sl-tp-group input:focus { border-color: rgba(255,138,0,0.4); }
-
-        .time-row { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
-        .time-btn {
-            flex: 1; min-width: 50px; padding: 8px; border-radius: 8px; font-size: 12px; font-weight: 700;
-            border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03);
-            color: #9aa6b2; cursor: pointer; width: auto; margin: 0; text-align: center; transition: all 0.15s;
-        }
-        .time-btn.active { background: rgba(255,138,0,0.15); border-color: rgba(255,138,0,0.4); color: #ff8a00; }
-
-        .confirm-trade-btn {
-            width: 100%; padding: 15px; border: none; border-radius: 12px;
-            font-size: 16px; font-weight: 800; cursor: pointer; margin: 0; transition: opacity 0.2s;
-        }
-        .confirm-buy  { background: linear-gradient(135deg,#00c853,#00e676); color: #111; }
-        .confirm-sell { background: linear-gradient(135deg,#ff1744,#ff3d5a); color: #fff; }
-        .confirm-trade-btn:hover { opacity: 0.88; }
-
-        /* Open positions */
-        .positions-list { display: flex; flex-direction: column; gap: 10px; }
-        .position-card {
-            background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 12px; padding: 14px 16px;
-        }
-        .position-card.profit { border-color: rgba(0,230,118,0.2); }
-        .position-card.loss   { border-color: rgba(255,61,90,0.2); }
-        .pos-row1 { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        .pos-pair { font-size: 14px; font-weight: 700; color: #fff; }
-        .pos-type { font-size: 11px; font-weight: 800; padding: 3px 10px; border-radius: 20px; letter-spacing: 1px; }
-        .pos-type.buy  { background: rgba(0,230,118,0.12); color: #00e676; border: 1px solid rgba(0,230,118,0.25); }
-        .pos-type.sell { background: rgba(255,61,90,0.10);  color: #ff3d5a; border: 1px solid rgba(255,61,90,0.2); }
-        .pos-row2 { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; }
-        .pos-stat .ps-label { font-size: 9px; color: #9aa6b2; text-transform: uppercase; letter-spacing: 0.5px; }
-        .pos-stat .ps-val   { font-size: 12px; font-weight: 700; color: #e6eef6; font-family: 'Courier New', monospace; }
-        .pos-pnl { font-size: 16px; font-weight: 900; font-family: 'Courier New', monospace; }
-        .pos-pnl.up   { color: #00e676; }
-        .pos-pnl.down { color: #ff3d5a; }
-        .pos-close-btn {
-            background: rgba(255,61,90,0.1); border: 1px solid rgba(255,61,90,0.25);
-            color: #ff3d5a; border-radius: 7px; padding: 5px 12px;
-            font-size: 11px; font-weight: 700; cursor: pointer; width: auto; margin: 0;
+            background:rgba(255,138,0,0.15);
+            border-color:rgba(255,138,0,0.4); color:#ff8a00;
         }
 
-        /* Deposit modal */
-        .dep-modal-overlay {
-            display: none; position: fixed; inset: 0;
-            background: rgba(0,0,0,0.88); backdrop-filter: blur(8px);
-            z-index: 2000; justify-content: center; align-items: center;
+        .trade-chart-big {
+            border-radius:14px; overflow:hidden;
+            border:1px solid rgba(255,255,255,0.06);
+            margin-bottom:14px; height:65vh;
         }
-        .dep-modal-overlay.show { display: flex; }
-        .dep-modal-box {
-            background: linear-gradient(160deg,#0f1a2a,#0b1220);
-            border: 1px solid rgba(255,138,0,0.25); border-radius: 20px;
-            max-width: 380px; width: 92%; padding: 28px;
-            animation: fadeUp 0.3s ease;
-        }
-        @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
-        .dep-rate-box {
-            background: rgba(255,138,0,0.08); border: 1px solid rgba(255,138,0,0.2);
-            border-radius: 10px; padding: 12px 16px; margin: 14px 0;
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        .dep-rate-box span { font-size: 13px; color: #ffb347; }
-        .dep-input-group { margin-bottom: 14px; }
-        .dep-input-group label { font-size: 11px; color: #9aa6b2; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; display: block; margin-bottom: 7px; }
-        .dep-input-group input {
-            width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 10px; padding: 12px; color: #fff; font-size:14px; box-sizing: border-box; outline: none;
-        }
-        .dep-preview { font-size: 12px; color: #9aa6b2; margin-top: 5px; }
-        .dep-preview strong { color: #00e676; }
-        .dep-actions { display: flex; gap: 10px; margin-top: 16px; }
-        .dep-cancel {
-            flex: 1; padding: 12px; border-radius: 10px; background: rgba(255,255,255,0.04);
-            border: 1px solid rgba(255,255,255,0.08); color: #9aa6b2; cursor: pointer;
-            font-size: 14px; width: auto; margin: 0;
-        }
-        .dep-confirm {
-            flex: 2; padding: 12px; border-radius: 10px;
-            background: linear-gradient(90deg,#ff8a00,#ffb347); border: none;
-            color: #111; font-weight: 800; font-size: 14px; cursor: pointer; width: auto; margin: 0;
-        }
+        .trade-chart-big iframe { width:100%;height:100%;border:0; }
 
-        /* History table */
-        .hist-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        .hist-table th { padding: 10px 8px; text-align: left; color: #9aa6b2; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .hist-table td { padding: 10px 8px; color: #e6eef6; border-bottom: 1px solid rgba(255,255,255,0.03); }
-        .hist-table tr:last-child td { border-bottom: none; }
-        .pnl-win  { color: #00e676; font-weight: 700; }
-        .pnl-lose { color: #ff3d5a; font-weight: 700; }
+        .trade-price-bar {
+            display:grid; grid-template-columns:1fr auto 1fr;
+            gap:8px; margin-bottom:14px; align-items:center;
+        }
+        .tprice-sell, .tprice-buy {
+            border-radius:12px; padding:16px; text-align:center;
+            cursor:pointer; transition:transform 0.15s;
+            border:2px solid transparent;
+        }
+        .tprice-sell {
+            background:rgba(255,29,68,0.1);
+            border-color:rgba(255,29,68,0.3);
+        }
+        .tprice-buy {
+            background:rgba(0,200,83,0.1);
+            border-color:rgba(0,200,83,0.3);
+        }
+        .tprice-sell:hover { transform:scale(1.02); border-color:#ff1744; }
+        .tprice-buy:hover  { transform:scale(1.02); border-color:#00c853; }
+        .tprice-label { font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase; }
+        .tprice-sell .tprice-label { color:#ff3d5a; }
+        .tprice-buy  .tprice-label { color:#00e676; }
+        .tprice-val { font-size:22px;font-weight:900;font-family:'Courier New',monospace;margin:4px 0; }
+        .tprice-sell .tprice-val { color:#ff3d5a; }
+        .tprice-buy  .tprice-val { color:#00e676; }
+        .tprice-sub { font-size:10px;color:#9aa6b2; }
+        .tspread-box { text-align:center; }
+        .tspread-box .sp-l { font-size:9px;color:#9aa6b2;text-transform:uppercase; }
+        .tspread-box .sp-v { font-size:14px;font-weight:700;color:#ffb347;font-family:'Courier New',monospace; }
 
-        .pending-dep-note {
-            background: rgba(255,138,0,0.08); border: 1px solid rgba(255,138,0,0.2);
-            border-radius: 10px; padding: 12px 16px; font-size: 13px; color: #ffb347;
-            margin-bottom: 12px; display: none;
+        /* Coming Soon Modal */
+        .cs-overlay {
+            display:none; position:fixed; inset:0;
+            background:rgba(0,0,0,0.88); backdrop-filter:blur(10px);
+            z-index:9999; justify-content:center; align-items:center;
+        }
+        .cs-overlay.show { display:flex; }
+        .cs-box {
+            background:linear-gradient(160deg,#0f1a2a,#0b1220);
+            border:1px solid rgba(255,138,0,0.25);
+            border-radius:24px; max-width:340px; width:90%;
+            padding:40px 28px; text-align:center;
+            animation:csSlide 0.3s cubic-bezier(0.16,1,0.3,1);
+        }
+        @keyframes csSlide { from{opacity:0;transform:scale(0.9)} to{opacity:1;transform:scale(1)} }
+        .cs-icon { font-size:60px; margin-bottom:16px; }
+        .cs-title { font-size:24px;font-weight:800;color:#fff;margin:0 0 10px; }
+        .cs-sub { font-size:14px;color:#9aa6b2;line-height:1.6;margin:0 0 20px; }
+        .cs-badge {
+            background:rgba(255,138,0,0.1); border:1px solid rgba(255,138,0,0.25);
+            border-radius:10px; padding:12px 16px; margin-bottom:24px;
+            font-size:13px; color:#ffb347;
+        }
+        .cs-close {
+            width:100%; padding:14px; background:linear-gradient(90deg,#ff8a00,#ffb347);
+            border:none; border-radius:12px; color:#111; font-weight:800;
+            font-size:15px; cursor:pointer; margin:0;
         }
 
     </style>
@@ -1009,166 +763,91 @@
 
     </div>
 
-    <!-- ════════════════════════════════
-         TRADING PLATFORM TAB
-    ════════════════════════════════ -->
+    <!-- TRADE TAB -->
     <div id="trade" class="tab-content">
 
-        <!-- Pending deposit notice -->
-        <div class="pending-dep-note" id="pendingDepNote">
-            ⏳ Your deposit is pending admin approval. You can trade once approved.
-        </div>
-
-        <!-- Header balances -->
-        <div class="trade-header">
-            <div class="bal-group">
-                <div class="bal-label">Trading Balance</div>
-                <div class="bal-val green">$<span id="tBalUSD">0.00</span></div>
-                <div style="font-size:10px;color:#9aa6b2">≈ KES <span id="tBalKES">0</span></div>
+        <!-- Balance hero -->
+        <div class="trade-hero">
+            <div class="trade-bal-item">
+                <div class="trade-bal-label">Trading Balance</div>
+                <div class="trade-bal-val">$0.00</div>
+                <div style="font-size:10px;color:#9aa6b2">Coming Soon</div>
             </div>
-            <div class="bal-group">
-                <div class="bal-label">Equity</div>
-                <div class="bal-val orange" id="tEquity">$0.00</div>
+            <div class="trade-bal-item">
+                <div class="trade-bal-label">Open P&L</div>
+                <div style="font-size:20px;font-weight:800;color:#9aa6b2;font-family:'Courier New',monospace">$0.00</div>
             </div>
-            <div class="bal-group">
-                <div class="bal-label">Open P&L</div>
-                <div class="bal-val" id="tOpenPnL">$0.00</div>
-            </div>
-            <button class="dep-btn" onclick="openDepositModal()">+ Deposit</button>
+            <button onclick="showCS('deposit')" style="background:linear-gradient(90deg,#ff8a00,#ffb347);border:none;border-radius:10px;padding:10px 18px;color:#111;font-weight:800;font-size:13px;cursor:pointer;width:auto;margin:0;">+ Deposit</button>
         </div>
 
         <!-- Pair selector -->
-        <div class="pair-bar" id="pairBar"></div>
+        <div class="pair-scroll" id="tradePairBar"></div>
 
-        <!-- Live Chart -->
-        <div class="trade-chart-box">
+        <!-- Big Live Chart -->
+        <div class="trade-chart-big">
             <iframe id="tradeChartFrame"
-                src="https://www.tradingview.com/widgetembed/?symbol=BINANCE:BTCUSDT&interval=1&theme=dark&style=1&locale=en&hide_side_toolbar=false&allow_symbol_change=false"
+                src="https://www.tradingview.com/widgetembed/?symbol=BINANCE:BTCUSDT&interval=5&theme=dark&style=1&locale=en&hide_side_toolbar=false"
                 allowfullscreen></iframe>
         </div>
 
-        <!-- Live price ticker -->
-        <div class="price-ticker">
-            <div class="tick-sell" onclick="openTradeModal('SELL')">
-                <div class="tick-label">▼ SELL</div>
-                <div class="tick-price" id="tickSell">—</div>
-                <div style="font-size:10px;color:#ff3d5a;margin-top:2px">Tap to sell</div>
+        <!-- Live Price Ticker -->
+        <div class="trade-price-bar">
+            <div class="tprice-sell" onclick="showCS('sell')">
+                <div class="tprice-label">▼ Sell</div>
+                <div class="tprice-val" id="tSellPrice">—</div>
+                <div class="tprice-sub">Tap to sell</div>
             </div>
-            <div class="tick-spread-box">
-                <div class="sp-label">Spread</div>
-                <div class="sp-val" id="tickSpread">—</div>
-                <div style="font-size:9px;color:#9aa6b2;margin-top:4px" id="tickChange">—</div>
+            <div class="tspread-box">
+                <div class="sp-l">Spread</div>
+                <div class="sp-v" id="tSpread">—</div>
             </div>
-            <div class="tick-buy" onclick="openTradeModal('BUY')">
-                <div class="tick-label">▲ BUY</div>
-                <div class="tick-price" id="tickBuy">—</div>
-                <div style="font-size:10px;color:#00e676;margin-top:2px">Tap to buy</div>
-            </div>
-        </div>
-
-        <!-- Open Positions -->
-        <div class="card">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-                <h2 style="margin:0;font-size:15px;">Open Positions <span style="font-size:12px;color:#9aa6b2;font-weight:400" id="posCount">(0)</span></h2>
-                <button onclick="closeAllTrades()" style="background:rgba(255,61,90,0.1);border:1px solid rgba(255,61,90,0.25);color:#ff3d5a;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;width:auto;margin:0;">Close All</button>
-            </div>
-            <div class="positions-list" id="positionsList">
-                <div style="text-align:center;padding:20px;color:#9aa6b2;font-size:13px;">No open positions</div>
+            <div class="tprice-buy" onclick="showCS('buy')">
+                <div class="tprice-label">▲ Buy</div>
+                <div class="tprice-val" id="tBuyPrice">—</div>
+                <div class="tprice-sub">Tap to buy</div>
             </div>
         </div>
 
-        <!-- Trade History -->
-        <div class="card">
-            <h2 style="font-size:15px;margin-bottom:14px;">Trade History</h2>
-            <div style="overflow-x:auto;">
-                <table class="hist-table" id="tradeHistTable">
-                    <thead><tr><th>Pair</th><th>Type</th><th>Lots</th><th>Open</th><th>Close</th><th>P&L</th></tr></thead>
-                    <tbody id="tradeHistBody">
-                        <tr><td colspan="6" style="text-align:center;color:#9aa6b2;padding:20px;">No history yet</td></tr>
-                    </tbody>
-                </table>
+        <!-- Info cards -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+            <div class="card" style="padding:16px;text-align:center;cursor:pointer;" onclick="showCS('history')">
+                <div style="font-size:24px;margin-bottom:6px">📋</div>
+                <div style="font-size:13px;font-weight:700;color:#fff;">Trade History</div>
+                <div style="font-size:11px;color:#9aa6b2;margin-top:2px">Coming Soon</div>
+            </div>
+            <div class="card" style="padding:16px;text-align:center;cursor:pointer;" onclick="showCS('withdraw')">
+                <div style="font-size:24px;margin-bottom:6px">💸</div>
+                <div style="font-size:13px;font-weight:700;color:#fff;">Withdraw</div>
+                <div style="font-size:11px;color:#9aa6b2;margin-top:2px">Coming Soon</div>
+            </div>
+        </div>
+
+        <div class="card" style="padding:20px;text-align:center;">
+            <div style="font-size:36px;margin-bottom:12px">🚀</div>
+            <h3 style="color:#fff;margin:0 0 8px;font-size:16px;">Bitfreeze Trading Platform</h3>
+            <p style="font-size:13px;color:#9aa6b2;line-height:1.6;margin:0 0 16px;">
+                Full Forex & Crypto trading is coming soon!<br>
+                Trade BTC, ETH, EUR/USD, Gold & more — all from your Bitfreeze account.
+            </p>
+            <div style="background:rgba(255,138,0,0.08);border:1px solid rgba(255,138,0,0.2);border-radius:10px;padding:12px;font-size:13px;color:#ffb347;">
+                🔔 You'll be notified the moment trading goes live!
             </div>
         </div>
 
     </div>
 
-    <!-- ═══ TRADE ENTRY MODAL (bottom sheet) ═══ -->
-    <div class="trade-modal-overlay" id="tradeModal">
-        <div class="trade-modal-sheet">
-            <div class="sheet-handle"></div>
-            <div class="sheet-title" id="sheetTitle">Place Trade</div>
-            <div class="sheet-sub" id="sheetSub">BTC/USD · Entry: —</div>
-
-            <!-- Lot size -->
-            <div style="font-size:11px;color:#9aa6b2;text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-bottom:8px;">Lot Size</div>
-            <div class="lot-grid">
-                <button class="lot-btn active" onclick="selectLot(0.01,this)">0.01</button>
-                <button class="lot-btn" onclick="selectLot(0.05,this)">0.05</button>
-                <button class="lot-btn" onclick="selectLot(0.1,this)">0.10</button>
-                <button class="lot-btn" onclick="selectLot(0.5,this)">0.50</button>
-                <button class="lot-btn" onclick="selectLot(1,this)">1.00</button>
-                <button class="lot-btn" onclick="selectLot(2,this)">2.00</button>
-                <button class="lot-btn" onclick="selectLot(5,this)">5.00</button>
-                <button class="lot-btn" onclick="selectLot(10,this)">10.00</button>
+    <!-- COMING SOON MODAL -->
+    <div class="cs-overlay" id="csModal">
+        <div class="cs-box">
+            <div class="cs-icon" id="csIcon">🚀</div>
+            <div class="cs-title" id="csTitle">Coming Soon!</div>
+            <div class="cs-sub" id="csSub">This feature is under development.</div>
+            <div class="cs-badge" id="csBadge">
+                🔔 You'll be notified when this goes live!
             </div>
-            <div style="font-size:12px;color:#9aa6b2;margin-bottom:14px;">
-                Margin required: <strong style="color:#fff" id="marginRequired">$0.00</strong> &nbsp;|&nbsp;
-                Available: <strong style="color:#00e676" id="availMargin">$0.00</strong>
-            </div>
-
-            <!-- Time limit -->
-            <div style="font-size:11px;color:#9aa6b2;text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-bottom:8px;">Auto-close after (optional)</div>
-            <div class="time-row">
-                <button class="time-btn active" onclick="selectTime(0,this)">Manual</button>
-                <button class="time-btn" onclick="selectTime(1,this)">1 min</button>
-                <button class="time-btn" onclick="selectTime(5,this)">5 min</button>
-                <button class="time-btn" onclick="selectTime(15,this)">15 min</button>
-                <button class="time-btn" onclick="selectTime(60,this)">1 hr</button>
-            </div>
-
-            <!-- SL / TP -->
-            <div class="sl-tp-row">
-                <div class="sl-tp-group">
-                    <label>Stop Loss</label>
-                    <input type="number" id="slInput" placeholder="Optional" step="0.00001">
-                </div>
-                <div class="sl-tp-group">
-                    <label>Take Profit</label>
-                    <input type="number" id="tpInput" placeholder="Optional" step="0.00001">
-                </div>
-            </div>
-
-            <div style="display:flex;gap:10px;">
-                <button onclick="closeTradeModal()" style="flex:1;padding:14px;border-radius:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:#9aa6b2;cursor:pointer;font-size:14px;width:auto;margin:0;">Cancel</button>
-                <button class="confirm-trade-btn" id="confirmTradeBtn" onclick="confirmTrade()" style="flex:2;">▲ BUY</button>
-            </div>
-            <div style="font-size:13px;text-align:center;margin-top:10px;min-height:16px;" id="tradeSheetMsg"></div>
-        </div>
-    </div>
-
-    <!-- ═══ DEPOSIT MODAL ═══ -->
-    <div class="dep-modal-overlay" id="depModal">
-        <div class="dep-modal-box">
-            <h3 style="margin:0 0 4px;color:#fff;font-size:18px;">💰 Fund Trading Account</h3>
-            <p style="font-size:13px;color:#9aa6b2;margin:0 0 4px;">Transfer from earnings balance to trading</p>
-            <div class="dep-rate-box">
-                <span>💱 Rate: KES 130 = $1.00 USD</span>
-                <span style="color:#9aa6b2">Earnings: KES <span id="depAvailKES">0</span></span>
-            </div>
-            <div class="dep-input-group">
-                <label>Amount in KES</label>
-                <input type="number" id="depAmountKES" placeholder="Min KES 130" min="130"
-                    oninput="updateDepPreview()">
-                <div class="dep-preview">You'll receive: <strong>$<span id="depUSDPreview">0.00</span></strong></div>
-            </div>
-            <div style="font-size:12px;color:#ffb347;padding:10px;background:rgba(255,138,0,0.06);border-radius:8px;">
-                ⚠️ Deposit requires admin approval before funds are available for trading.
-            </div>
-            <div class="dep-actions">
-                <button class="dep-cancel" onclick="closeDepModal()">Cancel</button>
-                <button class="dep-confirm" onclick="submitDeposit()">Submit Deposit Request</button>
-            </div>
-            <div style="font-size:13px;text-align:center;margin-top:10px;min-height:16px;" id="depMsg"></div>
+            <button class="cs-close" onclick="document.getElementById('csModal').classList.remove('show')">
+                Got it! 👍
+            </button>
         </div>
     </div>
 
@@ -1223,6 +902,16 @@
 const DOMAIN = window.location.origin;
 const token = localStorage.getItem('bf_token');
 if (!token) location.href = '/login';
+
+// TABS
+function showTab(id, btn) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    btn.classList.add('active');
+    if (id === 'trade') initTradeTab();
+    else if (tradePriceTimer) { clearInterval(tradePriceTimer); tradePriceTimer = null; }
+}
 
 // TABS
 
@@ -1566,457 +1255,77 @@ async function loadCommunityLinks() {
     } catch(e) { console.log('Links not set yet'); }
 }
 
-// ════════════════════════════════════════════════
-// PROFESSIONAL TRADING ENGINE
-// ════════════════════════════════════════════════
-const TRADE_PAIRS = {
-    'BTCUSDT':  { name:'BTC/USD',  decimals:2, spread:8,       lotValue:0.001,  chart:'BINANCE:BTCUSDT' },
-    'ETHUSDT':  { name:'ETH/USD',  decimals:2, spread:0.5,     lotValue:0.01,   chart:'BINANCE:ETHUSDT' },
-    'EURUSD':   { name:'EUR/USD',  decimals:5, spread:0.00010, lotValue:100000, chart:'FX:EURUSD' },
-    'GBPUSD':   { name:'GBP/USD',  decimals:5, spread:0.00015, lotValue:100000, chart:'FX:GBPUSD' },
-    'XAUUSD':   { name:'XAU/USD',  decimals:2, spread:0.35,    lotValue:100,    chart:'TVC:GOLD' },
-    'USOIL':    { name:'OIL/USD',  decimals:2, spread:0.03,    lotValue:1000,   chart:'TVC:USOIL' }
+
+// ── TRADING TAB ──
+const TRADE_PAIRS_CS = {
+    'BTCUSDT': { name:'BTC/USD', spread:8,       chart:'BINANCE:BTCUSDT' },
+    'ETHUSDT': { name:'ETH/USD', spread:0.5,     chart:'BINANCE:ETHUSDT' },
+    'EURUSD':  { name:'EUR/USD', spread:0.00012, chart:'FX:EURUSD' },
+    'GBPUSD':  { name:'GBP/USD', spread:0.00015, chart:'FX:GBPUSD' },
+    'XAUUSD':  { name:'XAU/USD', spread:0.35,    chart:'TVC:GOLD' },
+    'USOIL':   { name:'OIL/USD', spread:0.03,    chart:'TVC:USOIL' },
 };
 
-const KES_RATE_BUY  = 130; // KES per USD (deposit)
-const KES_RATE_SELL = 125; // KES per USD (withdraw)
+let activeTradePair = 'BTCUSDT';
+let tradePriceTimer = null;
 
-let tState = {
-    balance:    0,       // USD
-    equity:     0,
-    activePair: 'BTCUSDT',
-    tradeType:  'BUY',
-    selectedLot: 0.01,
-    selectedTime: 0,     // 0 = manual
-    positions:  [],
-    history:    [],
-    prices:     {}
+const CS_CONTENT = {
+    deposit:  { icon:'💰', title:'Deposit Coming Soon!',  sub:'Fund your trading account with KES and convert to USD. This feature launches very soon!' },
+    buy:      { icon:'📈', title:'Buy Orders Coming Soon!', sub:'Place BUY orders and trade the live market. Full trading functionality launches soon!' },
+    sell:     { icon:'📉', title:'Sell Orders Coming Soon!', sub:'Place SELL orders and profit from falling markets. Full trading functionality launches soon!' },
+    withdraw: { icon:'💸', title:'Withdrawal Coming Soon!', sub:'Withdraw your trading profits back to your M-Pesa. Coming very soon!' },
+    history:  { icon:'📋', title:'Trade History Coming Soon!', sub:'View all your past trades, profits and losses in detail. Coming very soon!' },
 };
 
-let priceTimer = null;
-let positionTimer = null;
-
-// ── Load saved state ──
-function tLoad() {
-    const saved = localStorage.getItem('bft_' + (token||''));
-    if (saved) {
-        try {
-            const d = JSON.parse(saved);
-            tState.balance   = d.balance   || 0;
-            tState.positions = d.positions || [];
-            tState.history   = d.history   || [];
-        } catch(e) {}
-    }
+function showCS(type) {
+    const c = CS_CONTENT[type] || CS_CONTENT.deposit;
+    document.getElementById('csIcon').textContent  = c.icon;
+    document.getElementById('csTitle').textContent = c.title;
+    document.getElementById('csSub').textContent   = c.sub;
+    document.getElementById('csModal').classList.add('show');
 }
 
-function tSave() {
-    localStorage.setItem('bft_' + (token||''), JSON.stringify({
-        balance:   tState.balance,
-        positions: tState.positions,
-        history:   tState.history.slice(0,100)
-    }));
-}
-
-// ── Init trading tab ──
-async function initTrading() {
-    tLoad();
-    buildPairBar();
-    renderBalances();
-    renderPositions();
-    renderHistory();
-    await fetchPrice(tState.activePair);
-    startPriceUpdates();
-    startPositionUpdates();
-    // Check pending deposits
-    checkPendingDeposit();
-}
-
-// ── Build pair bar ──
-function buildPairBar() {
-    const bar = document.getElementById('pairBar');
-    bar.innerHTML = Object.entries(TRADE_PAIRS).map(([key, p]) =>
-        `<button class="pair-chip ${key===tState.activePair?'active':''}" id="chip_${key}" onclick="switchPair('${key}',this)">
-            ${p.name}
-            <span class="chip-change" id="chg_${key}">—</span>
-        </button>`
+function buildTradePairBar() {
+    const bar = document.getElementById('tradePairBar');
+    if (!bar) return;
+    bar.innerHTML = Object.entries(TRADE_PAIRS_CS).map(([key, p]) =>
+        `<button class="pair-chip ${key===activeTradePair?'active':''}" onclick="switchTradePair('${key}',this)">${p.name}</button>`
     ).join('');
 }
 
-// ── Switch pair ──
-function switchPair(pair, btn) {
-    tState.activePair = pair;
+function switchTradePair(pair, btn) {
+    activeTradePair = pair;
     document.querySelectorAll('.pair-chip').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    const p = TRADE_PAIRS[pair];
+    const p = TRADE_PAIRS_CS[pair];
     document.getElementById('tradeChartFrame').src =
-        `https://www.tradingview.com/widgetembed/?symbol=${p.chart}&interval=1&theme=dark&style=1&locale=en&hide_side_toolbar=false&allow_symbol_change=false`;
-    fetchPrice(pair);
+        `https://www.tradingview.com/widgetembed/?symbol=${p.chart}&interval=5&theme=dark&style=1&locale=en&hide_side_toolbar=false`;
+    fetchTradePrice(pair);
 }
 
-// ── Fetch price from CoinGecko (crypto) or simulate (forex) ──
-async function fetchPrice(pair) {
+async function fetchTradePrice(pair) {
     try {
-        let price = tState.prices[pair];
+        const p = TRADE_PAIRS_CS[pair];
+        let price = null;
         if (pair === 'BTCUSDT' || pair === 'ETHUSDT') {
             const id = pair === 'BTCUSDT' ? 'bitcoin' : 'ethereum';
-            const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd&include_24hr_change=true`);
+            const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd`);
             const d = await r.json();
-            const key = pair === 'BTCUSDT' ? 'bitcoin' : 'ethereum';
-            price = d[key]?.usd;
-            const chg = d[key]?.usd_24h_change || 0;
-            const chgEl = document.getElementById('chg_' + pair);
-            if (chgEl) {
-                chgEl.textContent = (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%';
-                chgEl.className = 'chip-change ' + (chg >= 0 ? 'up' : 'down');
-            }
-        } else {
-            // Simulate realistic forex movement
-            const base = { 'EURUSD':1.085, 'GBPUSD':1.265, 'XAUUSD':3020, 'USOIL':68 };
-            if (!tState.prices[pair]) tState.prices[pair] = base[pair] || 1;
-            const change = (Math.random() - 0.499) * tState.prices[pair] * 0.0002;
-            price = tState.prices[pair] + change;
+            price = d[pair==='BTCUSDT'?'bitcoin':'ethereum']?.usd;
         }
-        if (price) {
-            tState.prices[pair] = price;
-            if (pair === tState.activePair) updatePriceTicker(pair, price);
-        }
-    } catch(e) {
-        // Keep last price
-        if (tState.prices[pair]) updatePriceTicker(pair, tState.prices[pair]);
-    }
-}
-
-function updatePriceTicker(pair, price) {
-    const p = TRADE_PAIRS[pair];
-    const sellP = price;
-    const buyP  = price + p.spread;
-    document.getElementById('tickSell').textContent    = sellP.toFixed(p.decimals);
-    document.getElementById('tickBuy').textContent     = buyP.toFixed(p.decimals);
-    document.getElementById('tickSpread').textContent  = p.spread.toFixed(p.decimals);
-    // 24h change display
-    const prevPrice = tState.prices[pair + '_prev'] || price;
-    const chgPct = ((price - prevPrice) / prevPrice * 100);
-    document.getElementById('tickChange').textContent =
-        (chgPct >= 0 ? '▲ +' : '▼ ') + Math.abs(chgPct).toFixed(3) + '%';
-    document.getElementById('tickChange').style.color = chgPct >= 0 ? '#00e676' : '#ff3d5a';
-}
-
-function startPriceUpdates() {
-    if (priceTimer) clearInterval(priceTimer);
-    priceTimer = setInterval(() => fetchPrice(tState.activePair), 3000);
-}
-
-// ── Update open positions P&L every second ──
-function startPositionUpdates() {
-    if (positionTimer) clearInterval(positionTimer);
-    positionTimer = setInterval(() => {
-        if (!tState.positions.length) return;
-        const now = Date.now();
-        let changed = false;
-
-        tState.positions.forEach(pos => {
-            const price = tState.prices[pos.pair];
-            if (!price) return;
-            const p = TRADE_PAIRS[pos.pair];
-
-            // Calculate P&L
-            const priceDiff = pos.type === 'BUY'
-                ? price - pos.entryPrice
-                : pos.entryPrice - price;
-            pos.pnl = priceDiff * pos.lots * p.lotValue;
-            pos.currentPrice = price;
-
-            // Check SL/TP
-            if (pos.sl && pos.type === 'BUY'  && price <= pos.sl) { autoCloseTrade(pos, 'Stop Loss'); changed=true; return; }
-            if (pos.sl && pos.type === 'SELL' && price >= pos.sl) { autoCloseTrade(pos, 'Stop Loss'); changed=true; return; }
-            if (pos.tp && pos.type === 'BUY'  && price >= pos.tp) { autoCloseTrade(pos, 'Take Profit'); changed=true; return; }
-            if (pos.tp && pos.type === 'SELL' && price <= pos.tp) { autoCloseTrade(pos, 'Take Profit'); changed=true; return; }
-
-            // Check time expiry
-            if (pos.expiresAt && now >= pos.expiresAt) { autoCloseTrade(pos, 'Time Expired'); changed=true; return; }
-        });
-
-        renderBalances();
-        renderPositions();
-        if (changed) { tSave(); renderHistory(); }
-    }, 1000);
-}
-
-function autoCloseTrade(pos, reason) {
-    const idx = tState.positions.findIndex(p => p.id === pos.id);
-    if (idx === -1) return;
-    finalizeTrade(pos, reason);
-    tState.positions.splice(idx, 1);
-}
-
-// ── Render balances ──
-function renderBalances() {
-    const openPnL = tState.positions.reduce((s, p) => s + (p.pnl || 0), 0);
-    const equity  = tState.balance + openPnL;
-    tState.equity = equity;
-
-    document.getElementById('tBalUSD').textContent  = tState.balance.toFixed(2);
-    document.getElementById('tBalKES').textContent  = Math.floor(tState.balance * KES_RATE_SELL).toLocaleString();
-    document.getElementById('tEquity').textContent  = '$' + equity.toFixed(2);
-    document.getElementById('tEquity').className    = 'bal-val ' + (equity >= tState.balance ? 'green' : 'red');
-
-    const pnlEl = document.getElementById('tOpenPnL');
-    pnlEl.textContent = (openPnL >= 0 ? '+$' : '-$') + Math.abs(openPnL).toFixed(2);
-    pnlEl.className   = 'bal-val ' + (openPnL >= 0 ? 'green' : 'red');
-}
-
-// ── Render positions ──
-function renderPositions() {
-    const el = document.getElementById('positionsList');
-    document.getElementById('posCount').textContent = `(${tState.positions.length})`;
-
-    if (!tState.positions.length) {
-        el.innerHTML = '<div style="text-align:center;padding:20px;color:#9aa6b2;font-size:13px;">No open positions</div>';
-        return;
-    }
-
-    const p = TRADE_PAIRS[tState.activePair];
-    el.innerHTML = tState.positions.map(pos => {
-        const pnl = pos.pnl || 0;
-        const pp  = TRADE_PAIRS[pos.pair];
-        const timeLeft = pos.expiresAt ? Math.max(0, Math.ceil((pos.expiresAt - Date.now()) / 1000)) : null;
-        return `<div class="position-card ${pnl >= 0 ? 'profit' : 'loss'}">
-            <div class="pos-row1">
-                <div>
-                    <span class="pos-pair">${pp.name}</span>
-                    <span class="pos-type ${pos.type.toLowerCase()}" style="margin-left:8px">${pos.type}</span>
-                </div>
-                <div style="display:flex;align-items:center;gap:10px">
-                    <span class="pos-pnl ${pnl>=0?'up':'down'}">${pnl>=0?'+':'-'}$${Math.abs(pnl).toFixed(2)}</span>
-                    <button class="pos-close-btn" onclick="closeTrade('${pos.id}')">Close</button>
-                </div>
-            </div>
-            <div class="pos-row2">
-                <div class="pos-stat"><div class="ps-label">Lots</div><div class="ps-val">${pos.lots}</div></div>
-                <div class="pos-stat"><div class="ps-label">Entry</div><div class="ps-val">${pos.entryPrice.toFixed(pp.decimals)}</div></div>
-                <div class="pos-stat"><div class="ps-label">Current</div><div class="ps-val">${(pos.currentPrice||pos.entryPrice).toFixed(pp.decimals)}</div></div>
-                <div class="pos-stat"><div class="ps-label">${timeLeft!==null?'Time':'SL/TP'}</div><div class="ps-val">${timeLeft!==null?(timeLeft+'s'):(pos.sl||'—')+'/'+( pos.tp||'—')}</div></div>
-            </div>
-        </div>`;
-    }).join('');
-}
-
-// ── Render history ──
-function renderHistory() {
-    const tbody = document.getElementById('tradeHistBody');
-    if (!tState.history.length) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#9aa6b2;padding:16px;">No history yet</td></tr>';
-        return;
-    }
-    tbody.innerHTML = tState.history.slice(0,20).map(h => {
-        const pp = TRADE_PAIRS[h.pair] || { decimals:2 };
-        const pnl = parseFloat(h.pnl) || 0;
-        return `<tr>
-            <td>${TRADE_PAIRS[h.pair]?.name || h.pair}</td>
-            <td style="color:${h.type==='BUY'?'#00e676':'#ff3d5a'};font-weight:700">${h.type}</td>
-            <td>${h.lots}</td>
-            <td style="font-family:'Courier New',monospace">${parseFloat(h.entryPrice).toFixed(pp.decimals)}</td>
-            <td style="font-family:'Courier New',monospace">${parseFloat(h.closePrice).toFixed(pp.decimals)}</td>
-            <td class="${pnl>=0?'pnl-win':'pnl-lose'}">${pnl>=0?'+':'-'}$${Math.abs(pnl).toFixed(2)}</td>
-        </tr>`;
-    }).join('');
-}
-
-// ── Trade modal ──
-function openTradeModal(type) {
-    if (tState.balance < 1) {
-        alert('Insufficient trading balance. Please deposit first.');
-        return;
-    }
-    tState.tradeType = type;
-    const pair = TRADE_PAIRS[tState.activePair];
-    const price = tState.prices[tState.activePair];
-
-    document.getElementById('sheetTitle').textContent = (type==='BUY'?'▲ BUY ':'▼ SELL ') + pair.name;
-    document.getElementById('sheetSub').textContent   = pair.name + ' · Entry: ' + (price ? price.toFixed(pair.decimals) : '—');
-
-    const btn = document.getElementById('confirmTradeBtn');
-    btn.textContent  = type === 'BUY' ? '▲ BUY' : '▼ SELL';
-    btn.className    = 'confirm-trade-btn ' + (type==='BUY'?'confirm-buy':'confirm-sell');
-
-    document.getElementById('availMargin').textContent  = '$' + tState.balance.toFixed(2);
-    updateMarginRequired();
-    document.getElementById('tradeModal').classList.add('show');
-    document.getElementById('tradeSheetMsg').textContent = '';
-    document.getElementById('slInput').value = '';
-    document.getElementById('tpInput').value = '';
-}
-
-function closeTradeModal() {
-    document.getElementById('tradeModal').classList.remove('show');
-}
-
-function selectLot(lot, btn) {
-    tState.selectedLot = lot;
-    document.querySelectorAll('.lot-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    updateMarginRequired();
-}
-
-function selectTime(mins, btn) {
-    tState.selectedTime = mins;
-    document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-}
-
-function updateMarginRequired() {
-    const pair  = TRADE_PAIRS[tState.activePair];
-    const price = tState.prices[tState.activePair] || 1;
-    const margin = tState.selectedLot * pair.lotValue * price / 100; // 1% margin (100x leverage)
-    document.getElementById('marginRequired').textContent = '$' + Math.max(margin, 0.01).toFixed(2);
-}
-
-function confirmTrade() {
-    const pair  = TRADE_PAIRS[tState.activePair];
-    const price = tState.prices[tState.activePair];
-    const msgEl = document.getElementById('tradeSheetMsg');
-
-    if (!price) { msgEl.style.color='#ff3d5a'; msgEl.textContent='Price not available'; return; }
-
-    const margin = tState.selectedLot * pair.lotValue * price / 100;
-    if (margin > tState.balance) {
-        msgEl.style.color='#ff3d5a';
-        msgEl.textContent = `Insufficient balance. Need $${margin.toFixed(2)}`;
-        return;
-    }
-
-    const entryPrice = tState.tradeType === 'BUY'
-        ? price + pair.spread
-        : price;
-
-    const sl = parseFloat(document.getElementById('slInput').value) || null;
-    const tp = parseFloat(document.getElementById('tpInput').value) || null;
-    const expiresAt = tState.selectedTime > 0 ? Date.now() + tState.selectedTime * 60000 : null;
-
-    const position = {
-        id:          Date.now().toString(),
-        pair:        tState.activePair,
-        type:        tState.tradeType,
-        lots:        tState.selectedLot,
-        entryPrice,
-        currentPrice: entryPrice,
-        margin,
-        sl, tp,
-        expiresAt,
-        pnl:         0,
-        openedAt:    new Date().toLocaleTimeString()
-    };
-
-    tState.balance -= margin;
-    tState.positions.push(position);
-    tSave();
-    renderBalances();
-    renderPositions();
-    closeTradeModal();
-}
-
-function closeTrade(id) {
-    const idx = tState.positions.findIndex(p => p.id === id);
-    if (idx === -1) return;
-    const pos = tState.positions[idx];
-    finalizeTrade(pos, 'Manual Close');
-    tState.positions.splice(idx, 1);
-    tSave();
-    renderBalances();
-    renderPositions();
-    renderHistory();
-}
-
-function finalizeTrade(pos, reason) {
-    const pp    = TRADE_PAIRS[pos.pair];
-    const closePrice = pos.currentPrice || pos.entryPrice;
-    const pnl   = pos.pnl || 0;
-
-    // Return margin + P&L
-    tState.balance += pos.margin + pnl;
-    if (tState.balance < 0) tState.balance = 0;
-
-    tState.history.unshift({
-        pair:       pos.pair,
-        type:       pos.type,
-        lots:       pos.lots,
-        entryPrice: pos.entryPrice.toFixed(pp.decimals),
-        closePrice: closePrice.toFixed(pp.decimals),
-        pnl:        pnl.toFixed(2),
-        reason,
-        time:       new Date().toLocaleTimeString()
-    });
-}
-
-function closeAllTrades() {
-    if (!tState.positions.length) return;
-    if (!confirm('Close all open positions?')) return;
-    [...tState.positions].forEach(pos => finalizeTrade(pos, 'Manual Close'));
-    tState.positions = [];
-    tSave();
-    renderBalances();
-    renderPositions();
-    renderHistory();
-}
-
-// ── Deposit ──
-function openDepositModal() {
-    const earningKES = parseFloat(document.getElementById('userEarning').textContent) || 0;
-    document.getElementById('depAvailKES').textContent = earningKES.toLocaleString();
-    document.getElementById('depAmountKES').value = '';
-    document.getElementById('depUSDPreview').textContent = '0.00';
-    document.getElementById('depMsg').textContent = '';
-    document.getElementById('depModal').classList.add('show');
-}
-
-function closeDepModal() {
-    document.getElementById('depModal').classList.remove('show');
-}
-
-function updateDepPreview() {
-    const kes = parseFloat(document.getElementById('depAmountKES').value) || 0;
-    document.getElementById('depUSDPreview').textContent = (kes / KES_RATE_BUY).toFixed(2);
-}
-
-async function submitDeposit() {
-    const kes = parseFloat(document.getElementById('depAmountKES').value);
-    const msgEl = document.getElementById('depMsg');
-    if (!kes || kes < 130) { msgEl.style.color='#ff3d5a'; msgEl.textContent='Minimum deposit is KES 130'; return; }
-
-    try {
-        const res = await fetch(DOMAIN + '/api/trade/deposit-request', {
-            method: 'POST',
-            headers: { 'Content-Type':'application/json', Authorization:'Bearer '+token },
-            body: JSON.stringify({ amountKES: kes })
-        });
-        const d = await res.json();
-        if (d.error) { msgEl.style.color='#ff3d5a'; msgEl.textContent='❌ '+d.error; return; }
-        msgEl.style.color='#00e676';
-        msgEl.textContent='✅ Deposit request submitted! Awaiting admin approval.';
-        document.getElementById('pendingDepNote').style.display = 'block';
-        setTimeout(() => { closeDepModal(); getUser(); }, 2000);
-    } catch(e) { msgEl.style.color='#ff3d5a'; msgEl.textContent='Network error'; }
-}
-
-async function checkPendingDeposit() {
-    try {
-        const res = await fetch(DOMAIN + '/api/trade/pending', { headers: { Authorization:'Bearer '+token } });
-        const d = await res.json();
-        document.getElementById('pendingDepNote').style.display = d.hasPending ? 'block' : 'none';
+        if (!price) return;
+        const dec = pair.includes('USD') && !pair.includes('BTC') && !pair.includes('ETH') ? 5 : 2;
+        document.getElementById('tSellPrice').textContent = price.toFixed(dec);
+        document.getElementById('tBuyPrice').textContent  = (price + p.spread).toFixed(dec);
+        document.getElementById('tSpread').textContent    = p.spread.toFixed(dec);
     } catch(e) {}
 }
 
-// Load when tab opens
-function showTab(id, btn) {
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-    btn.classList.add('active');
-    if (id === 'trade') initTrading();
-    else {
-        if (priceTimer) { clearInterval(priceTimer); priceTimer = null; }
-        if (positionTimer) { clearInterval(positionTimer); positionTimer = null; }
-    }
+function initTradeTab() {
+    buildTradePairBar();
+    fetchTradePrice(activeTradePair);
+    if (tradePriceTimer) clearInterval(tradePriceTimer);
+    tradePriceTimer = setInterval(() => fetchTradePrice(activeTradePair), 5000);
 }
 
 loadCommunityLinks();
@@ -2043,5 +1352,13 @@ async function loadBroadcast() {
 loadBroadcast();
 
 </script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').then(() => {
+                console.log('SW registered');
+            }).catch(err => console.log('SW error:', err));
+        }
+    </script>
 </body>
 </html>
