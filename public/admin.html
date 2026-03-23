@@ -658,6 +658,86 @@ tbody td {
     thead th, tbody td { padding: 10px 10px; }
 }
 
+/* ── CONFIRM MODAL ── */
+.confirm-modal {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
+    z-index: 99999; align-items: center; justify-content: center; padding: 20px;
+}
+.confirm-modal.show { display: flex; }
+.confirm-box {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 28px; max-width: 400px; width: 100%;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+    animation: riseIn 0.25s ease;
+}
+.confirm-box h3 { font-family: 'Syne',sans-serif; font-size:16px; color:var(--heading); margin-bottom:10px; }
+.confirm-box p  { font-size:13px; color:var(--muted); margin-bottom:20px; line-height:1.6; }
+.confirm-actions { display:flex; gap:10px; justify-content:flex-end; }
+
+/* ── STATS EXTRA ── */
+.stat-card.purple::before { background: #a855f7; }
+.stat-card.purple .stat-value { color: #a855f7; }
+
+/* ── EXPORT BTN ── */
+.export-btn {
+    background: rgba(61,158,255,0.1); border: 1px solid rgba(61,158,255,0.2);
+    color: var(--blue); font-size:12px; padding:7px 14px; border-radius:8px;
+    cursor:pointer; font-family:'DM Sans',sans-serif; font-weight:600;
+    transition: all 0.15s;
+}
+.export-btn:hover { background: rgba(61,158,255,0.2); }
+
+/* ── NOTES TEXTAREA ── */
+.note-area {
+    width:100%; background:rgba(255,255,255,0.04);
+    border:1px solid var(--border); border-radius:9px;
+    padding:11px 14px; color:#fff; font-family:'DM Sans',sans-serif;
+    font-size:13px; resize:vertical; outline:none; min-height:80px;
+    transition: border 0.2s;
+}
+.note-area:focus { border-color: rgba(255,138,0,0.4); }
+
+/* ── USER DETAIL TABS ── */
+.ud-tabs { display:flex; gap:6px; margin-bottom:18px; flex-wrap:wrap; }
+.ud-tab {
+    padding:7px 14px; border-radius:8px; font-size:12px; font-weight:600;
+    cursor:pointer; border:1px solid var(--border); background:none;
+    color:var(--muted); font-family:'DM Sans',sans-serif; transition:all 0.15s;
+}
+.ud-tab.active { background:rgba(255,138,0,0.12); color:var(--accent); border-color:rgba(255,138,0,0.25); }
+.ud-panel { display:none; }
+.ud-panel.active { display:block; }
+
+/* ── QUICK STATS BAR ── */
+.quick-stats {
+    display:flex; gap:12px; flex-wrap:wrap;
+    background:var(--card); border:1px solid var(--border);
+    border-radius:12px; padding:14px 18px; margin-bottom:20px;
+}
+.qs-item { font-size:12px; color:var(--muted); }
+.qs-item strong { color:var(--heading); font-size:14px; }
+
+/* ── FILTER BAR ── */
+.filter-bar {
+    display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; align-items:center;
+}
+.filter-btn {
+    padding:6px 14px; border-radius:20px; font-size:12px; font-weight:600;
+    cursor:pointer; border:1px solid var(--border); background:none;
+    color:var(--muted); font-family:'DM Sans',sans-serif; transition:all 0.15s;
+}
+.filter-btn.active { background:rgba(255,138,0,0.12); color:var(--accent); border-color:rgba(255,138,0,0.25); }
+
+/* ── LOADING SKELETON ── */
+.skeleton {
+    background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 6px; height: 14px;
+}
+@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
 /* Loading spinner */
 .spinner {
     display: inline-block;
@@ -759,6 +839,7 @@ tbody td {
                 <button class="nav-item" onclick="showPage('offers', this)">
                     <span class="nav-icon">🎁</span> Offer Codes
                 </button>
+
                 <button class="nav-item" onclick="showPage('links', this)">
                     <span class="nav-icon">🔗</span> Community Links
                 </button>
@@ -767,6 +848,17 @@ tbody td {
                 </button>
                 <button class="nav-item" onclick="showPage('logs', this)">
                     <span class="nav-icon">📋</span> Activity Log
+                </button>
+
+                <div class="nav-section-label">Tools</div>
+                <button class="nav-item" onclick="showPage('bulktools', this)">
+                    <span class="nav-icon">⚡</span> Bulk Tools
+                </button>
+                <button class="nav-item" onclick="showPage('export', this)">
+                    <span class="nav-icon">📤</span> Export Data
+                </button>
+                <button class="nav-item" onclick="showPage('settings', this)">
+                    <span class="nav-icon">⚙️</span> Settings
                 </button>
             </nav>
 
@@ -812,7 +904,44 @@ tbody td {
                             <div class="stat-label">Total Payments</div>
                             <div class="stat-value" id="statTotalPay">—</div>
                         </div>
+                        <div class="stat-card purple">
+                            <div class="stat-label">Approved Payments</div>
+                            <div class="stat-value" id="statApprovedPay">—</div>
+                        </div>
+                        <div class="stat-card blue">
+                            <div class="stat-label">Total Withdrawals</div>
+                            <div class="stat-value" id="statTotalWd">—</div>
+                        </div>
+                        <div class="stat-card green">
+                            <div class="stat-label">Active Users</div>
+                            <div class="stat-value" id="statActiveUsers">—</div>
+                        </div>
+                        <div class="stat-card red">
+                            <div class="stat-label">Banned Users</div>
+                            <div class="stat-value" id="statBannedUsers">—</div>
+                        </div>
                     </div>
+
+                    <!-- Financial Summary -->
+                    <div style="background:rgba(255,138,0,0.06);border:1px solid rgba(255,138,0,0.15);border-radius:12px;padding:16px;margin-bottom:20px;">
+                        <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:12px;font-family:'Syne',sans-serif;">💰 Financial Summary</div>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;">
+                            <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Total Deposits</div><div style="font-size:18px;font-weight:800;color:#fff;font-family:'Syne',sans-serif;" id="sumDeposits">—</div></div>
+                            <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Total Withdrawn</div><div style="font-size:18px;font-weight:800;color:var(--red);font-family:'Syne',sans-serif;" id="sumWithdrawn">—</div></div>
+                            <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Total Earnings Given</div><div style="font-size:18px;font-weight:800;color:var(--green);font-family:'Syne',sans-serif;" id="sumEarnings">—</div></div>
+                            <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Pending Withdrawal Value</div><div style="font-size:18px;font-weight:800;color:var(--accent);font-family:'Syne',sans-serif;" id="sumPendingWdVal">—</div></div>
+                        </div>
+                    </div>
+
+                    <!-- Manual earnings trigger -->
+                    <div style="background:rgba(0,230,118,0.06);border:1px solid rgba(0,230,118,0.15);border-radius:12px;padding:16px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+                        <div>
+                            <div style="font-size:14px;font-weight:700;color:#fff;">⏰ Daily Earnings</div>
+                            <div style="font-size:12px;color:var(--muted);">Runs automatically at 12:00 AM Kenya time. Use button to run manually if needed.</div>
+                        </div>
+                        <button class="btn-action btn-green" onclick="runEarnings()" id="runEarningsBtn">▶ Run Now</button>
+                    </div>
+                    <div id="runEarningsMsg" style="font-size:13px;margin-bottom:16px;min-height:16px;"></div>
 
                     <div class="section-head">
                         <div class="section-title">Recent Pending Payments</div>
@@ -829,6 +958,13 @@ tbody td {
                 <div class="page" id="page-payments">
                     <div class="section-head">
                         <div class="section-title">All Payment Requests</div>
+                        <button class="export-btn" onclick="exportTableCSV('paymentsTable','payments')">📤 Export CSV</button>
+                    </div>
+                    <div class="filter-bar">
+                        <button class="filter-btn active" onclick="filterPayments('all',this)">All</button>
+                        <button class="filter-btn" onclick="filterPayments('pending',this)">⏳ Pending</button>
+                        <button class="filter-btn" onclick="filterPayments('approved',this)">✅ Approved</button>
+                        <button class="filter-btn" onclick="filterPayments('rejected',this)">❌ Rejected</button>
                     </div>
                     <div class="table-wrap" id="paymentsTable"></div>
                 </div>
@@ -837,6 +973,12 @@ tbody td {
                 <div class="page" id="page-withdrawals">
                     <div class="section-head">
                         <div class="section-title">All Withdrawal Requests</div>
+                        <button class="export-btn" onclick="exportTableCSV('withdrawalsTable','withdrawals')">📤 Export CSV</button>
+                    </div>
+                    <div class="filter-bar">
+                        <button class="filter-btn active" onclick="filterWithdrawals('all',this)">All</button>
+                        <button class="filter-btn" onclick="filterWithdrawals('pending',this)">⏳ Pending</button>
+                        <button class="filter-btn" onclick="filterWithdrawals('approved',this)">✅ Approved</button>
                     </div>
                     <div class="table-wrap" id="withdrawalsTable"></div>
                 </div>
@@ -845,12 +987,19 @@ tbody td {
                 <div class="page" id="page-users">
                     <div class="section-head">
                         <div class="section-title">All Users</div>
+                        <button class="export-btn" onclick="exportUsersCSV()">📤 Export CSV</button>
                     </div>
-                    <div style="display:flex;gap:10px;margin-bottom:16px;">
-                        <input type="text" id="userSearchInput" placeholder="🔍  Search by email, phone or name..." 
-                            style="flex:1;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:9px;padding:11px 14px;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;"
+                    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+                        <input type="text" id="userSearchInput" placeholder="🔍  Search by email or phone..." 
+                            style="flex:1;min-width:200px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:9px;padding:11px 14px;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;"
                             oninput="searchUsers(this.value)">
                         <button class="refresh-btn" onclick="loadUsers()" style="white-space:nowrap;">Show All</button>
+                    </div>
+                    <div class="filter-bar">
+                        <button class="filter-btn active" onclick="filterUsers('all',this)">All</button>
+                        <button class="filter-btn" onclick="filterUsers('active',this)">✅ Active</button>
+                        <button class="filter-btn" onclick="filterUsers('banned',this)">🚫 Banned</button>
+                        <button class="filter-btn" onclick="filterUsers('hasfridge',this)">🧊 Has Fridge</button>
                     </div>
                     <div class="table-wrap" id="usersTable"></div>
 
@@ -872,6 +1021,48 @@ tbody td {
                         </div>
                         <button class="btn-action btn-orange" onclick="editUser()">Update User</button>
                         <div class="form-msg" id="editUserMsg"></div>
+                    </div>
+
+                    <div class="form-card">
+                        <h3>➕ Manually Add Fridge to User</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>User Email</label>
+                                <input type="email" id="addFridgeEmail" placeholder="user@example.com">
+                            </div>
+                            <div class="form-group">
+                                <label>Fridge ID</label>
+                                <select id="addFridgeId">
+                                    <option value="">Select fridge...</option>
+                                    <option value="offer1">offer1</option>
+                                    <option value="offer2">offer2</option>
+                                    <option value="offer3">offer3</option>
+                                    <option value="offer4">offer4</option>
+                                    <option value="offer5">offer5</option>
+                                    <option value="offer6">offer6</option>
+                                    <option value="offer7">offer7</option>
+                                    <option value="offer8">offer8</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button class="btn-action btn-green" onclick="addFridgeToUser()">➕ Add Fridge</button>
+                        <div class="form-msg" id="addFridgeMsg"></div>
+                    </div>
+
+                    <div class="form-card">
+                        <h3>🔑 Reset User Password</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>User Email</label>
+                                <input type="email" id="resetPwdEmail" placeholder="user@example.com">
+                            </div>
+                            <div class="form-group">
+                                <label>New Password</label>
+                                <input type="password" id="resetPwdValue" placeholder="Min 6 characters">
+                            </div>
+                        </div>
+                        <button class="btn-action btn-red" onclick="resetPasswordForm()">🔑 Reset Password</button>
+                        <div class="form-msg" id="resetPwdMsg"></div>
                     </div>
                 </div>
 
@@ -966,7 +1157,141 @@ tbody td {
 
             </div>
         
-                <!-- COMMUNITY LINKS -->
+                <!-- BULK TOOLS -->
+                <div class="page" id="page-bulktools">
+                    <div class="form-card">
+                        <h3>💸 Bulk Credit Earnings to All Users</h3>
+                        <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Add a fixed KES amount to the earnings balance of every active user at once.</p>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Amount per User (KES)</label>
+                                <input type="number" id="bulkCreditAmount" placeholder="e.g. 50" min="1">
+                            </div>
+                        </div>
+                        <button class="btn-action btn-green" onclick="bulkCredit()">⚡ Credit All Users</button>
+                        <div class="form-msg" id="bulkCreditMsg"></div>
+                    </div>
+
+                    <div class="form-card">
+                        <h3>🚫 Bulk Ban Users by Domain</h3>
+                        <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Ban all users whose email matches a domain (e.g. <code style="color:var(--accent)">spam.com</code>).</p>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Email Domain</label>
+                                <input type="text" id="bulkBanDomain" placeholder="e.g. spam.com">
+                            </div>
+                        </div>
+                        <button class="btn-action btn-red" onclick="bulkBanDomain()">🚫 Ban Domain Users</button>
+                        <div class="form-msg" id="bulkBanMsg"></div>
+                    </div>
+
+                    <div class="form-card">
+                        <h3>📢 Approve All Pending Payments</h3>
+                        <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">⚠️ This will approve every currently pending payment at once. Use with caution.</p>
+                        <button class="btn-action btn-orange" onclick="approveAllPayments()">✅ Approve All Pending</button>
+                        <div class="form-msg" id="bulkApproveMsg"></div>
+                    </div>
+
+                    <div class="form-card">
+                        <h3>💸 Approve All Pending Withdrawals</h3>
+                        <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">⚠️ This will approve every pending withdrawal at once. Use with caution.</p>
+                        <button class="btn-action btn-orange" onclick="approveAllWithdrawals()">✅ Approve All Withdrawals</button>
+                        <div class="form-msg" id="bulkWdMsg"></div>
+                    </div>
+
+                    <div class="form-card">
+                        <h3>🔄 Reset All User Earnings to Zero</h3>
+                        <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">⚠️ Danger zone: Sets every user's earnings balance to 0. Cannot be undone.</p>
+                        <button class="btn-action btn-red" onclick="resetAllEarnings()">⚠️ Reset All Earnings</button>
+                        <div class="form-msg" id="resetEarningsMsg"></div>
+                    </div>
+                </div>
+
+                <!-- EXPORT DATA -->
+                <div class="page" id="page-export">
+                    <div class="form-card">
+                        <h3>📤 Export Users</h3>
+                        <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Download all user data as a CSV file for external use.</p>
+                        <button class="btn-action btn-orange" onclick="exportUsersCSV()">📥 Download Users CSV</button>
+                    </div>
+                    <div class="form-card">
+                        <h3>📤 Export Payments</h3>
+                        <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Download all payment records as a CSV file.</p>
+                        <button class="btn-action btn-orange" onclick="exportPaymentsCSV()">📥 Download Payments CSV</button>
+                    </div>
+                    <div class="form-card">
+                        <h3>📤 Export Withdrawals</h3>
+                        <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Download all withdrawal records as a CSV file.</p>
+                        <button class="btn-action btn-orange" onclick="exportWithdrawalsCSV()">📥 Download Withdrawals CSV</button>
+                    </div>
+                    <div class="form-card">
+                        <h3>📤 Export Activity Log</h3>
+                        <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Download admin activity log as CSV.</p>
+                        <button class="btn-action btn-orange" onclick="exportLogsCSV()">📥 Download Logs CSV</button>
+                    </div>
+                </div>
+
+                <!-- SETTINGS -->
+                <div class="page" id="page-settings">
+                    <div class="form-card">
+                        <h3>🔑 Change Admin Password</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Current Password</label>
+                                <input type="password" id="settingsOldPwd" placeholder="Current password">
+                            </div>
+                            <div class="form-group">
+                                <label>New Password</label>
+                                <input type="password" id="settingsNewPwd" placeholder="New password (min 6 chars)">
+                            </div>
+                            <div class="form-group">
+                                <label>Confirm New Password</label>
+                                <input type="password" id="settingsConfirmPwd" placeholder="Repeat new password">
+                            </div>
+                        </div>
+                        <button class="btn-action btn-orange" onclick="changeAdminPassword()">🔑 Update Password</button>
+                        <div class="form-msg" id="settingsPwdMsg"></div>
+                    </div>
+
+                    <div class="form-card">
+                        <h3>🌐 Site Settings</h3>
+                        <div class="form-row">
+                            <div class="form-group" style="flex:2;min-width:100%">
+                                <label>Site Name</label>
+                                <input type="text" id="settingsSiteName" placeholder="e.g. Bitfreeze">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group" style="flex:2;min-width:100%">
+                                <label>Maintenance Mode Message (leave blank to disable)</label>
+                                <input type="text" id="settingsMaintMsg" placeholder="e.g. Site under maintenance, back in 1 hour">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Min Withdrawal (KES)</label>
+                                <input type="number" id="settingsMinWd" placeholder="e.g. 200" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Max Withdrawal (KES)</label>
+                                <input type="number" id="settingsMaxWd" placeholder="e.g. 50000" min="0">
+                            </div>
+                        </div>
+                        <button class="btn-action btn-orange" onclick="saveSiteSettings()">💾 Save Settings</button>
+                        <div class="form-msg" id="settingsSiteMsg"></div>
+                    </div>
+
+                    <div class="form-card">
+                        <h3>📊 System Info</h3>
+                        <div id="systemInfo" style="font-size:13px;color:var(--muted);line-height:2;">
+                            <div>Admin Panel Version: <strong style="color:var(--heading)">2.0.0</strong></div>
+                            <div>Session Token: <span class="mono" id="sessionTokenDisplay" style="font-size:11px;word-break:break-all;color:var(--accent)">—</span></div>
+                            <div>Last Login: <strong style="color:var(--heading)" id="lastLoginDisplay">This session</strong></div>
+                        </div>
+                    </div>
+                </div>
+
+
                 <div class="page" id="page-links">
                     <div class="form-card">
                         <h3>🔗 Community & Contact Links</h3>
@@ -1020,6 +1345,22 @@ tbody td {
                     </div>
                     <div class="table-wrap" id="logsTable"></div>
                 </div>
+                        <button class="refresh-btn" onclick="loadTradeDeposits()">↻ Refresh</button>
+                    </div>
+                    <div class="table-wrap" id="tradeDepositsTable"></div>
+                </div>
+
+
+                <!-- USER DETAIL MODAL -->
+                <div id="userDetailModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);z-index:9999;overflow-y:auto;padding:20px;">
+                    <div style="max-width:600px;margin:0 auto;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:28px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                            <h2 style="font-family:'Syne',sans-serif;font-size:18px;color:var(--heading);margin:0;" id="udTitle">User Details</h2>
+                            <button onclick="document.getElementById('userDetailModal').style.display='none'" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;">✕</button>
+                        </div>
+                        <div id="udContent">Loading...</div>
+                    </div>
+                </div>
 
 </main>
     </div>
@@ -1040,7 +1381,10 @@ const pageTitles = {
     offers: 'Offer Codes',
     links: 'Community Links',
     broadcast: 'Broadcast Message',
-    logs: 'Activity Log'
+    logs: 'Activity Log',
+    bulktools: 'Bulk Tools',
+    export: 'Export Data',
+    settings: 'Settings'
 };
 
 // ── TOAST ──
@@ -1143,6 +1487,7 @@ function loadPage(id) {
     if (id === 'links')       { loadLinks(); }
     if (id === 'broadcast')   { loadBroadcastHistory(); }
     if (id === 'logs')        { loadLogs(); }
+    if (id === 'settings')    { loadSettings(); }
 }
 
 function refreshAll() {
@@ -1178,15 +1523,35 @@ async function loadOverview() {
         api('/api/admin/users')
     ]);
 
-    const pendPay = (pays.payments||[]).filter(p=>!p.approved);
-    const pendWd  = (wds.withdrawals||[]).filter(w=>!w.approved);
-    const allPay  = pays.payments||[];
+    const allPay   = pays.payments||[];
+    const allWd    = wds.withdrawals||[];
     const allUsers = users.users||[];
 
-    document.getElementById('statPendingPay').textContent = pendPay.length;
-    document.getElementById('statPendingWd').textContent  = pendWd.length;
-    document.getElementById('statUsers').textContent      = allUsers.length;
-    document.getElementById('statTotalPay').textContent   = allPay.length;
+    const pendPay      = allPay.filter(p=>!p.approved && !p.revoked);
+    const approvedPay  = allPay.filter(p=>p.approved);
+    const pendWd       = allWd.filter(w=>!w.approved);
+    const approvedWd   = allWd.filter(w=>w.approved);
+    const activeUsers  = allUsers.filter(u=>!u.banned);
+    const bannedUsers  = allUsers.filter(u=>u.banned);
+
+    const totalDeposits    = approvedPay.reduce((s,p)=>s+(p.fridgePrice||0), 0);
+    const totalWithdrawn   = approvedWd.reduce((s,w)=>s+(w.amount||0), 0);
+    const totalEarnings    = allUsers.reduce((s,u)=>s+(u.earning||0), 0);
+    const pendWdVal        = pendWd.reduce((s,w)=>s+(w.amount||0), 0);
+
+    document.getElementById('statPendingPay').textContent  = pendPay.length;
+    document.getElementById('statPendingWd').textContent   = pendWd.length;
+    document.getElementById('statUsers').textContent       = allUsers.length;
+    document.getElementById('statTotalPay').textContent    = allPay.length;
+    document.getElementById('statApprovedPay').textContent = approvedPay.length;
+    document.getElementById('statTotalWd').textContent     = allWd.length;
+    document.getElementById('statActiveUsers').textContent = activeUsers.length;
+    document.getElementById('statBannedUsers').textContent = bannedUsers.length;
+
+    document.getElementById('sumDeposits').textContent    = 'KES ' + totalDeposits.toLocaleString();
+    document.getElementById('sumWithdrawn').textContent   = 'KES ' + totalWithdrawn.toLocaleString();
+    document.getElementById('sumEarnings').textContent    = 'KES ' + totalEarnings.toLocaleString();
+    document.getElementById('sumPendingWdVal').textContent = 'KES ' + pendWdVal.toLocaleString();
 
     // Update badges
     const pb = document.getElementById('payBadge');
@@ -1199,10 +1564,7 @@ async function loadOverview() {
 }
 
 // ── PAYMENTS ──
-async function loadPayments() {
-    const d = await api('/api/admin/payments');
-    document.getElementById('paymentsTable').innerHTML = renderPayTable(d.payments||[], false);
-}
+async function _loadPaymentsOLD_REPLACED() { /* replaced by filterPayments above */ }
 
 function renderPayTable(list, compact) {
     if (!list.length) return `<div class="empty-state"><div class="icon">✅</div><p>No pending payments</p></div>`;
@@ -1219,10 +1581,13 @@ function renderPayTable(list, compact) {
             <td><span class="mono">${p.transactionCode||'—'}</span></td>
             ${compact?'': `<td style="color:var(--muted);font-size:12px">${fmtDate(p.createdAt)}</td>`}
             <td><span class="pill ${p.approved?'pill-approved':'pill-pending'}">${p.approved?'Approved':'Pending'}</span></td>
-            <td>${!p.approved ? `
+            <td>${!p.approved && !p.revoked ? `
                 <button class="act-btn act-approve" onclick="actPayment('${p._id}','approve',this)">✅ Approve</button>
                 <button class="act-btn act-reject"  onclick="actPayment('${p._id}','reject',this)"  style="margin-left:6px">❌ Reject</button>
-            ` : '<span style="color:var(--muted);font-size:12px">Done</span>'}</td>
+            ` : p.approved ? `
+                <span style="color:var(--green);font-size:12px">Approved</span>
+                <button class="act-btn act-reject" onclick="revokePayment('${p._id}',this)" style="margin-left:6px;font-size:11px">↩ Revoke</button>
+            ` : `<span style="color:var(--red);font-size:12px">Rejected</span>`}</td>
         </tr>`).join('')}</tbody>
     </table>`;
 }
@@ -1237,10 +1602,7 @@ async function actPayment(id, action, btn) {
 }
 
 // ── WITHDRAWALS ──
-async function loadWithdrawals() {
-    const d = await api('/api/admin/withdrawals');
-    document.getElementById('withdrawalsTable').innerHTML = renderWdTable(d.withdrawals||[], false);
-}
+async function _loadWithdrawalsOLD_REPLACED() { /* replaced by filterWithdrawals above */ }
 
 function renderWdTable(list, compact) {
     if (!list.length) return `<div class="empty-state"><div class="icon">✅</div><p>No pending withdrawals</p></div>`;
@@ -1274,24 +1636,7 @@ async function actWithdrawal(id, action, btn) {
 }
 
 // ── USERS ──
-async function loadUsers() {
-    const d = await api('/api/admin/users');
-    const users = d.users||[];
-    if (!users.length) { document.getElementById('usersTable').innerHTML = `<div class="empty-state"><div class="icon">👥</div><p>No users yet</p></div>`; return; }
-    document.getElementById('usersTable').innerHTML = `<table>
-        <thead><tr>
-            <th>Email</th><th>Phone</th><th>Deposit Bal.</th><th>Earnings</th><th>Fridges</th><th>Joined</th>
-        </tr></thead>
-        <tbody>${users.map(u=>`<tr>
-            <td class="user-email" style="cursor:pointer" onclick="fillEditUser('${u.email}',${u.balance||0},${u.earning||0})">${u.email}</td>
-            <td><span class="mono">${u.phone||'—'}</span></td>
-            <td>KES ${(u.balance||0).toLocaleString()}</td>
-            <td>KES ${(u.earning||0).toLocaleString()}</td>
-            <td>${(u.fridges||[]).length}</td>
-            <td style="color:var(--muted);font-size:12px">${fmtDate(u.createdAt)}</td>
-        </tr>`).join('')}</tbody>
-    </table>`;
-}
+async function _loadUsersOLD_REPLACED() { /* replaced by filterUsers above */ }
 
 function fillEditUser(email, balance, earning) {
     document.getElementById('editUserEmail').value  = email;
@@ -1517,6 +1862,442 @@ async function loadLogs() {
             <td style="color:var(--muted);font-size:12px">${fmtDate(l.createdAt)}</td>
         </tr>`).join('')}</tbody>
     </table>`;
+}
+
+// ── TRADE DEPOSITS ──
+
+async function runEarnings() {
+    const btn = document.getElementById('runEarningsBtn');
+    const msg = document.getElementById('runEarningsMsg');
+    btn.disabled = true;
+    btn.textContent = '⏳ Running...';
+    const d = await api('/api/admin/run-earnings', 'POST');
+    if (d.error) {
+        msg.style.color = 'var(--red)';
+        msg.textContent = '❌ ' + d.error;
+    } else {
+        msg.style.color = 'var(--green)';
+        msg.textContent = '✅ ' + d.message;
+        toast('Daily earnings credited successfully!');
+        loadOverview();
+    }
+    btn.disabled = false;
+    btn.textContent = '▶ Run Now';
+}
+
+// ── REVOKE PAYMENT ──
+async function revokePayment(id, btn) {
+    if (!confirm('Revoke this approval? This will remove the fridge from the user.')) return;
+    btn.disabled = true;
+    const d = await api('/api/admin/payment/revoke', 'POST', { paymentId: id });
+    if (d.error) { toast(d.error, 'err'); btn.disabled=false; return; }
+    toast('Payment approval revoked!');
+    loadPayments();
+    loadOverview();
+}
+
+// ── VIEW USER DETAILS ──
+async function viewUser(email) {
+    document.getElementById('userDetailModal').style.display = 'block';
+    document.getElementById('udTitle').textContent = email;
+    document.getElementById('udContent').innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)"><span class="spinner"></span> Loading...</div>';
+
+    const d = await api('/api/admin/user/' + encodeURIComponent(email));
+    if (d.error) { document.getElementById('udContent').innerHTML = '<p style="color:var(--red)">' + d.error + '</p>'; return; }
+
+    const u = d.user;
+    document.getElementById('udContent').innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+            <div class="stat-card blue"><div class="stat-label">Balance</div><div class="stat-value" style="font-size:18px">KES ${(u.balance||0).toLocaleString()}</div></div>
+            <div class="stat-card green"><div class="stat-label">Earnings</div><div class="stat-value" style="font-size:18px">KES ${(u.earning||0).toLocaleString()}</div></div>
+        </div>
+
+        <h3 style="font-family:'Syne',sans-serif;font-size:14px;color:var(--heading);margin:0 0 12px;">📱 Account Info</h3>
+        <div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px;font-size:13px;display:flex;flex-direction:column;gap:6px;">
+            <div>Phone: <span class="mono">${u.phone||'—'}</span></div>
+            <div>Joined: ${fmtDate(u.createdAt)}</div>
+            <div>Referred by: ${u.referredBy||'—'}</div>
+            <div>Status: <span class="pill ${u.banned?'pill-rejected':'pill-approved'}">${u.banned?'Banned':'Active'}</span></div>
+        </div>
+
+        <h3 style="font-family:'Syne',sans-serif;font-size:14px;color:var(--heading);margin:0 0 12px;">🧊 Owned Fridges (${(u.fridges||[]).length})</h3>
+        <div style="margin-bottom:16px;">
+            ${(u.fridges||[]).length === 0 ? '<p style="color:var(--muted);font-size:13px">No fridges owned</p>' :
+            (u.fridges||[]).map((f,i) => `
+                <div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+                    <div>
+                        <div style="font-size:13px;font-weight:700;color:var(--heading)">${f.name||f.id}</div>
+                        <div style="font-size:11px;color:var(--muted)">KES ${f.dailyEarn||0}/day · Bought: ${fmtDate(f.boughtAt)}</div>
+                    </div>
+                    <button class="act-btn act-reject" onclick="removeFridge('${u.email}',${i})" style="font-size:11px">🗑 Remove</button>
+                </div>
+            `).join('')}
+        </div>
+
+        <h3 style="font-family:'Syne',sans-serif;font-size:14px;color:var(--heading);margin:0 0 12px;">💰 Payment History</h3>
+        <div style="overflow-x:auto;margin-bottom:16px;">
+            <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                <thead><tr style="border-bottom:1px solid var(--border)">
+                    <th style="padding:8px;text-align:left;color:var(--muted)">Fridge</th>
+                    <th style="padding:8px;text-align:left;color:var(--muted)">Amount</th>
+                    <th style="padding:8px;text-align:left;color:var(--muted)">Txn Code</th>
+                    <th style="padding:8px;text-align:left;color:var(--muted)">Status</th>
+                </tr></thead>
+                <tbody>
+                    ${(d.payments||[]).map(p => `<tr style="border-bottom:1px solid rgba(255,255,255,0.03)">
+                        <td style="padding:8px;color:var(--text)">${p.fridgeName}</td>
+                        <td style="padding:8px;font-weight:700;color:var(--heading)">KES ${p.fridgePrice}</td>
+                        <td style="padding:8px" class="mono">${p.transactionCode||'—'}</td>
+                        <td style="padding:8px"><span class="pill ${p.approved?'pill-approved':p.revoked?'pill-rejected':'pill-pending'}">${p.approved?'Approved':p.revoked?'Revoked':'Pending'}</span></td>
+                    </tr>`).join('') || '<tr><td colspan="4" style="padding:12px;text-align:center;color:var(--muted)">No payments</td></tr>'}
+                </tbody>
+            </table>
+        </div>
+
+        <h3 style="font-family:'Syne',sans-serif;font-size:14px;color:var(--heading);margin:0 0 12px;">🔐 Admin Actions</h3>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+            <button class="btn-action btn-orange" onclick="fillEditUser('${u.email}',${u.balance||0},${u.earning||0});document.getElementById('userDetailModal').style.display='none';showPage('users',document.querySelector('.nav-item.active'))">✏️ Edit Balance</button>
+            <button class="btn-action btn-red" onclick="resetPwdPrompt('${u.email}')">🔑 Reset Password</button>
+            <button class="btn-action ${u.banned?'btn-green':'btn-red'}" onclick="toggleBan('${u.email}',${!u.banned})">${u.banned?'🔓 Unban User':'🚫 Ban User'}</button>
+        </div>
+    `;
+}
+
+async function removeFridge(email, index) {
+    if (!confirm('Remove this fridge from user? This cannot be undone.')) return;
+    const d = await api('/api/admin/user/remove-fridge', 'POST', { email, fridgeIndex: index });
+    if (d.error) { toast(d.error, 'err'); return; }
+    toast('Fridge removed!');
+    viewUser(email);
+}
+
+async function toggleBan(email, banned) {
+    const msg = banned ? 'Ban this user? They cannot login.' : 'Unban this user?';
+    if (!confirm(msg)) return;
+    const d = await api('/api/admin/user/ban', 'POST', { email, banned });
+    if (d.error) { toast(d.error, 'err'); return; }
+    toast(banned ? 'User banned!' : 'User unbanned!');
+    loadUsers();
+    document.getElementById('userDetailModal').style.display = 'none';
+}
+
+async function resetPwdPrompt(email) {
+    const pwd = prompt('Enter new password for ' + email + ':');
+    if (!pwd || pwd.length < 4) { alert('Password too short (min 4 chars)'); return; }
+    const d = await api('/api/admin/user/reset-password', 'POST', { email, newPassword: pwd });
+    if (d.error) { toast(d.error, 'err'); return; }
+    toast('Password reset successfully!');
+}
+
+// ── FILTER PAYMENTS ──
+let _allPayments = [];
+async function loadPayments() {
+    const d = await api('/api/admin/payments');
+    _allPayments = d.payments||[];
+    renderFilteredPayments('all');
+}
+function filterPayments(type, btn) {
+    document.querySelectorAll('#page-payments .filter-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    renderFilteredPayments(type);
+}
+function renderFilteredPayments(type) {
+    let list = _allPayments;
+    if (type==='pending')  list = list.filter(p=>!p.approved && !p.revoked);
+    if (type==='approved') list = list.filter(p=>p.approved);
+    if (type==='rejected') list = list.filter(p=>p.revoked);
+    document.getElementById('paymentsTable').innerHTML = renderPayTable(list, false);
+}
+
+// ── FILTER WITHDRAWALS ──
+let _allWithdrawals = [];
+async function loadWithdrawals() {
+    const d = await api('/api/admin/withdrawals');
+    _allWithdrawals = d.withdrawals||[];
+    renderFilteredWd('all');
+}
+function filterWithdrawals(type, btn) {
+    document.querySelectorAll('#page-withdrawals .filter-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    renderFilteredWd(type);
+}
+function renderFilteredWd(type) {
+    let list = _allWithdrawals;
+    if (type==='pending')  list = list.filter(w=>!w.approved);
+    if (type==='approved') list = list.filter(w=>w.approved);
+    document.getElementById('withdrawalsTable').innerHTML = renderWdTable(list, false);
+}
+
+// ── FILTER USERS ──
+let _allUsers = [];
+async function loadUsers() {
+    const d = await api('/api/admin/users');
+    _allUsers = d.users||[];
+    renderFilteredUsers('all');
+}
+function filterUsers(type, btn) {
+    document.querySelectorAll('#page-users .filter-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    renderFilteredUsers(type);
+}
+function renderFilteredUsers(type) {
+    let list = _allUsers;
+    if (type==='active')   list = list.filter(u=>!u.banned);
+    if (type==='banned')   list = list.filter(u=>u.banned);
+    if (type==='hasfridge') list = list.filter(u=>(u.fridges||[]).length>0);
+    if (!list.length) { document.getElementById('usersTable').innerHTML = `<div class="empty-state"><div class="icon">👥</div><p>No users found</p></div>`; return; }
+    document.getElementById('usersTable').innerHTML = `<table>
+        <thead><tr>
+            <th>Email</th><th>Phone</th><th>Balance</th><th>Earnings</th><th>Fridges</th><th>Status</th><th>Joined</th><th>Actions</th>
+        </tr></thead>
+        <tbody>${list.map(u=>`<tr style="${u.banned?'opacity:0.5':''}">
+            <td class="user-email" style="cursor:pointer" onclick="viewUser('${u.email}')">${u.email}</td>
+            <td><span class="mono">${u.phone||'—'}</span></td>
+            <td>KES ${(u.balance||0).toLocaleString()}</td>
+            <td>KES ${(u.earning||0).toLocaleString()}</td>
+            <td style="cursor:pointer;color:var(--accent)" onclick="viewUser('${u.email}')">${(u.fridges||[]).length} 👁</td>
+            <td><span class="pill ${u.banned?'pill-rejected':'pill-approved'}">${u.banned?'Banned':'Active'}</span></td>
+            <td style="color:var(--muted);font-size:12px">${fmtDate(u.createdAt)}</td>
+            <td style="display:flex;gap:6px;flex-wrap:wrap">
+                <button class="act-btn act-approve" onclick="fillEditUser('${u.email}',${u.balance||0},${u.earning||0})" style="font-size:11px">✏️ Edit</button>
+                <button class="act-btn ${u.banned?'act-approve':'act-reject'}" onclick="toggleBan('${u.email}',${!u.banned})" style="font-size:11px">${u.banned?'🔓 Unban':'🚫 Ban'}</button>
+                <button class="act-btn act-reject" onclick="confirmDeleteUser('${u.email}')" style="font-size:11px">🗑 Delete</button>
+            </td>
+        </tr>`).join('')}</tbody>
+    </table>`;
+}
+
+// ── ADD FRIDGE TO USER ──
+async function addFridgeToUser() {
+    const email = document.getElementById('addFridgeEmail').value.trim();
+    const fridgeId = document.getElementById('addFridgeId').value;
+    const msg = document.getElementById('addFridgeMsg');
+    if (!email || !fridgeId) { msg.className='form-msg err'; msg.textContent='Select user email and fridge'; return; }
+    const d = await api('/api/admin/user/add-fridge', 'POST', { email, fridgeId });
+    if (d.error) { msg.className='form-msg err'; msg.textContent=d.error; return; }
+    msg.className='form-msg ok'; msg.textContent='Fridge added to user!';
+    toast('Fridge added successfully!');
+    loadUsers();
+}
+
+// ── RESET PASSWORD (FORM) ──
+async function resetPasswordForm() {
+    const email = document.getElementById('resetPwdEmail').value.trim();
+    const pwd   = document.getElementById('resetPwdValue').value;
+    const msg   = document.getElementById('resetPwdMsg');
+    if (!email) { msg.className='form-msg err'; msg.textContent='Enter user email'; return; }
+    if (!pwd || pwd.length < 6) { msg.className='form-msg err'; msg.textContent='Password must be at least 6 characters'; return; }
+    const d = await api('/api/admin/user/reset-password', 'POST', { email, newPassword: pwd });
+    if (d.error) { msg.className='form-msg err'; msg.textContent=d.error; return; }
+    msg.className='form-msg ok'; msg.textContent='Password reset successfully!';
+    toast('Password reset!');
+    document.getElementById('resetPwdEmail').value = '';
+    document.getElementById('resetPwdValue').value = '';
+}
+
+// ── DELETE USER ──
+function confirmDeleteUser(email) {
+    showConfirm(
+        '🗑 Delete User',
+        `Are you sure you want to permanently delete <strong>${email}</strong>? This cannot be undone.`,
+        async () => {
+            const d = await api('/api/admin/user/delete', 'POST', { email });
+            if (d.error) { toast(d.error, 'err'); return; }
+            toast('User deleted!');
+            loadUsers();
+        },
+        'btn-red'
+    );
+}
+
+// ── BULK TOOLS ──
+async function bulkCredit() {
+    const amount = Number(document.getElementById('bulkCreditAmount').value);
+    const msg = document.getElementById('bulkCreditMsg');
+    if (!amount || amount < 1) { msg.className='form-msg err'; msg.textContent='Enter a valid amount'; return; }
+    showConfirm('⚡ Bulk Credit', `Add KES ${amount.toLocaleString()} to earnings of ALL active users?`, async () => {
+        const d = await api('/api/admin/bulk/credit', 'POST', { amount });
+        if (d.error) { msg.className='form-msg err'; msg.textContent=d.error; return; }
+        msg.className='form-msg ok'; msg.textContent = d.message || 'Earnings credited to all users!';
+        toast('Bulk credit done!');
+        loadOverview();
+    });
+}
+
+async function bulkBanDomain() {
+    const domain = document.getElementById('bulkBanDomain').value.trim().toLowerCase();
+    const msg = document.getElementById('bulkBanMsg');
+    if (!domain) { msg.className='form-msg err'; msg.textContent='Enter a domain'; return; }
+    showConfirm('🚫 Bulk Ban', `Ban all users with email ending in <strong>@${domain}</strong>?`, async () => {
+        const d = await api('/api/admin/bulk/ban-domain', 'POST', { domain });
+        if (d.error) { msg.className='form-msg err'; msg.textContent=d.error; return; }
+        msg.className='form-msg ok'; msg.textContent = d.message || 'Users banned!';
+        toast('Domain users banned!');
+        loadUsers();
+    });
+}
+
+async function approveAllPayments() {
+    const msg = document.getElementById('bulkApproveMsg');
+    showConfirm('✅ Approve All', 'Approve ALL currently pending payments? This cannot be undone.', async () => {
+        const d = await api('/api/admin/bulk/approve-payments', 'POST');
+        if (d.error) { msg.className='form-msg err'; msg.textContent=d.error; return; }
+        msg.className='form-msg ok'; msg.textContent = d.message || 'All payments approved!';
+        toast('All payments approved!');
+        loadOverview();
+    });
+}
+
+async function approveAllWithdrawals() {
+    const msg = document.getElementById('bulkWdMsg');
+    showConfirm('✅ Approve All Withdrawals', 'Approve ALL currently pending withdrawals? This cannot be undone.', async () => {
+        const d = await api('/api/admin/bulk/approve-withdrawals', 'POST');
+        if (d.error) { msg.className='form-msg err'; msg.textContent=d.error; return; }
+        msg.className='form-msg ok'; msg.textContent = d.message || 'All withdrawals approved!';
+        toast('All withdrawals approved!');
+        loadOverview();
+    });
+}
+
+async function resetAllEarnings() {
+    const msg = document.getElementById('resetEarningsMsg');
+    showConfirm('⚠️ Reset ALL Earnings', 'This will set every user\'s earnings balance to ZERO. Are you absolutely sure?', async () => {
+        const d = await api('/api/admin/bulk/reset-earnings', 'POST');
+        if (d.error) { msg.className='form-msg err'; msg.textContent=d.error; return; }
+        msg.className='form-msg ok'; msg.textContent = d.message || 'All earnings reset!';
+        toast('Earnings reset!');
+        loadOverview();
+    });
+}
+
+// ── EXPORT CSV ──
+function toCSV(headers, rows) {
+    const escape = v => '"' + String(v||'').replace(/"/g,'""') + '"';
+    return [headers.map(escape).join(','), ...rows.map(r=>r.map(escape).join(','))].join('\n');
+}
+
+function downloadCSV(csv, filename) {
+    const blob = new Blob([csv], { type:'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+}
+
+async function exportUsersCSV() {
+    const d = await api('/api/admin/users');
+    const users = d.users||[];
+    const csv = toCSV(
+        ['Email','Phone','Balance (KES)','Earnings (KES)','Fridges','Status','Joined'],
+        users.map(u=>[u.email, u.phone||'', u.balance||0, u.earning||0, (u.fridges||[]).length, u.banned?'Banned':'Active', fmtDate(u.createdAt)])
+    );
+    downloadCSV(csv, 'bitfreeze-users.csv');
+    toast('Users CSV downloaded!');
+}
+
+async function exportPaymentsCSV() {
+    const d = await api('/api/admin/payments');
+    const payments = d.payments||[];
+    const csv = toCSV(
+        ['User Email','Fridge','Amount (KES)','Txn Code','Phone','Status','Date'],
+        payments.map(p=>[p.userEmail, p.fridgeName, p.fridgePrice||0, p.transactionCode||'', p.phone||'', p.approved?'Approved':p.revoked?'Rejected':'Pending', fmtDate(p.createdAt)])
+    );
+    downloadCSV(csv, 'bitfreeze-payments.csv');
+    toast('Payments CSV downloaded!');
+}
+
+async function exportWithdrawalsCSV() {
+    const d = await api('/api/admin/withdrawals');
+    const list = d.withdrawals||[];
+    const csv = toCSV(
+        ['User Email','Phone','Amount (KES)','Status','Date'],
+        list.map(w=>[w.userEmail, w.phone||'', w.amount||0, w.approved?'Approved':'Pending', fmtDate(w.createdAt)])
+    );
+    downloadCSV(csv, 'bitfreeze-withdrawals.csv');
+    toast('Withdrawals CSV downloaded!');
+}
+
+async function exportLogsCSV() {
+    const d = await api('/api/admin/logs');
+    const logs = d.logs||[];
+    const csv = toCSV(
+        ['Action','Details','IP','Time'],
+        logs.map(l=>[l.action, l.details||'', l.ip||'', fmtDate(l.createdAt)])
+    );
+    downloadCSV(csv, 'bitfreeze-logs.csv');
+    toast('Logs CSV downloaded!');
+}
+
+function exportTableCSV(tableId, filename) {
+    if (filename==='payments')    { exportPaymentsCSV(); return; }
+    if (filename==='withdrawals') { exportWithdrawalsCSV(); return; }
+}
+
+// ── SETTINGS ──
+function loadSettings() {
+    const tok = localStorage.getItem('bf_admin_token') || '';
+    document.getElementById('sessionTokenDisplay').textContent = tok ? tok.substring(0,40)+'...' : 'Not found';
+}
+
+async function changeAdminPassword() {
+    const oldPwd     = document.getElementById('settingsOldPwd').value;
+    const newPwd     = document.getElementById('settingsNewPwd').value;
+    const confirmPwd = document.getElementById('settingsConfirmPwd').value;
+    const msg        = document.getElementById('settingsPwdMsg');
+
+    if (!oldPwd || !newPwd || !confirmPwd) { msg.className='form-msg err'; msg.textContent='Fill in all fields'; return; }
+    if (newPwd.length < 6)  { msg.className='form-msg err'; msg.textContent='New password must be at least 6 characters'; return; }
+    if (newPwd !== confirmPwd) { msg.className='form-msg err'; msg.textContent='New passwords do not match'; return; }
+
+    const d = await api('/api/admin/change-password', 'POST', { oldPassword: oldPwd, newPassword: newPwd });
+    if (d.error) { msg.className='form-msg err'; msg.textContent=d.error; return; }
+    msg.className='form-msg ok'; msg.textContent='Password changed successfully!';
+    toast('Admin password updated!');
+    document.getElementById('settingsOldPwd').value = '';
+    document.getElementById('settingsNewPwd').value = '';
+    document.getElementById('settingsConfirmPwd').value = '';
+}
+
+async function saveSiteSettings() {
+    const siteName  = document.getElementById('settingsSiteName').value.trim();
+    const maintMsg  = document.getElementById('settingsMaintMsg').value.trim();
+    const minWd     = Number(document.getElementById('settingsMinWd').value) || 0;
+    const maxWd     = Number(document.getElementById('settingsMaxWd').value) || 0;
+    const msg       = document.getElementById('settingsSiteMsg');
+    const d = await api('/api/admin/settings', 'POST', { siteName, maintenanceMessage: maintMsg, minWithdrawal: minWd, maxWithdrawal: maxWd });
+    if (d.error) { msg.className='form-msg err'; msg.textContent=d.error; return; }
+    msg.className='form-msg ok'; msg.textContent='Settings saved!';
+    toast('Site settings updated!');
+}
+
+// ── CONFIRM DIALOG ──
+function showConfirm(title, body, onConfirm, btnClass='btn-orange') {
+    let modal = document.getElementById('confirmModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'confirmModal';
+        modal.className = 'confirm-modal';
+        modal.innerHTML = `
+            <div class="confirm-box">
+                <h3 id="confirmTitle"></h3>
+                <p id="confirmBody"></p>
+                <div class="confirm-actions">
+                    <button class="btn-action" style="background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--muted);" onclick="document.getElementById('confirmModal').classList.remove('show')">Cancel</button>
+                    <button class="btn-action" id="confirmOkBtn">Confirm</button>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+    }
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmBody').innerHTML = body;
+    const okBtn = document.getElementById('confirmOkBtn');
+    okBtn.className = 'btn-action ' + btnClass;
+    okBtn.textContent = 'Confirm';
+    okBtn.onclick = () => {
+        modal.classList.remove('show');
+        onConfirm();
+    };
+    modal.classList.add('show');
 }
 
 // Initial load

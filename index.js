@@ -56,7 +56,8 @@ const userSchema = new mongoose.Schema({
     lastDepositAttempt: Date,
     lastWithdrawalAttempt: Date,
     referredBy: { type: String, default: null },
-    referralRewarded: { type: Boolean, default: false }
+    referralRewarded: { type: Boolean, default: false },
+    banned: { type: Boolean, default: false }
 });
 const User = mongoose.model('User', userSchema);
 
@@ -77,6 +78,7 @@ const paymentSchema = new mongoose.Schema({
     phone: String,
     transactionCode: String,
     approved: { type: Boolean, default: false },
+    revoked: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now }
 }, { collection: 'payments' });
 const Payment = mongoose.model('Payment', paymentSchema);
@@ -205,6 +207,30 @@ function getReferralReward(depositAmount) {
     return 0;
 }
 
+// ================= IP BAN SYSTEM =================
+const bannedIPs = new Set();
+const suspiciousIPs = {}; // { ip: { count, firstSeen } }
+
+app.use((req, res, next) => {
+    const ip = req.ip || req.connection.remoteAddress;
+    
+    // Block banned IPs
+    if (bannedIPs.has(ip)) {
+        return res.status(403).send('Forbidden');
+    }
+
+    // Track suspicious 404s — auto-ban after 20 failed requests
+    if (res.statusCode === 404) {
+        if (!suspiciousIPs[ip]) suspiciousIPs[ip] = { count: 0, firstSeen: Date.now() };
+        suspiciousIPs[ip].count++;
+        if (suspiciousIPs[ip].count > 20) {
+            bannedIPs.add(ip);
+            console.log(`🚨 Auto-banned IP ${ip} after suspicious activity`);
+        }
+    }
+    next();
+});
+
 // ================= COMMUNITY LINKS =================
 // Community links loaded from MongoDB on startup
 let COMMUNITY_LINKS = { whatsapp: '', telegram: '' };
@@ -251,6 +277,58 @@ function clearAdminLockout(ip) {
 app.set('trust proxy', 1); // Required for Render/proxied hosting
 app.use(cors());
 app.use(bodyParser.json());
+
+// ── SECURITY HEADERS ──
+app.use((req, res, next) => {
+    // Prevent clickjacking
+    res.setHeader('X-Frame-Options', 'DENY');
+    // Prevent MIME sniffing
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    // XSS Protection
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    // Referrer Policy
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    // Content Security Policy
+    res.setHeader('Content-Security-Policy', 
+        "default-src 'self'; " +
+        "script-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://www.tradingview.com; " +
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; " +
+        "font-src 'self' https://fonts.gstatic.com; " +
+        "frame-src https://www.tradingview.com; " +
+        "img-src 'self' data: https:; " +
+        "connect-src 'self' https://api.coingecko.com;"
+    );
+    // Hide server info
+    res.removeHeader('X-Powered-By');
+    next();
+});
+
+// ── BLOCK COMMON HACKING PATHS ──
+const BLOCKED_PATHS = [
+    '/wp-admin', '/wp-login', '/phpmyadmin', '/.env', '/.git',
+    '/config', '/backup', '/shell', '/eval', '/cmd', '/exec',
+    '/admin.php', '/login.php', '/wp-content', '/xmlrpc.php',
+    '/.htaccess', '/server-status', '/actuator', '/api/v1/users'
+];
+
+app.use((req, res, next) => {
+    const path = req.path.toLowerCase();
+    // Block suspicious paths
+    if (BLOCKED_PATHS.some(p => path.includes(p))) {
+        console.log(`🚨 Blocked hacking attempt: ${req.ip} → ${req.path}`);
+        return res.status(404).send('Not Found');
+    }
+    // Block suspicious query strings
+    const query = req.url.toLowerCase();
+    if (query.includes('select ') || query.includes('union ') || 
+        query.includes('drop ') || query.includes('<script') ||
+        query.includes('etc/passwd') || query.includes('cmd=') ||
+        query.includes('../') || query.includes('eval(')) {
+        console.log(`🚨 Blocked SQL/XSS attempt: ${req.ip} → ${req.url}`);
+        return res.status(403).send('Forbidden');
+    }
+    next();
+});
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── RATE LIMITERS ──
@@ -419,6 +497,11 @@ app.post('/api/login', adminLoginLimiter, async (req, res) => {
             return res.status(400).json({ error: 'Invalid credentials' });
         }
 
+        // Check if user is banned
+        if (user.banned && email !== ADMIN_EMAIL) {
+            return res.status(403).json({ error: 'Your account has been suspended. Contact support.' });
+        }
+
         // Successful admin login — clear lockout
         if (email === ADMIN_EMAIL) {
             clearAdminLockout(ip);
@@ -518,31 +601,6 @@ app.post('/api/admin/fix-user-fridges', async (req, res) => {
             fixed,
             skipped
         });
-    } catch(err) { res.status(500).json({ error: err.message }); }
-});
-
-// ================= TEMP DEBUG (remove after fixing) =================
-app.get('/api/debug/fridges-check', async (req, res) => {
-    try {
-        const now = new Date();
-        const users = await User.find({ 'fridges.0': { $exists: true } }, '-password');
-        const report = users.map(u => ({
-            email: u.email,
-            earning: u.earning,
-            fridges: u.fridges.map(f => ({
-                id: f.id,
-                dailyEarn: f.dailyEarn,
-                boughtAt: f.boughtAt,
-                hoursSinceBuy: f.boughtAt
-                    ? ((now - new Date(f.boughtAt)) / (1000*60*60)).toFixed(1) + ' hrs'
-                    : '❌ NO boughtAt saved!',
-                qualifiesForEarning: f.boughtAt
-                    ? ((now - new Date(f.boughtAt)) / (1000*60*60)) >= 24
-                    : false,
-                isOffer: f.id.startsWith('offer')
-            }))
-        }));
-        res.json({ now, totalUsers: users.length, report });
     } catch(err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -653,6 +711,16 @@ app.post('/api/payment/manual', auth, async (req, res) => {
 
         const duplicate = await Payment.findOne({ transactionCode: txnCode.toUpperCase() });
         if (duplicate) return res.status(400).json({ error: 'Transaction code already used' });
+
+        // Prevent duplicate pending payments for same fridge
+        const pendingPayment = await Payment.findOne({ 
+            userEmail: user.email, 
+            fridgeId: fridge.id,
+            approved: false 
+        });
+        if (pendingPayment) return res.status(400).json({ 
+            error: 'You already have a pending payment for this fridge. Please wait for admin approval or rejection before submitting again.' 
+        });
 
         const payment = new Payment({
             userEmail: user.email,
@@ -1104,14 +1172,10 @@ app.post('/api/withdraw', auth, async (req, res) => {
             return res.status(400).json({ error: 'You must first deposit (buy a normal fridge starting from KES 100) before withdrawing.' });
         }
 
-        if (user.lastWithdrawalAttempt) {
-            const diff = Date.now() - new Date(user.lastWithdrawalAttempt).getTime();
-            if (diff < 24 * 60 * 60 * 1000) {
-                const pending = await Withdrawal.findOne({ userEmail: user.email, approved: false });
-                if (pending) {
-                    return res.status(400).json({ error: 'You already have a pending withdrawal.' });
-                }
-            }
+        // Block if already has pending withdrawal
+        const pendingWd = await Withdrawal.findOne({ userEmail: user.email, approved: false });
+        if (pendingWd) {
+            return res.status(400).json({ error: 'You already have a pending withdrawal. Please wait for admin approval or rejection before submitting again.' });
         }
 
         if (!phone || !amount || amount < 200) {
@@ -1288,6 +1352,112 @@ app.post('/api/trade/withdraw', auth, async (req, res) => {
         await user.save();
 
         res.json({ message: `Withdrawn KES ${kes} from trading balance`, kesAmount: kes });
+    } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= ADMIN: REVOKE APPROVED PAYMENT (undo approval) =================
+app.post('/api/admin/payment/revoke', auth, async (req, res) => {
+    try {
+        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
+        const { paymentId } = req.body;
+        const payment = await Payment.findById(paymentId);
+        if (!payment) return res.status(404).json({ error: 'Payment not found' });
+        if (!payment.approved) return res.status(400).json({ error: 'Payment not yet approved' });
+
+        const user = await User.findOne({ email: payment.userEmail });
+        if (user) {
+            // Remove the fridge from user's fridges array
+            user.fridges = user.fridges.filter(f => {
+                // Remove the most recently added matching fridge
+                if (f.id === payment.fridgeId) {
+                    return false;
+                }
+                return true;
+            });
+            user.markModified('fridges');
+            await user.save();
+        }
+
+        payment.approved = false;
+        payment.revoked = true;
+        await payment.save();
+
+        await ActivityLog.create({ 
+            action: 'PAYMENT_REVOKED', 
+            adminEmail: req.user.email, 
+            details: `Payment ${paymentId} revoked for ${payment.userEmail}` 
+        });
+
+        res.json({ message: 'Payment approval revoked successfully' });
+    } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= ADMIN: GET FULL USER DETAILS =================
+app.get('/api/admin/user/:email', auth, async (req, res) => {
+    try {
+        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
+        const user = await User.findOne({ email: req.params.email }, '-password');
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        
+        // Get user's payment history
+        const payments = await Payment.find({ userEmail: req.params.email }).sort({ createdAt: -1 });
+        const withdrawals = await Withdrawal.find({ userEmail: req.params.email }).sort({ createdAt: -1 });
+        
+        res.json({ user, payments, withdrawals });
+    } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= ADMIN: REMOVE FRIDGE FROM USER =================
+app.post('/api/admin/user/remove-fridge', auth, async (req, res) => {
+    try {
+        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
+        const { email, fridgeIndex } = req.body;
+        const user = await User.findOne({ email });
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        
+        user.fridges.splice(fridgeIndex, 1);
+        user.markModified('fridges');
+        await user.save();
+
+        await ActivityLog.create({ 
+            action: 'FRIDGE_REMOVED', 
+            adminEmail: req.user.email, 
+            details: `Fridge at index ${fridgeIndex} removed from ${email}` 
+        });
+
+        res.json({ message: 'Fridge removed successfully' });
+    } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= ADMIN: RESET USER PASSWORD =================
+app.post('/api/admin/user/reset-password', auth, async (req, res) => {
+    try {
+        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
+        const { email, newPassword } = req.body;
+        if (!newPassword || newPassword.length < 4) return res.status(400).json({ error: 'Password too short' });
+        const user = await User.findOne({ email });
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        user.password = await require('bcryptjs').hash(newPassword, 10);
+        await user.save();
+        res.json({ message: 'Password reset successfully' });
+    } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= ADMIN: BAN/UNBAN USER =================
+app.post('/api/admin/user/ban', auth, async (req, res) => {
+    try {
+        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
+        const { email, banned } = req.body;
+        const user = await User.findOne({ email });
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        user.banned = banned;
+        await user.save();
+        await ActivityLog.create({ 
+            action: banned ? 'USER_BANNED' : 'USER_UNBANNED', 
+            adminEmail: req.user.email, 
+            details: email 
+        });
+        res.json({ message: banned ? 'User banned' : 'User unbanned' });
     } catch(err) { res.status(500).json({ error: err.message }); }
 });
 
