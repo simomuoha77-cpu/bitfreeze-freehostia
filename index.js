@@ -1143,8 +1143,20 @@ bot.launch().then(() => console.log('Telegram bot running'))
 // Every minute — instantly credit offer earnings when they expire
 cron.schedule('* * * * *', checkAndCreditOfferEarnings);
 
-// 12:00 AM Kenya time (UTC+3 = 21:00 UTC) — ONE cron only, no recovery to avoid double credits
-cron.schedule('0 21 * * *', runDailyEarnings, { timezone: 'UTC' });
+// 12:00 AM Kenya time (UTC+3 = 21:00 UTC) — daily earnings for normal fridges
+cron.schedule('0 21 * * *', async () => {
+    const now = new Date();
+    const todayKey = new Date(now.getTime() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    await runDailyEarnings();
+    await Settings.findOneAndUpdate(
+        { key: 'last_earnings_date' },
+        { value: todayKey },
+        { upsert: true }
+    );
+}, { timezone: 'UTC' });
+
+// Every hour — recovery cron in case Render slept and missed midnight
+cron.schedule('0 * * * *', checkMissedEarnings);
 
 console.log('✅ All cron jobs scheduled');
 
