@@ -933,16 +933,6 @@ tbody td {
                         </div>
                     </div>
 
-                    <!-- Manual earnings trigger -->
-                    <div style="background:rgba(0,230,118,0.06);border:1px solid rgba(0,230,118,0.15);border-radius:12px;padding:16px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
-                        <div>
-                            <div style="font-size:14px;font-weight:700;color:#fff;">⏰ Daily Earnings</div>
-                            <div style="font-size:12px;color:var(--muted);">Runs automatically at 12:00 AM Kenya time. Use button to run manually if needed.</div>
-                        </div>
-                        <button class="btn-action btn-green" onclick="runEarnings()" id="runEarningsBtn">▶ Run Now</button>
-                    </div>
-                    <div id="runEarningsMsg" style="font-size:13px;margin-bottom:16px;min-height:16px;"></div>
-
                     <div class="section-head">
                         <div class="section-title">Recent Pending Payments</div>
                     </div>
@@ -1034,6 +1024,19 @@ tbody td {
                                 <label>Fridge ID</label>
                                 <select id="addFridgeId">
                                     <option value="">Select fridge...</option>
+                                    <optgroup label="Normal Fridges">
+                                    <option value="100">100 — KES 100 (KES 5/day)</option>
+                                    <option value="200">200 — KES 200 (KES 10/day)</option>
+                                    <option value="300">300 — KES 300 (KES 15/day)</option>
+                                    <option value="400">400 — KES 400 (KES 20/day)</option>
+                                    <option value="2ft">2ft — KES 500 (KES 25/day)</option>
+                                    <option value="4ft">4ft — KES 1,000 (KES 55/day)</option>
+                                    <option value="6ft">6ft — KES 2,000 (KES 100/day)</option>
+                                    <option value="8ft">8ft — KES 4,000 (KES 150/day)</option>
+                                    <option value="10ft">10ft — KES 6,000 (KES 250/day)</option>
+                                    <option value="12ft">12ft — KES 8,000 (KES 350/day)</option>
+                                    </optgroup>
+                                    <optgroup label="Offer Fridges">
                                     <option value="offer1">offer1</option>
                                     <option value="offer2">offer2</option>
                                     <option value="offer3">offer3</option>
@@ -1042,6 +1045,7 @@ tbody td {
                                     <option value="offer6">offer6</option>
                                     <option value="offer7">offer7</option>
                                     <option value="offer8">offer8</option>
+                                    </optgroup>
                                 </select>
                             </div>
                         </div>
@@ -1344,10 +1348,6 @@ tbody td {
                         <button class="refresh-btn" onclick="loadLogs()">↻ Refresh</button>
                     </div>
                     <div class="table-wrap" id="logsTable"></div>
-                </div>
-                        <button class="refresh-btn" onclick="loadTradeDeposits()">↻ Refresh</button>
-                    </div>
-                    <div class="table-wrap" id="tradeDepositsTable"></div>
                 </div>
 
 
@@ -1864,26 +1864,6 @@ async function loadLogs() {
     </table>`;
 }
 
-// ── TRADE DEPOSITS ──
-
-async function runEarnings() {
-    const btn = document.getElementById('runEarningsBtn');
-    const msg = document.getElementById('runEarningsMsg');
-    btn.disabled = true;
-    btn.textContent = '⏳ Running...';
-    const d = await api('/api/admin/run-earnings', 'POST');
-    if (d.error) {
-        msg.style.color = 'var(--red)';
-        msg.textContent = '❌ ' + d.error;
-    } else {
-        msg.style.color = 'var(--green)';
-        msg.textContent = '✅ ' + d.message;
-        toast('Daily earnings credited successfully!');
-        loadOverview();
-    }
-    btn.disabled = false;
-    btn.textContent = '▶ Run Now';
-}
 
 // ── REVOKE PAYMENT ──
 async function revokePayment(id, btn) {
