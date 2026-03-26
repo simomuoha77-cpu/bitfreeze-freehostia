@@ -50,7 +50,8 @@ const userSchema = new mongoose.Schema({
         dailyEarn: Number,
         boughtAt: Date,
         endTime: Date,
-        earningAdded: Boolean
+        earningAdded: Boolean,
+        lastEarnedAt: Date
     }],
     createdAt: { type: Date, default: Date.now },
     lastDepositAttempt: Date,
@@ -1047,38 +1048,63 @@ async function checkAndCreditOfferEarnings() {
     }
 }
 
+// ── Mutex flag to prevent concurrent runDailyEarnings calls ──
+let earningsRunning = false;
+
 // ── DAILY EARNINGS: 12:00 AM Kenya time (UTC+3 = 21:00 UTC) for normal fridges ──
 async function runDailyEarnings() {
+    // ✅ MUTEX: if already running (e.g. midnight cron + hourly cron fire at same second), skip
+    if (earningsRunning) {
+        console.log('⚠️ runDailyEarnings already in progress — skipping duplicate call');
+        return;
+    }
+    earningsRunning = true;
     try {
         const users = await User.find();
         const now = new Date();
+        // Kenya date string e.g. "2026-03-27"
+        const todayKenya = new Date(now.getTime() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
         let totalCredited = 0;
         let usersUpdated = 0;
 
         for (const user of users) {
             let earnThisRun = 0;
+            let changed = false;
 
-            for (const f of user.fridges) {
+            for (let i = 0; i < user.fridges.length; i++) {
+                const f = user.fridges[i];
                 if (!f.id || f.id.startsWith('offer')) continue;
                 const dailyEarn = f.dailyEarn || 0;
                 if (dailyEarn <= 0) continue;
                 const boughtAt = f.boughtAt ? new Date(f.boughtAt) : null;
                 if (!boughtAt) continue;
                 const hoursSinceBuy = (now - boughtAt) / (1000 * 60 * 60);
-                if (hoursSinceBuy >= 24) {
-                    earnThisRun += dailyEarn;
+                if (hoursSinceBuy < 24) continue;
+
+                // ✅ DEDUP: skip if already credited today (Kenya date)
+                const lastEarnedAt = f.lastEarnedAt ? new Date(f.lastEarnedAt) : null;
+                if (lastEarnedAt) {
+                    const lastEarnedKenya = new Date(lastEarnedAt.getTime() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
+                    if (lastEarnedKenya === todayKenya) continue; // already credited today, skip
                 }
+
+                earnThisRun += dailyEarn;
+                user.fridges[i].lastEarnedAt = now; // mark as credited today
+                changed = true;
             }
 
-            if (earnThisRun > 0) {
-                // Use direct MongoDB $inc — most reliable way to update
+            if (earnThisRun > 0 && changed) {
+                user.markModified('fridges');
                 await User.updateOne(
                     { _id: user._id },
-                    { $inc: { earning: earnThisRun } }
+                    {
+                        $inc: { earning: earnThisRun },
+                        $set: { fridges: user.fridges }
+                    }
                 );
                 totalCredited += earnThisRun;
                 usersUpdated++;
-                console.log(`✅ Credited KES ${earnThisRun} to ${user.email} (new total: ${user.earning + earnThisRun})`);
+                console.log(`✅ Credited KES ${earnThisRun} to ${user.email}`);
             }
         }
 
@@ -1095,6 +1121,8 @@ async function runDailyEarnings() {
         } catch(e) {}
     } catch (err) {
         console.error('Daily earnings error:', err);
+    } finally {
+        earningsRunning = false; // always release the lock
     }
 }
 
