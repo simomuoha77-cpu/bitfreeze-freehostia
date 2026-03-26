@@ -198,7 +198,7 @@ const REFERRAL_RULES = [
     { min: 400,  reward: 40  },
     { min: 300,  reward: 30  },
     { min: 200,  reward: 20  },
-    { min: 100,  reward: 80  },
+    { min: 100,  reward: 10  },
 ];
 
 function getReferralReward(depositAmount) {
