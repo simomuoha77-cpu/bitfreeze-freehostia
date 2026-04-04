@@ -22,12 +22,9 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 mongoose.connect(process.env.MONGO_URI)
     .then(async () => {
         console.log('MongoDB connected');
-        // Drop any bad legacy indexes
         try { await mongoose.connection.collection('withdrawals').dropIndexes(); console.log('Withdrawals indexes cleared'); } catch(e) {}
         try { await mongoose.connection.collection('payments').dropIndexes(); console.log('Payments indexes cleared'); } catch(e) {}
-        // Load saved fridge states from MongoDB
         await loadFridgeStates();
-        // Load community links from MongoDB
         await loadCommunityLinks();
     })
     .catch(err => {
@@ -78,6 +75,8 @@ const paymentSchema = new mongoose.Schema({
     fridgeDurationHrs: { type: Number, default: 0 },
     phone: String,
     transactionCode: String,
+    checkoutRequestId: String,   // STK Push CheckoutRequestID for callback matching
+    stkStatus: { type: String, default: 'pending' }, // pending | success | failed | manual
     approved: { type: Boolean, default: false },
     revoked: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now }
@@ -115,7 +114,6 @@ const settingsSchema = new mongoose.Schema({
 }, { collection: 'settings' });
 const Settings = mongoose.model('Settings', settingsSchema);
 
-// ================= FRIDGE STATE SCHEMA (persisted to MongoDB) =================
 const fridgeStateSchema = new mongoose.Schema({
     id: { type: String, unique: true },
     locked: { type: Boolean, default: true },
@@ -187,7 +185,6 @@ async function saveFridgeState(fridge) {
 }
 
 // ================= REFERRAL RULES =================
-// Reward credited to referrer when referred user's FIRST deposit is approved
 const REFERRAL_RULES = [
     { min: 8000, reward: 500 },
     { min: 6000, reward: 350 },
@@ -209,31 +206,33 @@ function getReferralReward(depositAmount) {
 }
 
 // ================= IP BAN SYSTEM =================
+// FIXED: was checking res.statusCode before response was sent (always 200 at that point)
 const bannedIPs = new Set();
-const suspiciousIPs = {}; // { ip: { count, firstSeen } }
+const suspiciousIPs = {};
 
 app.use((req, res, next) => {
     const ip = req.ip || req.connection.remoteAddress;
-    
-    // Block banned IPs
+
     if (bannedIPs.has(ip)) {
         return res.status(403).send('Forbidden');
     }
 
-    // Track suspicious 404s — auto-ban after 20 failed requests
-    if (res.statusCode === 404) {
-        if (!suspiciousIPs[ip]) suspiciousIPs[ip] = { count: 0, firstSeen: Date.now() };
-        suspiciousIPs[ip].count++;
-        if (suspiciousIPs[ip].count > 20) {
-            bannedIPs.add(ip);
-            console.log(`🚨 Auto-banned IP ${ip} after suspicious activity`);
+    // Track 404s AFTER the response is actually sent
+    res.on('finish', () => {
+        if (res.statusCode === 404) {
+            if (!suspiciousIPs[ip]) suspiciousIPs[ip] = { count: 0, firstSeen: Date.now() };
+            suspiciousIPs[ip].count++;
+            if (suspiciousIPs[ip].count > 20) {
+                bannedIPs.add(ip);
+                console.log(`🚨 Auto-banned IP ${ip} after suspicious activity`);
+            }
         }
-    }
+    });
+
     next();
 });
 
 // ================= COMMUNITY LINKS =================
-// Community links loaded from MongoDB on startup
 let COMMUNITY_LINKS = { whatsapp: '', telegram: '' };
 
 async function loadCommunityLinks() {
@@ -247,9 +246,9 @@ async function loadCommunityLinks() {
 }
 
 // ================= ADMIN SECURITY: LOGIN LOCKOUT =================
-const adminLoginAttempts = {}; // { ip: { count, lockedUntil } }
+const adminLoginAttempts = {};
 const ADMIN_MAX_ATTEMPTS = 3;
-const ADMIN_LOCKOUT_MS = 30 * 60 * 1000; // 30 minutes
+const ADMIN_LOCKOUT_MS = 30 * 60 * 1000;
 
 function checkAdminLockout(ip) {
     const a = adminLoginAttempts[ip];
@@ -266,7 +265,7 @@ function recordFailedAdminLogin(ip) {
     adminLoginAttempts[ip].count++;
     if (adminLoginAttempts[ip].count >= ADMIN_MAX_ATTEMPTS) {
         adminLoginAttempts[ip].lockedUntil = Date.now() + ADMIN_LOCKOUT_MS;
-        console.log(`🔒 Admin panel locked for IP ${ip} after ${ADMIN_MAX_ATTEMPTS} failed attempts`);
+        console.log(`🔒 Admin panel locked for IP ${ip}`);
     }
 }
 
@@ -275,22 +274,18 @@ function clearAdminLockout(ip) {
 }
 
 // ================= EXPRESS SETUP =================
-app.set('trust proxy', 1); // Required for Render/proxied hosting
+app.set('trust proxy', 1);
 app.use(cors());
 app.use(bodyParser.json());
 
 // ── SECURITY HEADERS ──
 app.use((req, res, next) => {
-    // Prevent clickjacking
     res.setHeader('X-Frame-Options', 'DENY');
-    // Prevent MIME sniffing
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    // XSS Protection
     res.setHeader('X-XSS-Protection', '1; mode=block');
-    // Referrer Policy
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-    // Content Security Policy
-    res.setHeader('Content-Security-Policy', 
+    res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+    res.setHeader('Content-Security-Policy',
         "default-src 'self'; " +
         "script-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://www.tradingview.com; " +
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; " +
@@ -299,7 +294,6 @@ app.use((req, res, next) => {
         "img-src 'self' data: https:; " +
         "connect-src 'self' https://api.coingecko.com;"
     );
-    // Hide server info
     res.removeHeader('X-Powered-By');
     next();
 });
@@ -309,31 +303,34 @@ const BLOCKED_PATHS = [
     '/wp-admin', '/wp-login', '/phpmyadmin', '/.env', '/.git',
     '/config', '/backup', '/shell', '/eval', '/cmd', '/exec',
     '/admin.php', '/login.php', '/wp-content', '/xmlrpc.php',
-    '/.htaccess', '/server-status', '/actuator', '/api/v1/users'
+    '/.htaccess', '/server-status', '/actuator', '/api/v1/users',
+    '/etc/passwd', '/proc/', '/cgi-bin', '/.well-known/security',
+    '/telescope', '/laravel', '/debug', '/console', '/vendor'
 ];
 
 app.use((req, res, next) => {
-    const path = req.path.toLowerCase();
-    // Block suspicious paths
-    if (BLOCKED_PATHS.some(p => path.includes(p))) {
+    const p = req.path.toLowerCase();
+    if (BLOCKED_PATHS.some(b => p.includes(b))) {
         console.log(`🚨 Blocked hacking attempt: ${req.ip} → ${req.path}`);
+        bannedIPs.add(req.ip); // auto-ban immediately on known exploit paths
         return res.status(404).send('Not Found');
     }
-    // Block suspicious query strings
     const query = req.url.toLowerCase();
-    if (query.includes('select ') || query.includes('union ') || 
+    if (query.includes('select ') || query.includes('union ') ||
         query.includes('drop ') || query.includes('<script') ||
         query.includes('etc/passwd') || query.includes('cmd=') ||
-        query.includes('../') || query.includes('eval(')) {
+        query.includes('../') || query.includes('eval(') ||
+        query.includes('base64_decode') || query.includes('exec(')) {
         console.log(`🚨 Blocked SQL/XSS attempt: ${req.ip} → ${req.url}`);
+        bannedIPs.add(req.ip);
         return res.status(403).send('Forbidden');
     }
     next();
 });
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── RATE LIMITERS ──
-// General API: 100 requests per 15 minutes per IP
 const generalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 100,
@@ -342,24 +339,28 @@ const generalLimiter = rateLimit({
     legacyHeaders: false
 });
 
-// Login: 10 attempts per 15 minutes per IP
 const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 10,
     message: { error: 'Too many login attempts. Try again in 15 minutes.' }
 });
 
-// Admin login: 5 attempts per 30 minutes per IP
 const adminLoginLimiter = rateLimit({
     windowMs: 30 * 60 * 1000,
     max: 5,
     message: { error: 'Too many admin login attempts. Try again later.' }
 });
 
+const paymentLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 3,
+    message: { error: 'Too many payment requests. Please wait a minute.' }
+});
+
 app.use('/api/', generalLimiter);
 app.use('/api/login', loginLimiter);
 
-// ── HIDE /admin — return 404 so hackers can't find it ──
+// ── HIDE /admin ──
 app.get('/admin', (req, res) => res.status(404).send('Not Found'));
 app.get('/admin.html', (req, res) => res.status(404).send('Not Found'));
 
@@ -376,62 +377,81 @@ function auth(req, res, next) {
 }
 
 // ================= M-PESA CONFIG =================
-const M_PESA_SHORTCODE = process.env.M_PESA_SHORTCODE;
-const M_PESA_LIVE_URL = process.env.M_PESA_LIVE_URL;
-const M_PESA_CONSUMER_KEY = process.env.M_PESA_CONSUMER_KEY;
+// IMPORTANT: For Till number (Buy Goods), use:
+//   M_PESA_SHORTCODE  = your Till number
+//   M_PESA_PASSKEY    = Passkey from Daraja portal (not the Till PIN)
+//   TransactionType   = "CustomerBuyGoodsOnline"
+//   PartyB            = your Till number
+const M_PESA_SHORTCODE       = process.env.M_PESA_SHORTCODE;       // Your Till number
+const M_PESA_LIVE_URL        = process.env.M_PESA_LIVE_URL;         // https://api.safaricom.co.ke
+const M_PESA_CONSUMER_KEY    = process.env.M_PESA_CONSUMER_KEY;
 const M_PESA_CONSUMER_SECRET = process.env.M_PESA_CONSUMER_SECRET;
+const M_PESA_PASSKEY         = process.env.M_PESA_PASSKEY;          // Daraja passkey (not PIN)
+const CALLBACK_URL           = process.env.CALLBACK_URL;            // e.g. https://yoursite.com/api/payment/mpesa/callback
 
-// Function to initiate STK Push
+// Format phone to 254XXXXXXXXX
+function formatPhone(phone) {
+    const clean = String(phone).replace(/\s+/g, '').replace(/[^0-9+]/g, '');
+    if (clean.startsWith('+254')) return clean.slice(1);         // +254XXXXXXXXX → 254XXXXXXXXX
+    if (clean.startsWith('254'))  return clean;                  // already good
+    if (clean.startsWith('0'))    return '254' + clean.slice(1); // 07XXXXXXXX → 2547XXXXXXXX
+    return '254' + clean;
+}
+
+// ── STK Push (Till / Buy Goods) ──
 async function initiateStkPush(phone, amount) {
-    try {
-        const auth = Buffer.from(`${M_PESA_CONSUMER_KEY}:${M_PESA_CONSUMER_SECRET}`).toString('base64');
-        
-        // Step 1: Get access token
-        const tokenResponse = await axios.get(`${M_PESA_LIVE_URL}/oauth/v1/generate?grant_type=client_credentials`, {
-            headers: {
-                Authorization: `Basic ${auth}`
-            }
-        });
-        const accessToken = tokenResponse.data.access_token;
+    const formattedPhone = formatPhone(phone);
 
-        // Step 2: Prepare the payload for STK Push
-        const timestamp = new Date().toISOString().replace(/[-:]/g, '').slice(0, 14);
-        const password = Buffer.from(`${M_PESA_SHORTCODE}:${process.env.M_PESA_BUSINESS_PASSWORD}:${timestamp}`).toString('base64');
+    // Step 1: Get access token
+    const tokenAuth = Buffer.from(`${M_PESA_CONSUMER_KEY}:${M_PESA_CONSUMER_SECRET}`).toString('base64');
+    const tokenResponse = await axios.get(
+        `${M_PESA_LIVE_URL}/oauth/v1/generate?grant_type=client_credentials`,
+        { headers: { Authorization: `Basic ${tokenAuth}` } }
+    );
+    const accessToken = tokenResponse.data.access_token;
 
-        const payload = {
-            "BusinessShortCode": M_PESA_SHORTCODE,
-            "Password": password,
-            "Timestamp": timestamp,
-            "TransactionType": "CustomerPayBillOnline",
-            "Amount": amount,
-            "PartyA": phone,
-            "PartyB": M_PESA_SHORTCODE,
-            "PhoneNumber": phone,
-            "CallBackURL": `${process.env.CALLBACK_URL}`, // Define your callback URL
-            "AccountReference": "FridgePurchase",
-            "TransactionDesc": "Payment for fridge purchase"
-        };
-        
-        const stkResponse = await axios.post(`${M_PESA_LIVE_URL}/mpesa/stkpush/v1/processrequest`, payload, {
-            headers: {
-                Authorization: `Bearer ${accessToken}`
-            }
-        });
-        
-        return stkResponse.data;
-    } catch (error) {
-        console.error("M-Pesa STK Push error:", error);
-        throw new Error("Failed to initiate payment");
+    // Step 2: Build timestamp and password
+    // Password = Base64(ShortCode + Passkey + Timestamp)
+    const timestamp = new Date().toISOString().replace(/[-T:.Z]/g, '').slice(0, 14);
+    const password = Buffer.from(`${M_PESA_SHORTCODE}${M_PESA_PASSKEY}${timestamp}`).toString('base64');
+
+    // Step 3: Build STK payload
+    // CustomerBuyGoodsOnline = Till number (not Paybill)
+    const payload = {
+        BusinessShortCode: M_PESA_SHORTCODE,
+        Password: password,
+        Timestamp: timestamp,
+        TransactionType: 'CustomerBuyGoodsOnline',  // ✅ CORRECT for Till number
+        Amount: Math.ceil(amount),                  // must be integer
+        PartyA: formattedPhone,
+        PartyB: M_PESA_SHORTCODE,                   // Till number
+        PhoneNumber: formattedPhone,
+        CallBackURL: CALLBACK_URL,
+        AccountReference: 'Bitfreeze',
+        TransactionDesc: 'Fridge Purchase'
+    };
+
+    const stkResponse = await axios.post(
+        `${M_PESA_LIVE_URL}/mpesa/stkpush/v1/processrequest`,
+        payload,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+
+    // Daraja returns ResponseCode "0" for success
+    if (stkResponse.data.ResponseCode !== '0') {
+        throw new Error(stkResponse.data.ResponseDescription || 'STK Push failed');
     }
+
+    return stkResponse.data; // contains CheckoutRequestID, MerchantRequestID
 }
 
 // ================= ROUTES =================
-app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
+app.get('/login',    (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
 app.get('/manifest.json', (req, res) => res.sendFile(path.join(__dirname, 'public', 'manifest.json')));
-app.get('/sw.js', (req, res) => res.sendFile(path.join(__dirname, 'public', 'sw.js')));
+app.get('/sw.js',    (req, res) => res.sendFile(path.join(__dirname, 'public', 'sw.js')));
 app.get('/register', (req, res) => res.sendFile(path.join(__dirname, 'public', 'register.html')));
-app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
-// Secret admin URL — only you know this path
+app.get('/dashboard',(req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
+// Secret admin URL
 app.get('/manage-bf-2025', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
 
 // ================= REGISTER / LOGIN =================
@@ -443,24 +463,21 @@ app.post('/api/register', async (req, res) => {
         if (!name || !email || !password || !phone) return res.status(400).json({ error: 'Missing fields' });
         if (await User.findOne({ email })) return res.status(400).json({ error: 'Email exists' });
 
-        // Phone validation - must be valid Kenyan number
         const cleanPhone = phone.replace(/\s/g, '');
         if (!cleanPhone.match(/^(\+254|0)[17]\d{8}$/)) {
             return res.status(400).json({ error: 'Please enter a valid Kenyan M-Pesa number (e.g. 0712345678)' });
         }
 
-        // Extract email from referral URL if full URL was passed
         if (referrerEmail && referrerEmail.includes('ref=')) {
             const match = referrerEmail.match(/ref=([^&]+)/);
             if (match) referrerEmail = decodeURIComponent(match[1]);
         }
-        if (referrerEmail && referrerEmail.includes('/')) referrerEmail = null; // still a URL, ignore
+        if (referrerEmail && referrerEmail.includes('/')) referrerEmail = null;
 
         const hashed = await bcrypt.hash(password, 10);
         const user = new User({ name, email, password: hashed, phone });
         await user.save();
 
-        // Save referredBy — reward will be credited when they make first deposit
         if (referrerEmail && referrerEmail !== email) {
             const referrer = await User.findOne({ email: referrerEmail });
             if (referrer) {
@@ -480,7 +497,6 @@ app.post('/api/login', adminLoginLimiter, async (req, res) => {
         const { email, password } = req.body;
         const ip = req.ip || req.connection.remoteAddress;
 
-        // Check admin lockout
         if (email === ADMIN_EMAIL) {
             const lockout = checkAdminLockout(ip);
             if (lockout.locked) {
@@ -498,12 +514,10 @@ app.post('/api/login', adminLoginLimiter, async (req, res) => {
             return res.status(400).json({ error: 'Invalid credentials' });
         }
 
-        // Check if user is banned
         if (user.banned && email !== ADMIN_EMAIL) {
             return res.status(403).json({ error: 'Your account has been suspended. Contact support.' });
         }
 
-        // Successful admin login — clear lockout
         if (email === ADMIN_EMAIL) {
             clearAdminLockout(ip);
             await ActivityLog.create({ action: 'ADMIN_LOGIN', adminEmail: email, details: 'Successful login', ip });
@@ -528,7 +542,6 @@ app.post('/api/admin/run-earnings', auth, async (req, res) => {
     try {
         if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
         await runDailyEarnings();
-        // Reset the daily check so it can run again today if needed
         const today = new Date();
         const todayKey = new Date(today.getTime() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
         await Settings.findOneAndUpdate({ key: 'last_earnings_date' }, { value: todayKey }, { upsert: true });
@@ -536,38 +549,31 @@ app.post('/api/admin/run-earnings', auth, async (req, res) => {
     } catch(err) { res.status(500).json({ error: err.message }); }
 });
 
-// ================= ADMIN: FORCE CREDIT OFFER EARNINGS NOW =================
+// ================= ADMIN: FORCE CREDIT OFFER EARNINGS =================
 app.post('/api/admin/force-credit', auth, async (req, res) => {
     try {
         if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
         await checkAndCreditOfferEarnings();
-        res.json({ message: 'Offer earnings check completed. Check server logs.' });
+        res.json({ message: 'Offer earnings check completed.' });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // ================= ONE-TIME FIX: Repair missing boughtAt and dailyEarn =================
-app.post('/api/admin/fix-user-fridges', async (req, res) => {
+app.post('/api/admin/fix-user-fridges', auth, async (req, res) => {
     try {
-        const now = new Date();
+        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
         const users = await User.find({ 'fridges.0': { $exists: true } });
-        let fixed = 0;
-        let skipped = 0;
+        let fixed = 0, skipped = 0;
 
         for (const user of users) {
             let changed = false;
-
             for (let i = 0; i < user.fridges.length; i++) {
                 const f = user.fridges[i];
-
-                // Fix missing boughtAt
                 if (!f.boughtAt) {
                     user.fridges[i].boughtAt = new Date('2026-01-01T00:00:00Z');
                     changed = true;
                 }
-
-                // Fix missing/null dailyEarn for normal fridges
                 if (!f.id.startsWith('offer') && (!f.dailyEarn || f.dailyEarn === 0)) {
-                    // Find dailyEarn from approved payment record
                     const pmt = await Payment.findOne({
                         userEmail: user.email,
                         fridgeId: f.id,
@@ -578,7 +584,6 @@ app.post('/api/admin/fix-user-fridges', async (req, res) => {
                         user.fridges[i].dailyEarn = pmt.fridgeDailyEarn;
                         changed = true;
                     } else {
-                        // Fallback: get from FRIDGES array
                         const gf = FRIDGES.find(fr => fr.id === f.id);
                         if (gf && gf.dailyEarn) {
                             user.fridges[i].dailyEarn = gf.dailyEarn;
@@ -587,21 +592,13 @@ app.post('/api/admin/fix-user-fridges', async (req, res) => {
                     }
                 }
             }
-
             if (changed) {
                 user.markModified('fridges');
                 await user.save();
                 fixed++;
-            } else {
-                skipped++;
-            }
+            } else { skipped++; }
         }
-
-        res.json({
-            message: `Fixed ${fixed} users, skipped ${skipped} users`,
-            fixed,
-            skipped
-        });
+        res.json({ message: `Fixed ${fixed} users, skipped ${skipped} users`, fixed, skipped });
     } catch(err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -660,8 +657,8 @@ app.get('/api/fridges', auth, async (req, res) => {
     res.json({ fridges: FRIDGES });
 });
 
-// ================= PAYMENT SUBMISSION =================
-app.post('/api/payment/submit', auth, async (req, res) => {
+// ================= PAYMENT: STK PUSH (PRIMARY METHOD) =================
+app.post('/api/payment/submit', auth, paymentLimiter, async (req, res) => {
     try {
         const { fridgeId } = req.body;
         const user = await User.findOne({ email: req.user.email });
@@ -671,32 +668,132 @@ app.post('/api/payment/submit', auth, async (req, res) => {
         if (!fridge) return res.status(400).json({ error: 'Invalid fridge' });
         if (fridge.locked) return res.status(400).json({ error: 'Fridge is locked' });
 
-        // Perform STK Push using the user's registered phone number
-        const stkResponse = await initiateStkPush(user.phone, fridge.price);
+        // Block duplicate pending STK payments for same fridge
+        const pendingPayment = await Payment.findOne({
+            userEmail: user.email,
+            fridgeId: fridge.id,
+            approved: false,
+            stkStatus: { $in: ['pending', 'success'] }
+        });
+        if (pendingPayment) {
+            return res.status(400).json({
+                error: 'You already have a pending payment for this fridge. Please wait for admin approval.'
+            });
+        }
 
-        // Save payment information
+        // Initiate STK Push
+        let stkData;
+        try {
+            stkData = await initiateStkPush(user.phone, fridge.price);
+        } catch (stkErr) {
+            console.error('STK Push failed:', stkErr.message);
+            return res.status(502).json({ error: 'M-Pesa prompt failed. Check your phone number or try again.' });
+        }
+
+        // Save payment with CheckoutRequestID so callback can match it
         const payment = new Payment({
             userEmail: user.email,
             fridgeId: fridge.id,
             fridgeName: fridge.name,
             fridgePrice: fridge.price,
+            fridgeDailyEarn: fridge.dailyEarn || 0,
+            fridgeDurationHrs: fridge.durationHrs || 0,
             phone: user.phone,
-            transactionCode: stkResponse.ResponseCode // Or any relevant code from stkResponse
+            checkoutRequestId: stkData.CheckoutRequestID,
+            stkStatus: 'pending'
         });
         await payment.save();
 
         await bot.telegram.sendMessage(
             ADMIN_CHAT_ID,
-            `💰 New Fridge Payment\n━━━━━━━━━━━━━━━━━━\nUser: ${user.email}\nFridge: ${fridge.name}\nAmount: KES ${fridge.price}\nPhone: ${user.phone}\n\n👉 Go to Admin Panel to approve`
+            `📲 STK Push Sent\n━━━━━━━━━━━━━━━━━━\nUser: ${user.email}\nFridge: ${fridge.name}\nAmount: KES ${fridge.price}\nPhone: ${user.phone}\nCheckoutID: ${stkData.CheckoutRequestID}\n\nWaiting for M-Pesa callback...`
         );
 
-        res.json({ message: 'Payment submitted. Awaiting admin approval.' });
+        res.json({
+            message: 'M-Pesa prompt sent to your phone. Enter your PIN to complete payment.',
+            checkoutRequestId: stkData.CheckoutRequestID
+        });
     } catch (err) {
+        console.error('Payment submit error:', err);
         res.status(500).json({ error: err.message });
     }
 });
 
-// ================= PAYMENT: MANUAL (BUY TILL) =================
+// ================= M-PESA STK CALLBACK (called by Safaricom) =================
+// SECURITY: Only Safaricom IPs should hit this endpoint
+const SAFARICOM_IPS = [
+    '196.201.214.200', '196.201.214.206', '196.201.213.114',
+    '196.201.214.207', '196.201.214.208', '196.201.213.44',
+    '196.201.212.127', '196.201.212.138', '196.201.212.129',
+    '196.201.212.136', '196.201.212.74', '196.201.212.69'
+];
+
+app.post('/api/payment/mpesa/callback', async (req, res) => {
+    // Validate Safaricom IP (skip check in dev/test environments)
+    if (process.env.NODE_ENV === 'production') {
+        const callerIP = req.ip || req.connection.remoteAddress;
+        const cleanIP = callerIP.replace('::ffff:', '');
+        if (!SAFARICOM_IPS.includes(cleanIP)) {
+            console.log(`🚨 Callback rejected from unknown IP: ${cleanIP}`);
+            return res.status(403).json({ error: 'Forbidden' });
+        }
+    }
+
+    // Always respond 200 immediately — Safaricom retries if you're slow
+    res.status(200).json({ ResultCode: 0, ResultDesc: 'Accepted' });
+
+    try {
+        const body = req.body;
+        const stkCallback = body?.Body?.stkCallback;
+        if (!stkCallback) return;
+
+        const checkoutRequestId = stkCallback.CheckoutRequestID;
+        const resultCode = stkCallback.ResultCode;
+
+        const payment = await Payment.findOne({ checkoutRequestId });
+        if (!payment) {
+            console.log(`⚠️ Callback received for unknown CheckoutRequestID: ${checkoutRequestId}`);
+            return;
+        }
+
+        if (resultCode === 0) {
+            // Payment successful — extract M-Pesa transaction code
+            const items = stkCallback.CallbackMetadata?.Item || [];
+            const mpesaCode = items.find(i => i.Name === 'MpesaReceiptNumber')?.Value;
+            const amount    = items.find(i => i.Name === 'Amount')?.Value;
+            const phone     = items.find(i => i.Name === 'PhoneNumber')?.Value;
+
+            payment.transactionCode = mpesaCode || '';
+            payment.stkStatus = 'success';
+            await payment.save();
+
+            console.log(`✅ M-Pesa payment confirmed: ${mpesaCode} | KES ${amount} | ${phone}`);
+
+            await bot.telegram.sendMessage(
+                ADMIN_CHAT_ID,
+                `✅ M-Pesa Payment Confirmed!\n━━━━━━━━━━━━━━━━━━\nUser: ${payment.userEmail}\nFridge: ${payment.fridgeName}\nAmount: KES ${amount}\nM-Pesa Code: ${mpesaCode}\nPhone: ${phone}\n\n👉 Go to Admin Panel to approve`
+            );
+        } else {
+            // Payment failed or cancelled
+            payment.stkStatus = 'failed';
+            await payment.save();
+
+            const desc = stkCallback.ResultDesc || 'Payment failed';
+            console.log(`❌ STK payment failed for ${payment.userEmail}: ${desc}`);
+
+            try {
+                await bot.telegram.sendMessage(
+                    ADMIN_CHAT_ID,
+                    `❌ STK Payment Failed\nUser: ${payment.userEmail}\nFridge: ${payment.fridgeName}\nReason: ${desc}`
+                );
+            } catch(e) {}
+        }
+    } catch (err) {
+        console.error('Callback processing error:', err);
+    }
+});
+
+// ================= PAYMENT: MANUAL (FALLBACK — enter code if STK fails) =================
 app.post('/api/payment/manual', auth, async (req, res) => {
     try {
         const { fridgeId, txnCode } = req.body;
@@ -713,14 +810,13 @@ app.post('/api/payment/manual', auth, async (req, res) => {
         const duplicate = await Payment.findOne({ transactionCode: txnCode.toUpperCase() });
         if (duplicate) return res.status(400).json({ error: 'Transaction code already used' });
 
-        // Prevent duplicate pending payments for same fridge
-        const pendingPayment = await Payment.findOne({ 
-            userEmail: user.email, 
+        const pendingPayment = await Payment.findOne({
+            userEmail: user.email,
             fridgeId: fridge.id,
-            approved: false 
+            approved: false
         });
-        if (pendingPayment) return res.status(400).json({ 
-            error: 'You already have a pending payment for this fridge. Please wait for admin approval or rejection before submitting again.' 
+        if (pendingPayment) return res.status(400).json({
+            error: 'You already have a pending payment for this fridge.'
         });
 
         const payment = new Payment({
@@ -731,13 +827,14 @@ app.post('/api/payment/manual', auth, async (req, res) => {
             fridgeDailyEarn: fridge.dailyEarn || 0,
             fridgeDurationHrs: fridge.durationHrs || 0,
             phone: user.phone,
-            transactionCode: txnCode.toUpperCase()
+            transactionCode: txnCode.toUpperCase(),
+            stkStatus: 'manual'
         });
         await payment.save();
 
         await bot.telegram.sendMessage(
             ADMIN_CHAT_ID,
-            `💰 New Fridge Payment\n━━━━━━━━━━━━━━━━━━\nUser: ${user.email}\nPhone: ${user.phone}\nFridge: ${fridge.name}\nAmount: KES ${fridge.price}\nM-Pesa Code: ${txnCode.toUpperCase()}\n\n👉 Go to Admin Panel to approve`
+            `💰 Manual Payment Submitted\n━━━━━━━━━━━━━━━━━━\nUser: ${user.email}\nPhone: ${user.phone}\nFridge: ${fridge.name}\nAmount: KES ${fridge.price}\nM-Pesa Code: ${txnCode.toUpperCase()}\n\n👉 Go to Admin Panel to approve`
         );
 
         res.json({ message: 'Payment submitted! Awaiting admin verification.' });
@@ -769,8 +866,6 @@ app.post('/api/admin/payment/approve', auth, async (req, res) => {
         if (!user || !fridge) return res.status(404).json({ error: 'User or fridge not found' });
 
         if (fridge.id.startsWith('offer')) {
-            // Use dailyEarn from payment record (saved at buy time) NOT current fridge state
-            // This prevents earning=0 if fridge was reset before admin approves
             const earnToSave = payment.fridgeDailyEarn || fridge.dailyEarn || 0;
             const durationHrs = payment.fridgeDurationHrs || fridge.durationHrs || 24;
             const endTime = new Date(Date.now() + durationHrs * 60 * 60 * 1000);
@@ -784,7 +879,6 @@ app.post('/api/admin/payment/approve', auth, async (req, res) => {
                 earningAdded: false
             });
         } else {
-            // Use dailyEarn from payment record to ensure correct amount is saved
             const earnToSave = payment.fridgeDailyEarn || fridge.dailyEarn || 0;
             user.fridges.push({
                 id: fridge.id,
@@ -800,7 +894,6 @@ app.post('/api/admin/payment/approve', auth, async (req, res) => {
         payment.approved = true;
         await payment.save();
 
-        // ── Credit referral reward based on deposit amount ──
         if (user.referredBy && !user.referralRewarded) {
             const reward = getReferralReward(payment.fridgePrice || 0);
             if (reward > 0) {
@@ -810,7 +903,7 @@ app.post('/api/admin/payment/approve', auth, async (req, res) => {
                     await referrer.save();
                     user.referralRewarded = true;
                     await user.save();
-                    console.log(`✅ Referral reward: KES ${reward} credited to ${user.referredBy} (referred ${user.email} deposited KES ${payment.fridgePrice})`);
+                    console.log(`✅ Referral reward: KES ${reward} credited to ${user.referredBy}`);
                 }
             }
         }
@@ -902,7 +995,6 @@ app.post('/api/offer/redeem', auth, async (req, res) => {
         const user = await User.findOne({ email: req.user.email });
         if (!user) return res.status(404).json({ error: 'User not found' });
 
-        // Must have at least one approved normal fridge (min deposit KES 100)
         const hasDeposit = await Payment.findOne({
             userEmail: user.email,
             approved: true,
@@ -924,7 +1016,6 @@ app.post('/api/offer/redeem', auth, async (req, res) => {
 });
 
 // ================= OFFER: FRONTEND PINGS THIS WHEN TIMER ENDS =================
-// Actual crediting is handled by the minute cron below — this just triggers it early
 app.post('/api/offer/expired/:fridgeId', auth, async (req, res) => {
     try {
         await checkAndCreditOfferEarnings();
@@ -990,16 +1081,13 @@ app.post('/api/admin/lock', auth, async (req, res) => {
 });
 
 // ================= DAILY EARNINGS & AUTO-LOCK OFFERS =================
-// ── OFFER EARNINGS: every minute, credits immediately when endTime passes ──
 async function checkAndCreditOfferEarnings() {
     try {
         const now = new Date();
-        // Get ALL users who have fridges (broad query, filter in JS)
         const users = await User.find({ 'fridges.0': { $exists: true } });
 
         for (const user of users) {
             let credited = false;
-            // Use markModified to ensure mongoose detects subdoc changes
             for (let i = 0; i < user.fridges.length; i++) {
                 const f = user.fridges[i];
                 if (!f.id || !f.id.startsWith('offer')) continue;
@@ -1007,7 +1095,6 @@ async function checkAndCreditOfferEarnings() {
                 if (!f.endTime) continue;
                 if (now < new Date(f.endTime)) continue;
 
-                // Get earn amount — try from fridge record first, then payment record
                 let amount = f.dailyEarn || 0;
                 if (amount === 0) {
                     const pmt = await Payment.findOne({
@@ -1027,7 +1114,6 @@ async function checkAndCreditOfferEarnings() {
             if (credited) await user.save();
         }
 
-        // Auto-lock expired global offer fridges
         for (const fridge of FRIDGES) {
             if (!fridge.id.startsWith('offer') || fridge.locked) continue;
             if (fridge.startTime && fridge.durationHrs) {
@@ -1048,6 +1134,7 @@ async function checkAndCreditOfferEarnings() {
     }
 }
 
+<<<<<<< HEAD
 // ── Mutex flag to prevent concurrent runDailyEarnings calls ──
 let earningsRunning = false;
 
@@ -1056,13 +1143,23 @@ async function runDailyEarnings() {
     // ✅ MUTEX: if already running (e.g. midnight cron + hourly cron fire at same second), skip
     if (earningsRunning) {
         console.log('⚠️ runDailyEarnings already in progress — skipping duplicate call');
+=======
+let earningsRunning = false;
+
+async function runDailyEarnings() {
+    if (earningsRunning) {
+        console.log('⚠️ runDailyEarnings already in progress — skipping');
+>>>>>>> f0e6183 (Backup 2026-04-04 18:41:46)
         return;
     }
     earningsRunning = true;
     try {
         const users = await User.find();
         const now = new Date();
+<<<<<<< HEAD
         // Kenya date string e.g. "2026-03-27"
+=======
+>>>>>>> f0e6183 (Backup 2026-04-04 18:41:46)
         const todayKenya = new Date(now.getTime() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
         let totalCredited = 0;
         let usersUpdated = 0;
@@ -1081,6 +1178,7 @@ async function runDailyEarnings() {
                 const hoursSinceBuy = (now - boughtAt) / (1000 * 60 * 60);
                 if (hoursSinceBuy < 24) continue;
 
+<<<<<<< HEAD
                 // ✅ DEDUP: skip if already credited today (Kenya date)
                 const lastEarnedAt = f.lastEarnedAt ? new Date(f.lastEarnedAt) : null;
                 if (lastEarnedAt) {
@@ -1090,6 +1188,16 @@ async function runDailyEarnings() {
 
                 earnThisRun += dailyEarn;
                 user.fridges[i].lastEarnedAt = now; // mark as credited today
+=======
+                const lastEarnedAt = f.lastEarnedAt ? new Date(f.lastEarnedAt) : null;
+                if (lastEarnedAt) {
+                    const lastEarnedKenya = new Date(lastEarnedAt.getTime() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
+                    if (lastEarnedKenya === todayKenya) continue;
+                }
+
+                earnThisRun += dailyEarn;
+                user.fridges[i].lastEarnedAt = now;
+>>>>>>> f0e6183 (Backup 2026-04-04 18:41:46)
                 changed = true;
             }
 
@@ -1097,10 +1205,14 @@ async function runDailyEarnings() {
                 user.markModified('fridges');
                 await User.updateOne(
                     { _id: user._id },
+<<<<<<< HEAD
                     {
                         $inc: { earning: earnThisRun },
                         $set: { fridges: user.fridges }
                     }
+=======
+                    { $inc: { earning: earnThisRun }, $set: { fridges: user.fridges } }
+>>>>>>> f0e6183 (Backup 2026-04-04 18:41:46)
                 );
                 totalCredited += earnThisRun;
                 usersUpdated++;
@@ -1108,9 +1220,8 @@ async function runDailyEarnings() {
             }
         }
 
-        console.log(`✅ Daily earnings DONE: KES ${totalCredited} to ${usersUpdated} users at ${now.toISOString()}`);
+        console.log(`✅ Daily earnings DONE: KES ${totalCredited} to ${usersUpdated} users`);
 
-        // Notify admin
         try {
             if (typeof bot !== 'undefined' && usersUpdated > 0) {
                 await bot.telegram.sendMessage(
@@ -1122,19 +1233,19 @@ async function runDailyEarnings() {
     } catch (err) {
         console.error('Daily earnings error:', err);
     } finally {
+<<<<<<< HEAD
         earningsRunning = false; // always release the lock
+=======
+        earningsRunning = false;
+>>>>>>> f0e6183 (Backup 2026-04-04 18:41:46)
     }
 }
 
-// ── MISSED CRON RECOVERY: runs every hour to catch any missed midnight cron ──
-// This is critical for Render free tier which may sleep and miss the midnight cron
 async function checkMissedEarnings() {
     try {
         const now = new Date();
-        // Only run between 12:00 AM - 2:00 AM Kenya time to catch missed midnight cron
         const kenyaHour = new Date(now.getTime() + 3 * 60 * 60 * 1000).getUTCHours();
         if (kenyaHour >= 0 && kenyaHour <= 2) {
-            // Check if earnings were already credited today
             const todayKey = new Date(now.getTime() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
             const alreadyRan = await Settings.findOne({ key: 'last_earnings_date' });
             if (!alreadyRan || alreadyRan.value !== todayKey) {
@@ -1155,37 +1266,24 @@ async function checkMissedEarnings() {
 // ================= TELEGRAM BOT =================
 const bot = new Telegraf(TELEGRAM_TOKEN);
 
-// All approvals handled in admin panel
-
-
 bot.launch().then(() => console.log('Telegram bot running'))
 .catch(err => {
     if (err.message && err.message.includes('409')) {
-        console.log('⚠️ Telegram bot already running elsewhere (Render). Skipping local bot launch.');
+        console.log('⚠️ Telegram bot already running elsewhere. Skipping local launch.');
     } else {
         console.error('Telegram bot error:', err.message);
     }
 });
 
 // ================= CRON JOBS =================
-// Every minute — instantly credit offer earnings when they expire
 cron.schedule('* * * * *', checkAndCreditOfferEarnings);
-
-// 12:00 AM Kenya time (UTC+3 = 21:00 UTC) — daily earnings for normal fridges
 cron.schedule('0 21 * * *', async () => {
     const now = new Date();
     const todayKey = new Date(now.getTime() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
     await runDailyEarnings();
-    await Settings.findOneAndUpdate(
-        { key: 'last_earnings_date' },
-        { value: todayKey },
-        { upsert: true }
-    );
+    await Settings.findOneAndUpdate({ key: 'last_earnings_date' }, { value: todayKey }, { upsert: true });
 }, { timezone: 'UTC' });
-
-// Every hour — recovery cron in case Render slept and missed midnight
 cron.schedule('0 * * * *', checkMissedEarnings);
-
 console.log('✅ All cron jobs scheduled');
 
 // ================= USER WITHDRAWAL REQUEST =================
@@ -1195,14 +1293,12 @@ app.post('/api/withdraw', auth, async (req, res) => {
         const user = await User.findOne({ email: req.user.email });
         if (!user) return res.status(404).json({ error: 'User not found' });
 
-        // ── Weekday check: Monday(1) to Friday(5) only, Kenya time (UTC+3) ──
         const kenyaDate = new Date(Date.now() + 3 * 60 * 60 * 1000);
-        const dayOfWeek = kenyaDate.getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+        const dayOfWeek = kenyaDate.getUTCDay();
         if (dayOfWeek === 0 || dayOfWeek === 6) {
-            return res.status(400).json({ error: 'Withdrawals are only available Monday to Friday. Please try again on a weekday.' });
+            return res.status(400).json({ error: 'Withdrawals are only available Monday to Friday.' });
         }
 
-        // ── Must have at least one approved normal fridge (KES 100 min deposit) ──
         const hasDeposit = await Payment.findOne({
             userEmail: user.email,
             approved: true,
@@ -1212,10 +1308,9 @@ app.post('/api/withdraw', auth, async (req, res) => {
             return res.status(400).json({ error: 'You must first deposit (buy a normal fridge starting from KES 100) before withdrawing.' });
         }
 
-        // Block if already has pending withdrawal
         const pendingWd = await Withdrawal.findOne({ userEmail: user.email, approved: false });
         if (pendingWd) {
-            return res.status(400).json({ error: 'You already have a pending withdrawal. Please wait for admin approval or rejection before submitting again.' });
+            return res.status(400).json({ error: 'You already have a pending withdrawal. Please wait before submitting again.' });
         }
 
         if (!phone || !amount || amount < 200) {
@@ -1230,12 +1325,7 @@ app.post('/api/withdraw', auth, async (req, res) => {
             return res.status(400).json({ error: 'Insufficient earnings' });
         }
 
-        const withdrawal = new Withdrawal({
-            userEmail: user.email,
-            phone,
-            amount
-        });
-
+        const withdrawal = new Withdrawal({ userEmail: user.email, phone, amount });
         await withdrawal.save();
         user.lastWithdrawalAttempt = new Date();
         await user.save();
@@ -1251,7 +1341,7 @@ app.post('/api/withdraw', auth, async (req, res) => {
     }
 });
 
-// ================= GET COMMUNITY LINKS (public) =================
+// ================= GET COMMUNITY LINKS =================
 app.get('/api/links', (req, res) => {
     res.json(COMMUNITY_LINKS);
 });
@@ -1288,8 +1378,7 @@ app.get('/api/admin/stats', auth, async (req, res) => {
         const totalFridgesBought = payments.length;
         const newUsersToday = users.filter(u => {
             const d = new Date(u.createdAt);
-            const now = new Date();
-            return d.toDateString() === now.toDateString();
+            return d.toDateString() === new Date().toDateString();
         }).length;
         res.json({
             totalUsers: users.length,
@@ -1342,7 +1431,7 @@ app.post('/api/admin/broadcast', auth, async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ================= GET LATEST BROADCAST (for dashboard) =================
+// ================= GET LATEST BROADCAST =================
 app.get('/api/broadcast/latest', auth, async (req, res) => {
     try {
         const b = await Broadcast.findOne().sort({ sentAt: -1 });
@@ -1350,11 +1439,11 @@ app.get('/api/broadcast/latest', auth, async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ================= ADMIN: LOG ACTIONS (helper called internally) =================
+// ================= ADMIN: LOG ACTIONS =================
 async function logAction(adminEmail, action, details, ip = '') {
     try {
         await ActivityLog.create({ action, adminEmail, details, ip });
-    } catch(e) { /* non-critical */ }
+    } catch(e) {}
 }
 
 // ================= TRADING: DEPOSIT KES → USD =================
@@ -1395,7 +1484,7 @@ app.post('/api/trade/withdraw', auth, async (req, res) => {
     } catch(err) { res.status(500).json({ error: err.message }); }
 });
 
-// ================= ADMIN: REVOKE APPROVED PAYMENT (undo approval) =================
+// ================= ADMIN: REVOKE APPROVED PAYMENT =================
 app.post('/api/admin/payment/revoke', auth, async (req, res) => {
     try {
         if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
@@ -1406,14 +1495,7 @@ app.post('/api/admin/payment/revoke', auth, async (req, res) => {
 
         const user = await User.findOne({ email: payment.userEmail });
         if (user) {
-            // Remove the fridge from user's fridges array
-            user.fridges = user.fridges.filter(f => {
-                // Remove the most recently added matching fridge
-                if (f.id === payment.fridgeId) {
-                    return false;
-                }
-                return true;
-            });
+            user.fridges = user.fridges.filter(f => f.id !== payment.fridgeId);
             user.markModified('fridges');
             await user.save();
         }
@@ -1422,10 +1504,10 @@ app.post('/api/admin/payment/revoke', auth, async (req, res) => {
         payment.revoked = true;
         await payment.save();
 
-        await ActivityLog.create({ 
-            action: 'PAYMENT_REVOKED', 
-            adminEmail: req.user.email, 
-            details: `Payment ${paymentId} revoked for ${payment.userEmail}` 
+        await ActivityLog.create({
+            action: 'PAYMENT_REVOKED',
+            adminEmail: req.user.email,
+            details: `Payment ${paymentId} revoked for ${payment.userEmail}`
         });
 
         res.json({ message: 'Payment approval revoked successfully' });
@@ -1438,11 +1520,8 @@ app.get('/api/admin/user/:email', auth, async (req, res) => {
         if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
         const user = await User.findOne({ email: req.params.email }, '-password');
         if (!user) return res.status(404).json({ error: 'User not found' });
-        
-        // Get user's payment history
         const payments = await Payment.find({ userEmail: req.params.email }).sort({ createdAt: -1 });
         const withdrawals = await Withdrawal.find({ userEmail: req.params.email }).sort({ createdAt: -1 });
-        
         res.json({ user, payments, withdrawals });
     } catch(err) { res.status(500).json({ error: err.message }); }
 });
@@ -1454,17 +1533,14 @@ app.post('/api/admin/user/remove-fridge', auth, async (req, res) => {
         const { email, fridgeIndex } = req.body;
         const user = await User.findOne({ email });
         if (!user) return res.status(404).json({ error: 'User not found' });
-        
         user.fridges.splice(fridgeIndex, 1);
         user.markModified('fridges');
         await user.save();
-
-        await ActivityLog.create({ 
-            action: 'FRIDGE_REMOVED', 
-            adminEmail: req.user.email, 
-            details: `Fridge at index ${fridgeIndex} removed from ${email}` 
+        await ActivityLog.create({
+            action: 'FRIDGE_REMOVED',
+            adminEmail: req.user.email,
+            details: `Fridge at index ${fridgeIndex} removed from ${email}`
         });
-
         res.json({ message: 'Fridge removed successfully' });
     } catch(err) { res.status(500).json({ error: err.message }); }
 });
@@ -1477,7 +1553,7 @@ app.post('/api/admin/user/reset-password', auth, async (req, res) => {
         if (!newPassword || newPassword.length < 4) return res.status(400).json({ error: 'Password too short' });
         const user = await User.findOne({ email });
         if (!user) return res.status(404).json({ error: 'User not found' });
-        user.password = await require('bcryptjs').hash(newPassword, 10);
+        user.password = await bcrypt.hash(newPassword, 10);
         await user.save();
         res.json({ message: 'Password reset successfully' });
     } catch(err) { res.status(500).json({ error: err.message }); }
@@ -1492,27 +1568,18 @@ app.post('/api/admin/user/ban', auth, async (req, res) => {
         if (!user) return res.status(404).json({ error: 'User not found' });
         user.banned = banned;
         await user.save();
-        await ActivityLog.create({ 
-            action: banned ? 'USER_BANNED' : 'USER_UNBANNED', 
-            adminEmail: req.user.email, 
-            details: email 
+        await ActivityLog.create({
+            action: banned ? 'USER_BANNED' : 'USER_UNBANNED',
+            adminEmail: req.user.email,
+            details: email
         });
         res.json({ message: banned ? 'User banned' : 'User unbanned' });
     } catch(err) { res.status(500).json({ error: err.message }); }
 });
 
 // ================= GRACEFUL SHUTDOWN =================
-process.on('SIGINT', () => {
-    console.log('Shutting down...');
-    bot.stop('SIGINT');
-    process.exit();
-});
-
-process.on('SIGTERM', () => {
-    console.log('Shutting down...');
-    bot.stop('SIGTERM');
-    process.exit();
-});
+process.on('SIGINT',  () => { bot.stop('SIGINT');  process.exit(); });
+process.on('SIGTERM', () => { bot.stop('SIGTERM'); process.exit(); });
 
 // ================= START SERVER =================
 app.listen(PORT, () => {

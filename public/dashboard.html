@@ -9,6 +9,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Bitfreeze">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
     <title>Bitfreeze — Dashboard</title>
     <style>
         :root {
@@ -18,465 +20,166 @@
             --accent: #ff8a00;
             --glass: rgba(255, 255, 255, 0.03);
         }
-
-        body {
-            margin: 0;
-            font-family: Inter, system-ui, Arial;
-            background: radial-gradient(1200px 600px at top, #121a26, #070b11);
-            color: #e6eef6;
-        }
-
-        .wrap {
-            max-width: 1200px;
-            margin: auto;
-            padding: 20px;
-        }
-
-        .card {
-            background: linear-gradient(180deg, var(--card), #0b1420);
-            border-radius: 14px;
-            padding: 20px;
-            margin-bottom: 20px;
-            border: 1px solid rgba(255, 255, 255, .05);
-        }
-
-        h2 {
-            margin-top: 0;
-        }
-
-        label {
-            display: block;
-            margin-top: 10px;
-            font-size: 15px;
-            color: var(--muted);
-        }
-
-        input, button {
-            width: 100%;
-            padding: 12px;
-            margin-top: 6px;
-            border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, .05);
-            background: var(--glass);
-            color: #fff;
-        }
-
-        button {
-            background: linear-gradient(90deg, var(--accent), #ffb347);
-            color: #111;
-            font-weight: 700;
-            cursor: pointer;
-        }
-
-        .tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-
-        .tab {
-            flex: 1;
-            padding: 12px;
-            border-radius: 10px;
-            background: var(--glass);
-            border: 1px solid rgba(255, 255, 255, .05);
-            color: #fff;
-            font-weight: 600;
-            cursor: pointer;
-            text-align: center;
-        }
-
-        .tab.active {
-            background: linear-gradient(90deg, var(--accent), #ffb347);
-            color: #111;
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        .balance-container {
-            display: flex;
-            gap: 20px;
-            flex-wrap: wrap;
-        }
-
-        .balance-box {
-            flex: 1;
-            background: var(--glass);
-            border-radius: 10px;
-            padding: 10px;
-            text-align: center;
-        }
-
-        .balance-box p {
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--accent);
-        }
-
-        #animatedEarnings {
-            font-size: 28px;
-            font-weight: 700;
-            color: #00ffb0;
-            margin-top: 10px;
-        }
-
-        .fridge-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 12px;
-        }
-
-        .fridge {
-            background: var(--glass);
-            border-radius: 10px;
-            padding: 10px;
-            text-align: center;
-        }
-
-        .fridge img {
-            width: 100%;
-            height: 150px;
-            border-radius: 8px;
-            object-fit: cover;
-        }
-
-        .chart-container {
-            width: 100%;
-            height: 70vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-top: 10px;
-        }
-
-        .chart-container iframe {
-            width: 100%;
-            height: 100%;
-            border: 0;
-            border-radius: 12px;
-        }
-
-        @media (max-width: 768px) {
-            .fridge img {
-                height: 120px;
-            }
-
-            .chart-container {
-                height: 65vh;
-            }
-        }
+        body { margin:0; font-family:Inter,system-ui,Arial; background:radial-gradient(1200px 600px at top,#121a26,#070b11); color:#e6eef6; }
+        .wrap { max-width:1200px; margin:auto; padding:20px; }
+        .card { background:linear-gradient(180deg,var(--card),#0b1420); border-radius:14px; padding:20px; margin-bottom:20px; border:1px solid rgba(255,255,255,.05); }
+        h2 { margin-top:0; }
+        label { display:block; margin-top:10px; font-size:15px; color:var(--muted); }
+        input, button { width:100%; padding:12px; margin-top:6px; border-radius:8px; border:1px solid rgba(255,255,255,.05); background:var(--glass); color:#fff; }
+        button { background:linear-gradient(90deg,var(--accent),#ffb347); color:#111; font-weight:700; cursor:pointer; }
+        .tabs { display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; }
+        .tab { flex:1; padding:12px; border-radius:10px; background:var(--glass); border:1px solid rgba(255,255,255,.05); color:#fff; font-weight:600; cursor:pointer; text-align:center; }
+        .tab.active { background:linear-gradient(90deg,var(--accent),#ffb347); color:#111; }
+        .tab-content { display:none; }
+        .tab-content.active { display:block; }
+        .balance-container { display:flex; gap:20px; flex-wrap:wrap; }
+        .balance-box { flex:1; background:var(--glass); border-radius:10px; padding:10px; text-align:center; }
+        .balance-box p { font-size:20px; font-weight:700; color:var(--accent); }
+        #animatedEarnings { font-size:28px; font-weight:700; color:#00ffb0; margin-top:10px; }
+        .fridge-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; }
+        .fridge { background:var(--glass); border-radius:10px; padding:10px; text-align:center; }
+        .fridge img { width:100%; height:150px; border-radius:8px; object-fit:cover; }
+        .chart-container { width:100%; height:70vh; display:flex; justify-content:center; align-items:center; margin-top:10px; }
+        .chart-container iframe { width:100%; height:100%; border:0; border-radius:12px; }
+        @media(max-width:768px){ .fridge img{height:120px} .chart-container{height:65vh} }
 
         /* PAYMENT MODAL */
-        #paymentModal {
-            display: none; position: fixed; top:0; left:0;
-            width:100%; height:100%;
-            background: rgba(0,0,0,0.85);
-            backdrop-filter: blur(6px);
-            justify-content: center; align-items: center;
-            z-index: 999;
-        }
-        #paymentModal .modalContent {
-            background: linear-gradient(160deg,#0f1a2a,#0b1220);
-            border: 1px solid rgba(255,138,0,0.25);
-            border-radius: 20px; max-width:420px; width:92%;
-            overflow:hidden;
-            box-shadow: 0 30px 80px rgba(0,0,0,0.6);
-            animation: slideUp 0.3s cubic-bezier(0.16,1,0.3,1);
-        }
+        #paymentModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(6px); justify-content:center; align-items:center; z-index:999; }
+        #paymentModal .modalContent { background:linear-gradient(160deg,#0f1a2a,#0b1220); border:1px solid rgba(255,138,0,0.25); border-radius:20px; max-width:420px; width:92%; overflow:hidden; box-shadow:0 30px 80px rgba(0,0,0,0.6); animation:slideUp 0.3s cubic-bezier(0.16,1,0.3,1); max-height:92vh; overflow-y:auto; }
         @keyframes slideUp { from{transform:translateY(30px);opacity:0} to{transform:translateY(0);opacity:1} }
-        .modal-header {
-            background: linear-gradient(90deg,#ff8a00,#ffb347);
-            padding:18px 24px; display:flex; align-items:center; gap:12px;
-        }
-        .brand-logo { width:38px;height:38px;background:rgba(0,0,0,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px; }
+        .modal-header { background:linear-gradient(90deg,#ff8a00,#ffb347); padding:18px 24px; display:flex; align-items:center; gap:12px; position:sticky; top:0; }
+        .brand-logo { width:38px; height:38px; background:rgba(0,0,0,0.2); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; }
         .modal-body { padding:24px; }
-        .fridge-order-row { display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:12px 16px;margin-bottom:10px; }
-        .order-label { font-size:13px;color:#9aa6b2; }
-        .order-value { font-size:15px;font-weight:700;color:#fff; }
-        .till-card { background:linear-gradient(135deg,#0d2137,#102040);border:1px solid rgba(255,138,0,0.3);border-radius:14px;padding:20px;margin:16px 0;position:relative;overflow:hidden; }
-        .till-card::before { content:'';position:absolute;top:-40px;right:-40px;width:120px;height:120px;background:radial-gradient(circle,rgba(255,138,0,0.12),transparent 70%);border-radius:50%; }
-        .mpesa-badge { display:inline-flex;align-items:center;gap:6px;background:#4caf50;color:#fff;font-size:11px;font-weight:800;letter-spacing:1px;padding:4px 10px;border-radius:20px;margin-bottom:12px; }
-        .till-label { font-size:11px;color:#9aa6b2;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px; }
-        .till-number { font-size:34px;font-weight:900;color:#ff8a00;letter-spacing:4px;font-family:'Courier New',monospace;line-height:1; }
-        .till-name { font-size:12px;color:rgba(255,255,255,0.4);margin-top:4px; }
-        .copy-btn { position:absolute;bottom:14px;right:14px;background:rgba(255,138,0,0.15);border:1px solid rgba(255,138,0,0.4);color:#ff8a00;font-size:12px;font-weight:700;padding:5px 12px;border-radius:7px;cursor:pointer;width:auto;margin:0;transition:all 0.2s; }
-        .copy-btn:hover { background:rgba(255,138,0,0.3); }
-        .steps-list { margin-bottom:16px; }
-        .steps-title { font-size:11px;color:#9aa6b2;text-transform:uppercase;letter-spacing:1px;font-weight:600;margin:0 0 10px; }
-        .step { display:flex;align-items:flex-start;gap:10px;margin-bottom:8px; }
-        .step-num { width:22px;height:22px;background:linear-gradient(90deg,#ff8a00,#ffb347);color:#111;font-size:11px;font-weight:800;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px; }
-        .step span { font-size:13px;color:#c8d4e0;line-height:1.5; }
-        .step strong { color:#fff; }
-        .txn-input-wrap { margin-bottom:16px; }
-        .txn-input-wrap label { font-size:11px;color:#9aa6b2;text-transform:uppercase;letter-spacing:0.8px;font-weight:600;margin-bottom:7px;display:block;margin-top:0; }
-        .txn-input-wrap input { width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px 16px;color:#fff;font-size:14px;font-family:'Courier New',monospace;letter-spacing:1px;box-sizing:border-box; }
-        .txn-input-wrap input:focus { outline:none;border-color:rgba(255,138,0,0.5); }
-        .modal-actions { display:flex;gap:10px; }
-        .btn-confirm { flex:1;background:linear-gradient(90deg,#ff8a00,#ffb347);color:#111;font-weight:800;font-size:14px;padding:13px;border-radius:10px;border:none;cursor:pointer;width:auto;margin:0; }
-        .btn-cancel { background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:#9aa6b2;font-size:14px;font-weight:600;padding:13px 20px;border-radius:10px;cursor:pointer;width:auto;margin:0; }
-        #paymentMsg { font-size:13px;text-align:center;margin-top:10px;min-height:18px;color:#ffb347; }
-        .secure-badge { display:flex;align-items:center;justify-content:center;gap:6px;margin-top:12px;font-size:11px;color:rgba(255,255,255,0.2); }
+        .fridge-order-row { display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:12px 16px; margin-bottom:10px; }
+        .order-label { font-size:13px; color:#9aa6b2; }
+        .order-value { font-size:15px; font-weight:700; color:#fff; }
+        .modal-actions { display:flex; gap:10px; }
+        .btn-confirm { flex:1; background:linear-gradient(90deg,#ff8a00,#ffb347); color:#111; font-weight:800; font-size:14px; padding:13px; border-radius:10px; border:none; cursor:pointer; width:auto; margin:0; }
+        .btn-confirm:disabled { opacity:0.55; cursor:not-allowed; }
+        .btn-cancel { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); color:#9aa6b2; font-size:14px; font-weight:600; padding:13px 20px; border-radius:10px; cursor:pointer; width:auto; margin:0; }
+        #paymentMsg { font-size:13px; text-align:center; margin-top:10px; min-height:18px; color:#ffb347; }
+        .secure-badge { display:flex; align-items:center; justify-content:center; gap:6px; margin-top:12px; font-size:11px; color:rgba(255,255,255,0.2); }
+
+        /* PAYBILL CARD */
+        .mpesa-badge { display:inline-flex; align-items:center; gap:6px; background:#4caf50; color:#fff; font-size:11px; font-weight:800; letter-spacing:1px; padding:4px 10px; border-radius:20px; margin-bottom:12px; }
+        .paybill-card { background:linear-gradient(135deg,#0d2137,#102040); border:1px solid rgba(255,138,0,0.35); border-radius:14px; padding:18px; margin:14px 0; position:relative; overflow:hidden; }
+        .paybill-card::after { content:''; position:absolute; top:-30px; right:-30px; width:100px; height:100px; background:radial-gradient(circle,rgba(255,138,0,0.1),transparent 70%); border-radius:50%; }
+        .paybill-row { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.05); }
+        .paybill-row:last-of-type { border-bottom:none; }
+        .paybill-key { font-size:11px; color:#9aa6b2; text-transform:uppercase; letter-spacing:1px; font-weight:600; }
+        .paybill-val { font-size:20px; font-weight:900; color:#ff8a00; font-family:'Courier New',monospace; letter-spacing:3px; }
+        .paybill-val.acct { color:#00e5ff; font-size:18px; }
+        .copy-pill { background:rgba(255,138,0,0.12); border:1px solid rgba(255,138,0,0.35); color:#ff8a00; font-size:11px; font-weight:700; padding:4px 10px; border-radius:6px; cursor:pointer; width:auto; margin:0 0 0 8px; flex-shrink:0; transition:background 0.15s; }
+        .copy-pill:hover { background:rgba(255,138,0,0.25); }
+        .pay-steps { margin:14px 0 0; }
+        .pay-step { display:flex; align-items:flex-start; gap:10px; margin-bottom:9px; }
+        .pay-step-num { width:22px; height:22px; background:linear-gradient(135deg,#ff8a00,#ffb347); color:#111; font-size:11px; font-weight:800; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+        .pay-step span { font-size:13px; color:#c8d4e0; line-height:1.5; }
+        .pay-step strong { color:#fff; }
+        .txn-wrap { margin:14px 0; }
+        .txn-wrap label { font-size:11px; color:#9aa6b2; text-transform:uppercase; letter-spacing:0.8px; font-weight:600; display:block; margin-bottom:7px; margin-top:0; }
+        .txn-wrap textarea { width:100%; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:12px 14px; color:#fff; font-size:13px; font-family:Inter,system-ui,Arial; line-height:1.5; resize:vertical; min-height:80px; box-sizing:border-box; }
+        .txn-wrap textarea:focus { outline:none; border-color:rgba(255,138,0,0.6); box-shadow:0 0 0 3px rgba(255,138,0,0.08); }
+        .txn-wrap textarea::placeholder { color:rgba(255,255,255,0.2); font-size:12px; }
 
         /* SUPPORT TAB */
-        .support-hero {
-            background: linear-gradient(135deg, #0d1f35 0%, #0f2040 100%);
-            border: 1px solid rgba(255,138,0,0.2);
-            border-radius: 14px;
-            padding: 28px 20px;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .support-hero .hero-icon { font-size: 48px; margin-bottom: 12px; }
-        .support-hero h2 { margin: 0 0 8px; font-size: 22px; color: #fff; }
-        .support-hero p { color: #9aa6b2; font-size: 14px; margin: 0; }
-
-        .community-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 14px;
-            margin-bottom: 20px;
-        }
-        .community-card {
-            border-radius: 14px;
-            padding: 20px;
-            text-align: center;
-            text-decoration: none;
-            display: block;
-            transition: transform 0.2s, opacity 0.2s;
-            border: 1px solid rgba(255,255,255,0.06);
-        }
-        .community-card:hover { transform: translateY(-2px); opacity: 0.9; }
-        .community-card.whatsapp { background: linear-gradient(135deg, #075e54, #128c7e); }
-        .community-card.telegram { background: linear-gradient(135deg, #0077b5, #229ed9); }
-        .community-card .c-icon { font-size: 32px; margin-bottom: 8px; }
-        .community-card .c-title { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 4px; }
-        .community-card .c-sub { font-size: 12px; color: rgba(255,255,255,0.7); }
-
-        .how-steps { margin-bottom: 20px; }
-        .how-step {
-            display: flex;
-            gap: 14px;
-            align-items: flex-start;
-            background: rgba(255,255,255,0.02);
-            border: 1px solid rgba(255,255,255,0.05);
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 10px;
-        }
-        .how-step .step-icon {
-            width: 42px; height: 42px;
-            background: linear-gradient(135deg, #ff8a00, #ffb347);
-            border-radius: 12px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 20px;
-            flex-shrink: 0;
-        }
-        .how-step .step-body h4 { margin: 0 0 4px; font-size: 15px; color: #fff; }
-        .how-step .step-body p  { margin: 0; font-size: 13px; color: #9aa6b2; line-height: 1.5; }
-
-        .faq-item {
-            border: 1px solid rgba(255,255,255,0.05);
-            border-radius: 12px;
-            margin-bottom: 10px;
-            overflow: hidden;
-        }
-        .faq-q {
-            padding: 15px 16px;
-            font-size: 14px;
-            font-weight: 600;
-            color: #e6eef6;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(255,255,255,0.02);
-        }
-        .faq-q:hover { background: rgba(255,255,255,0.04); }
-        .faq-q .arrow { transition: transform 0.2s; font-size: 12px; color: #ff8a00; }
-        .faq-q.open .arrow { transform: rotate(180deg); }
-        .faq-a {
-            display: none;
-            padding: 0 16px 15px;
-            font-size: 13px;
-            color: #9aa6b2;
-            line-height: 1.6;
-            border-top: 1px solid rgba(255,255,255,0.04);
-        }
-        .faq-a.open { display: block; }
-
-        .about-section { margin-bottom: 20px; }
-        .about-section h3 { color: #ff8a00; font-size: 16px; margin: 0 0 10px; }
-        .about-section p  { color: #9aa6b2; font-size: 13px; line-height: 1.7; margin: 0 0 10px; }
-
-        .terms-section p  { color: #9aa6b2; font-size: 13px; line-height: 1.7; margin: 0 0 10px; }
-        .terms-section h4 { color: #e6eef6; font-size: 14px; margin: 16px 0 6px; }
-
-        .contact-row {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 14px;
-            background: rgba(255,255,255,0.02);
-            border: 1px solid rgba(255,255,255,0.05);
-            border-radius: 10px;
-            margin-bottom: 10px;
-            text-decoration: none;
-            color: #e6eef6;
-            font-size: 14px;
-            transition: background 0.2s;
-        }
-        .contact-row:hover { background: rgba(255,138,0,0.08); }
-        .contact-row .ci { font-size: 22px; }
-
+        .support-hero { background:linear-gradient(135deg,#0d1f35 0%,#0f2040 100%); border:1px solid rgba(255,138,0,0.2); border-radius:14px; padding:28px 20px; text-align:center; margin-bottom:20px; }
+        .support-hero .hero-icon { font-size:48px; margin-bottom:12px; }
+        .support-hero h2 { margin:0 0 8px; font-size:22px; color:#fff; }
+        .support-hero p { color:#9aa6b2; font-size:14px; margin:0; }
+        .community-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:20px; }
+        .community-card { border-radius:14px; padding:20px; text-align:center; text-decoration:none; display:block; transition:transform 0.2s,opacity 0.2s; border:1px solid rgba(255,255,255,0.06); }
+        .community-card:hover { transform:translateY(-2px); opacity:0.9; }
+        .community-card.whatsapp { background:linear-gradient(135deg,#075e54,#128c7e); }
+        .community-card.telegram { background:linear-gradient(135deg,#0077b5,#229ed9); }
+        .community-card .c-icon { font-size:32px; margin-bottom:8px; }
+        .community-card .c-title { font-size:15px; font-weight:700; color:#fff; margin-bottom:4px; }
+        .community-card .c-sub { font-size:12px; color:rgba(255,255,255,0.7); }
+        .how-steps { margin-bottom:20px; }
+        .how-step { display:flex; gap:14px; align-items:flex-start; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:12px; padding:16px; margin-bottom:10px; }
+        .how-step .step-icon { width:42px; height:42px; background:linear-gradient(135deg,#ff8a00,#ffb347); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+        .how-step .step-body h4 { margin:0 0 4px; font-size:15px; color:#fff; }
+        .how-step .step-body p  { margin:0; font-size:13px; color:#9aa6b2; line-height:1.5; }
+        .faq-item { border:1px solid rgba(255,255,255,0.05); border-radius:12px; margin-bottom:10px; overflow:hidden; }
+        .faq-q { padding:15px 16px; font-size:14px; font-weight:600; color:#e6eef6; cursor:pointer; display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); }
+        .faq-q:hover { background:rgba(255,255,255,0.04); }
+        .faq-q .arrow { transition:transform 0.2s; font-size:12px; color:#ff8a00; }
+        .faq-q.open .arrow { transform:rotate(180deg); }
+        .faq-a { display:none; padding:0 16px 15px; font-size:13px; color:#9aa6b2; line-height:1.6; border-top:1px solid rgba(255,255,255,0.04); }
+        .faq-a.open { display:block; }
+        .about-section { margin-bottom:20px; }
+        .about-section h3 { color:#ff8a00; font-size:16px; margin:0 0 10px; }
+        .about-section p  { color:#9aa6b2; font-size:13px; line-height:1.7; margin:0 0 10px; }
+        .terms-section p  { color:#9aa6b2; font-size:13px; line-height:1.7; margin:0 0 10px; }
+        .terms-section h4 { color:#e6eef6; font-size:14px; margin:16px 0 6px; }
+        .contact-row { display:flex; align-items:center; gap:12px; padding:14px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:10px; margin-bottom:10px; text-decoration:none; color:#e6eef6; font-size:14px; transition:background 0.2s; }
+        .contact-row:hover { background:rgba(255,138,0,0.08); }
+        .contact-row .ci { font-size:22px; }
 
         /* BROADCAST BANNER */
-        #broadcastBanner {
-            display: none;
-            background: linear-gradient(90deg, rgba(255,138,0,0.15), rgba(255,179,71,0.1));
-            border: 1px solid rgba(255,138,0,0.35);
-            border-radius: 12px;
-            padding: 13px 18px;
-            margin-bottom: 16px;
-            font-size: 14px;
-            color: #ffe0a0;
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            animation: fadeIn 0.4s ease;
-        }
+        #broadcastBanner { display:none; background:linear-gradient(90deg,rgba(255,138,0,0.15),rgba(255,179,71,0.1)); border:1px solid rgba(255,138,0,0.35); border-radius:12px; padding:13px 18px; margin-bottom:16px; font-size:14px; color:#ffe0a0; align-items:flex-start; gap:10px; animation:fadeIn 0.4s ease; }
         @keyframes fadeIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
-        #broadcastBanner .b-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
-        #broadcastBanner .b-close {
-            margin-left: auto; background: none; border: none;
-            color: #9aa6b2; cursor: pointer; font-size: 16px;
-            width: auto; padding: 0; margin-top: 0;
-        }
+        #broadcastBanner .b-icon { font-size:18px; flex-shrink:0; margin-top:1px; }
+        #broadcastBanner .b-close { margin-left:auto; background:none; border:none; color:#9aa6b2; cursor:pointer; font-size:16px; width:auto; padding:0; margin-top:0; }
 
-
-        /* ── TRADING TAB ── */
-
-        /* ── TRADE TAB ── */
-        .trade-hero {
-            background: linear-gradient(135deg,#0d1a2a,#0f2040);
-            border:1px solid rgba(255,138,0,0.2);
-            border-radius:14px; padding:16px 20px; margin-bottom:14px;
-            display:flex; justify-content:space-between; align-items:center;
-            flex-wrap:wrap; gap:12px;
-        }
+        /* TRADING TAB */
+        .trade-hero { background:linear-gradient(135deg,#0d1a2a,#0f2040); border:1px solid rgba(255,138,0,0.2); border-radius:14px; padding:16px 20px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; }
         .trade-bal-item { text-align:center; }
-        .trade-bal-label { font-size:10px;color:#9aa6b2;text-transform:uppercase;letter-spacing:1px; }
-        .trade-bal-val { font-size:20px;font-weight:800;color:#00e676;font-family:'Courier New',monospace; }
-
-        .pair-scroll {
-            display:flex; gap:8px; overflow-x:auto; padding-bottom:6px;
-            margin-bottom:12px; scrollbar-width:none;
-        }
+        .trade-bal-label { font-size:10px; color:#9aa6b2; text-transform:uppercase; letter-spacing:1px; }
+        .trade-bal-val { font-size:20px; font-weight:800; color:#00e676; font-family:'Courier New',monospace; }
+        .pair-scroll { display:flex; gap:8px; overflow-x:auto; padding-bottom:6px; margin-bottom:12px; scrollbar-width:none; }
         .pair-scroll::-webkit-scrollbar { display:none; }
-        .pair-chip {
-            flex-shrink:0; padding:8px 16px; border-radius:20px;
-            font-size:12px; font-weight:700; cursor:pointer;
-            border:1px solid rgba(255,255,255,0.08);
-            background:rgba(255,255,255,0.03); color:#9aa6b2;
-            width:auto; margin:0; transition:all 0.15s; white-space:nowrap;
-        }
-        .pair-chip.active {
-            background:rgba(255,138,0,0.15);
-            border-color:rgba(255,138,0,0.4); color:#ff8a00;
-        }
-
-        .trade-chart-big {
-            border-radius:14px; overflow:hidden;
-            border:1px solid rgba(255,255,255,0.06);
-            margin-bottom:14px; height:65vh;
-        }
-        .trade-chart-big iframe { width:100%;height:100%;border:0; }
-
-        .trade-price-bar {
-            display:grid; grid-template-columns:1fr auto 1fr;
-            gap:8px; margin-bottom:14px; align-items:center;
-        }
-        .tprice-sell, .tprice-buy {
-            border-radius:12px; padding:16px; text-align:center;
-            cursor:pointer; transition:transform 0.15s;
-            border:2px solid transparent;
-        }
-        .tprice-sell {
-            background:rgba(255,29,68,0.1);
-            border-color:rgba(255,29,68,0.3);
-        }
-        .tprice-buy {
-            background:rgba(0,200,83,0.1);
-            border-color:rgba(0,200,83,0.3);
-        }
+        .pair-chip { flex-shrink:0; padding:8px 16px; border-radius:20px; font-size:12px; font-weight:700; cursor:pointer; border:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.03); color:#9aa6b2; width:auto; margin:0; transition:all 0.15s; white-space:nowrap; }
+        .pair-chip.active { background:rgba(255,138,0,0.15); border-color:rgba(255,138,0,0.4); color:#ff8a00; }
+        .trade-chart-big { border-radius:14px; overflow:hidden; border:1px solid rgba(255,255,255,0.06); margin-bottom:14px; height:65vh; }
+        .trade-chart-big iframe { width:100%; height:100%; border:0; }
+        .trade-price-bar { display:grid; grid-template-columns:1fr auto 1fr; gap:8px; margin-bottom:14px; align-items:center; }
+        .tprice-sell,.tprice-buy { border-radius:12px; padding:16px; text-align:center; cursor:pointer; transition:transform 0.15s; border:2px solid transparent; }
+        .tprice-sell { background:rgba(255,29,68,0.1); border-color:rgba(255,29,68,0.3); }
+        .tprice-buy  { background:rgba(0,200,83,0.1); border-color:rgba(0,200,83,0.3); }
         .tprice-sell:hover { transform:scale(1.02); border-color:#ff1744; }
         .tprice-buy:hover  { transform:scale(1.02); border-color:#00c853; }
-        .tprice-label { font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase; }
+        .tprice-label { font-size:10px; font-weight:800; letter-spacing:2px; text-transform:uppercase; }
         .tprice-sell .tprice-label { color:#ff3d5a; }
         .tprice-buy  .tprice-label { color:#00e676; }
-        .tprice-val { font-size:22px;font-weight:900;font-family:'Courier New',monospace;margin:4px 0; }
+        .tprice-val { font-size:22px; font-weight:900; font-family:'Courier New',monospace; margin:4px 0; }
         .tprice-sell .tprice-val { color:#ff3d5a; }
         .tprice-buy  .tprice-val { color:#00e676; }
-        .tprice-sub { font-size:10px;color:#9aa6b2; }
+        .tprice-sub { font-size:10px; color:#9aa6b2; }
         .tspread-box { text-align:center; }
-        .tspread-box .sp-l { font-size:9px;color:#9aa6b2;text-transform:uppercase; }
-        .tspread-box .sp-v { font-size:14px;font-weight:700;color:#ffb347;font-family:'Courier New',monospace; }
-
-        /* Coming Soon Modal */
-        .cs-overlay {
-            display:none; position:fixed; inset:0;
-            background:rgba(0,0,0,0.88); backdrop-filter:blur(10px);
-            z-index:9999; justify-content:center; align-items:center;
-        }
+        .tspread-box .sp-l { font-size:9px; color:#9aa6b2; text-transform:uppercase; }
+        .tspread-box .sp-v { font-size:14px; font-weight:700; color:#ffb347; font-family:'Courier New',monospace; }
+        .cs-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.88); backdrop-filter:blur(10px); z-index:9999; justify-content:center; align-items:center; }
         .cs-overlay.show { display:flex; }
-        .cs-box {
-            background:linear-gradient(160deg,#0f1a2a,#0b1220);
-            border:1px solid rgba(255,138,0,0.25);
-            border-radius:24px; max-width:340px; width:90%;
-            padding:40px 28px; text-align:center;
-            animation:csSlide 0.3s cubic-bezier(0.16,1,0.3,1);
-        }
+        .cs-box { background:linear-gradient(160deg,#0f1a2a,#0b1220); border:1px solid rgba(255,138,0,0.25); border-radius:24px; max-width:340px; width:90%; padding:40px 28px; text-align:center; animation:csSlide 0.3s cubic-bezier(0.16,1,0.3,1); }
         @keyframes csSlide { from{opacity:0;transform:scale(0.9)} to{opacity:1;transform:scale(1)} }
         .cs-icon { font-size:60px; margin-bottom:16px; }
-        .cs-title { font-size:24px;font-weight:800;color:#fff;margin:0 0 10px; }
-        .cs-sub { font-size:14px;color:#9aa6b2;line-height:1.6;margin:0 0 20px; }
-        .cs-badge {
-            background:rgba(255,138,0,0.1); border:1px solid rgba(255,138,0,0.25);
-            border-radius:10px; padding:12px 16px; margin-bottom:24px;
-            font-size:13px; color:#ffb347;
-        }
-        .cs-close {
-            width:100%; padding:14px; background:linear-gradient(90deg,#ff8a00,#ffb347);
-            border:none; border-radius:12px; color:#111; font-weight:800;
-            font-size:15px; cursor:pointer; margin:0;
-        }
-
+        .cs-title { font-size:24px; font-weight:800; color:#fff; margin:0 0 10px; }
+        .cs-sub { font-size:14px; color:#9aa6b2; line-height:1.6; margin:0 0 20px; }
+        .cs-badge { background:rgba(255,138,0,0.1); border:1px solid rgba(255,138,0,0.25); border-radius:10px; padding:12px 16px; margin-bottom:24px; font-size:13px; color:#ffb347; }
+        .cs-close { width:100%; padding:14px; background:linear-gradient(90deg,#ff8a00,#ffb347); border:none; border-radius:12px; color:#111; font-weight:800; font-size:15px; cursor:pointer; margin:0; }
     </style>
 </head>
 
 <body>
 <div class="wrap">
+
     <!-- BROADCAST BANNER -->
     <div id="broadcastBanner" style="display:none">
-        <span class="b-icon">📢</span>
+        <span class="b-icon">&#128226;</span>
         <span id="broadcastText"></span>
-        <button class="b-close" onclick="document.getElementById('broadcastBanner').style.display='none'">✕</button>
+        <button class="b-close" onclick="document.getElementById('broadcastBanner').style.display='none'">&#10005;</button>
     </div>
+
     <!-- TABS -->
     <div class="tabs">
-        <button class="tab active" onclick="showTab('home', this)">Home</button>
-        <button class="tab" onclick="showTab('earning', this)">Earning Fridge</button>
-        <button class="tab" onclick="showTab('offer', this)">Offer</button>
-        <button class="tab" onclick="showTab('withdraw', this)">Withdraw</button>
-        <button class="tab" onclick="showTab('profile', this)">Profile</button>
-        <button class="tab" onclick="showTab('support', this)">Support</button>
-        <button class="tab" onclick="showTab('trade', this)">📈 Trade</button>
+        <button class="tab active" onclick="showTab('home',this)">Home</button>
+        <button class="tab" onclick="showTab('earning',this)">Earning Fridge</button>
+        <button class="tab" onclick="showTab('offer',this)">Offer</button>
+        <button class="tab" onclick="showTab('withdraw',this)">Withdraw</button>
+        <button class="tab" onclick="showTab('profile',this)">Profile</button>
+        <button class="tab" onclick="showTab('support',this)">Support</button>
+        <button class="tab" onclick="showTab('trade',this)">&#128200; Trade</button>
     </div>
 
     <!-- HOME -->
@@ -486,14 +189,8 @@
             <p>Email: <span id="userEmail"></span></p>
             <p>Phone: <span id="userPhone"></span></p>
             <div class="balance-container">
-                <div class="balance-box">
-                    <h3>Deposit Balance</h3>
-                    <p>KES <span id="userBalance">0</span></p>
-                </div>
-                <div class="balance-box">
-                    <h3>Earnings</h3>
-                    <p>KES <span id="userEarning">0</span></p>
-                </div>
+                <div class="balance-box"><h3>Deposit Balance</h3><p>KES <span id="userBalance">0</span></p></div>
+                <div class="balance-box"><h3>Earnings</h3><p>KES <span id="userEarning">0</span></p></div>
             </div>
             <p>Fridges owned: <span id="userFridges">0</span></p>
             <p>Daily Earnings: <span id="animatedEarnings">0</span> KES</p>
@@ -502,10 +199,7 @@
             <h2>Bitcoin Earnings Growth (fridge earning chart)</h2>
             <p style="font-size:13px;color:#9aa6b2">Live Bitcoin chart to demonstrate fridge earning growth.</p>
             <div class="chart-container">
-                <iframe
-                    src="https://www.tradingview.com/widgetembed/?symbol=BTCUSD&interval=D&theme=dark&style=1&locale=en&hide_side_toolbar=false"
-                    allowfullscreen>
-                </iframe>
+                <iframe src="https://www.tradingview.com/widgetembed/?symbol=BTCUSD&interval=D&theme=dark&style=1&locale=en&hide_side_toolbar=false" allowfullscreen></iframe>
             </div>
         </div>
     </div>
@@ -519,15 +213,15 @@
         </div>
     </div>
 
-    <!-- OFFER🎁🎁 -->
+    <!-- OFFER -->
     <div id="offer" class="tab-content">
         <div class="card">
-            <h2>Offer Fridges🎁</h2>
-            <p style="font-size:13px;color:#9aa6b2">🎁🎁Special Offer Fridges, unlocked by admin with limited time🎁🎁.</p>
+            <h2>Offer Fridges &#127873;</h2>
+            <p style="font-size:13px;color:#9aa6b2">Special Offer Fridges, unlocked by admin with limited time.</p>
             <div class="fridge-list" id="offerFridgeList"></div>
         </div>
         <div class="card">
-            <h3>Redeem Offer Code🎁🎁</h3>
+            <h3>Redeem Offer Code &#127873;</h3>
             <input type="text" id="offerCodeInput" placeholder="Enter code">
             <button onclick="redeemOffer()">Redeem</button>
             <p id="offerMsg"></p>
@@ -565,26 +259,22 @@
 
     <!-- SUPPORT -->
     <div id="support" class="tab-content">
-
-        <!-- Hero -->
         <div class="support-hero">
-            <div class="hero-icon">❄️</div>
+            <div class="hero-icon">&#10052;&#65039;</div>
             <h2>Bitfreeze Support Center</h2>
             <p>Get help, learn how it works, and join our community</p>
         </div>
-
-        <!-- Community Links -->
         <div class="card">
             <h2>Join Our Community</h2>
             <p style="font-size:13px;color:#9aa6b2;margin-bottom:16px">Connect with other Bitfreeze members for tips, updates and support.</p>
             <div class="community-grid">
                 <a id="whatsappLink" href="#" target="_blank" class="community-card whatsapp">
-                    <div class="c-icon">💬</div>
+                    <div class="c-icon">&#128172;</div>
                     <div class="c-title">WhatsApp Group</div>
                     <div class="c-sub">Tap to join</div>
                 </a>
                 <a id="telegramLink" href="#" target="_blank" class="community-card telegram">
-                    <div class="c-icon">✈️</div>
+                    <div class="c-icon">&#9992;&#65039;</div>
                     <div class="c-title">Telegram Channel</div>
                     <div class="c-sub">Tap to join</div>
                 </a>
@@ -593,7 +283,7 @@
 
         <!-- Referral Rewards -->
         <div class="card">
-            <h2>🎁 Referral Rewards</h2>
+            <h2>&#127873; Referral Rewards</h2>
             <p style="font-size:13px;color:#9aa6b2;margin-bottom:16px;">Share your referral link! When your friend signs up and makes their <strong style="color:#fff">first deposit</strong>, you earn a reward based on how much they deposit.</p>
             <div style="overflow-x:auto;">
                 <table style="width:100%;border-collapse:collapse;font-size:13px;">
@@ -613,12 +303,12 @@
                         <tr style="border-bottom:1px solid rgba(255,255,255,0.03)"><td style="padding:10px 12px;color:#e6eef6">KES 2,000</td><td style="padding:10px 12px;text-align:right;color:#ff8a00;font-weight:700">KES 150</td></tr>
                         <tr style="border-bottom:1px solid rgba(255,255,255,0.03)"><td style="padding:10px 12px;color:#e6eef6">KES 4,000</td><td style="padding:10px 12px;text-align:right;color:#ff8a00;font-weight:700">KES 250</td></tr>
                         <tr style="border-bottom:1px solid rgba(255,255,255,0.03)"><td style="padding:10px 12px;color:#e6eef6">KES 6,000</td><td style="padding:10px 12px;text-align:right;color:#ff8a00;font-weight:700">KES 350</td></tr>
-                        <tr><td style="padding:10px 12px;color:#e6eef6">KES 8,000</td><td style="padding:10px 12px;text-align:right;color:#00e676;font-weight:700">KES 500 🏆</td></tr>
+                        <tr><td style="padding:10px 12px;color:#e6eef6">KES 8,000</td><td style="padding:10px 12px;text-align:right;color:#00e676;font-weight:700">KES 500 &#127942;</td></tr>
                     </tbody>
                 </table>
             </div>
             <div style="margin-top:14px;padding:12px;background:rgba(255,138,0,0.06);border:1px solid rgba(255,138,0,0.15);border-radius:10px;font-size:12px;color:#9aa6b2;">
-                💡 <strong style="color:#fff">How it works:</strong> Share your referral link from the Profile tab. When your friend registers using your link and their first deposit is approved by admin, your reward is instantly credited to your earnings balance.
+                &#128161; <strong style="color:#fff">How it works:</strong> Share your referral link from the Profile tab. When your friend registers using your link and their first deposit is approved by admin, your reward is instantly credited to your earnings balance.
             </div>
         </div>
 
@@ -627,46 +317,31 @@
             <h2>How Bitfreeze Works</h2>
             <div class="how-steps">
                 <div class="how-step">
-                    <div class="step-icon">📝</div>
+                    <div class="step-icon">&#128221;</div>
+                    <div class="step-body"><h4>1. Register &amp; Verify</h4><p>Create your free Bitfreeze account using your email and M-Pesa phone number. Your account is secured and verified instantly.</p></div>
+                </div>
+                <div class="how-step">
+                    <div class="step-icon">&#129398;</div>
+                    <div class="step-body"><h4>2. Choose a Fridge</h4><p>Browse our range of earning fridges — from KES 100 starters to KES 8,000 premium fridges. Each fridge earns you a fixed daily income.</p></div>
+                </div>
+                <div class="how-step">
+                    <div class="step-icon">&#128176;</div>
                     <div class="step-body">
-                        <h4>1. Register & Verify</h4>
-                        <p>Create your free Bitfreeze account using your email and M-Pesa phone number. Your account is secured and verified instantly.</p>
+                        <h4>3. Pay via M-Pesa Paybill</h4>
+                        <p>Go to <strong style="color:#fff">M-Pesa &rarr; Lipa na M-Pesa &rarr; Pay Bill</strong>. Enter Business No. <strong style="color:#ff8a00">222111</strong>, Account No. <strong style="color:#00e5ff">3037819</strong>, and the exact fridge amount. Paste your M-Pesa confirmation SMS in the app to submit for approval.</p>
                     </div>
                 </div>
                 <div class="how-step">
-                    <div class="step-icon">🧊</div>
-                    <div class="step-body">
-                        <h4>2. Choose a Fridge</h4>
-                        <p>Browse our range of earning fridges — from KES 100 starters to KES 8,000 premium fridges. Each fridge earns you a fixed daily income.</p>
-                    </div>
+                    <div class="step-icon">&#128200;</div>
+                    <div class="step-body"><h4>4. Earn Daily</h4><p>After 24 hours your fridge starts earning. Daily earnings are credited to your account every night at 12:00 AM Kenya time automatically.</p></div>
                 </div>
                 <div class="how-step">
-                    <div class="step-icon">💰</div>
-                    <div class="step-body">
-                        <h4>3. Pay via M-Pesa Till</h4>
-                        <p>Pay using M-Pesa Buy Goods — Till Number <strong style="color:#ff8a00">6992349</strong>. Submit your transaction code and wait for admin approval.</p>
-                    </div>
+                    <div class="step-icon">&#127873;</div>
+                    <div class="step-body"><h4>5. Grab Special Offers</h4><p>Admin unlocks special Offer Fridges for a limited time. These give you a higher total return over a short period — grab them fast!</p></div>
                 </div>
                 <div class="how-step">
-                    <div class="step-icon">📈</div>
-                    <div class="step-body">
-                        <h4>4. Earn Daily</h4>
-                        <p>After 24 hours your fridge starts earning. Daily earnings are credited to your account every night at 12:00 AM Kenya time automatically.</p>
-                    </div>
-                </div>
-                <div class="how-step">
-                    <div class="step-icon">🎁</div>
-                    <div class="step-body">
-                        <h4>5. Grab Special Offers</h4>
-                        <p>Admin unlocks special Offer Fridges for a limited time. These give you a higher total return over a short period — grab them fast!</p>
-                    </div>
-                </div>
-                <div class="how-step">
-                    <div class="step-icon">💸</div>
-                    <div class="step-body">
-                        <h4>6. Withdraw Anytime</h4>
-                        <p>Withdraw your earnings to your M-Pesa number anytime. Minimum withdrawal is KES 200. Withdrawals are processed within 24 hours.</p>
-                    </div>
+                    <div class="step-icon">&#128184;</div>
+                    <div class="step-body"><h4>6. Withdraw Anytime</h4><p>Withdraw your earnings to your M-Pesa number anytime. Minimum withdrawal is KES 200. Withdrawals are processed within 24 hours.</p></div>
                 </div>
             </div>
         </div>
@@ -675,36 +350,36 @@
         <div class="card">
             <h2>Frequently Asked Questions</h2>
             <div class="faq-item">
-                <div class="faq-q" onclick="toggleFaq(this)">Is Bitfreeze safe to use? <span class="arrow">▼</span></div>
-                <div class="faq-a">Yes. Bitfreeze uses secure JWT authentication, encrypted passwords, and all payments are manually verified by our admin team before any fridge is activated.</div>
+                <div class="faq-q" onclick="toggleFaq(this)">Is Bitfreeze safe to use? <span class="arrow">&#9660;</span></div>
+                <div class="faq-a">Yes. Bitfreeze uses secure JWT authentication, encrypted passwords, and all payments are verified against your M-Pesa confirmation message before any fridge is activated.</div>
             </div>
             <div class="faq-item">
-                <div class="faq-q" onclick="toggleFaq(this)">When do I start earning? <span class="arrow">▼</span></div>
+                <div class="faq-q" onclick="toggleFaq(this)">When do I start earning? <span class="arrow">&#9660;</span></div>
                 <div class="faq-a">You start earning 24 hours after your fridge purchase is approved by admin. Earnings are then credited to your account every night at midnight Kenya time.</div>
             </div>
             <div class="faq-item">
-                <div class="faq-q" onclick="toggleFaq(this)">How do I pay for a fridge? <span class="arrow">▼</span></div>
-                <div class="faq-a">Go to M-Pesa → Lipa na M-Pesa → Buy Goods & Services → Enter Till Number 6992349 → Enter the exact fridge price → Submit your M-Pesa transaction code in the app.</div>
+                <div class="faq-q" onclick="toggleFaq(this)">How do I pay for a fridge? <span class="arrow">&#9660;</span></div>
+                <div class="faq-a">Click Buy on any fridge. Go to M-Pesa &rarr; Lipa na M-Pesa &rarr; Pay Bill. Enter Business No. 222111 and Account No. 3037819. Enter the exact fridge price and your PIN. Copy the full M-Pesa confirmation SMS and paste it into the app, then tap Submit for Approval.</div>
             </div>
             <div class="faq-item">
-                <div class="faq-q" onclick="toggleFaq(this)">How long does approval take? <span class="arrow">▼</span></div>
-                <div class="faq-a">Payments are typically approved within a few hours. Our admin team verifies every M-Pesa code manually to protect all users from fraud.</div>
+                <div class="faq-q" onclick="toggleFaq(this)">How long does approval take? <span class="arrow">&#9660;</span></div>
+                <div class="faq-a">Payments are typically approved within a few hours. Our team verifies every M-Pesa confirmation message to protect all users. Once approved, your fridge starts earning within 24 hours.</div>
             </div>
             <div class="faq-item">
-                <div class="faq-q" onclick="toggleFaq(this)">Can I own multiple fridges? <span class="arrow">▼</span></div>
+                <div class="faq-q" onclick="toggleFaq(this)">Can I own multiple fridges? <span class="arrow">&#9660;</span></div>
                 <div class="faq-a">Yes! You can own as many fridges as you like. Each fridge earns independently, so more fridges means more daily income.</div>
             </div>
             <div class="faq-item">
-                <div class="faq-q" onclick="toggleFaq(this)">What are Offer Fridges? <span class="arrow">▼</span></div>
+                <div class="faq-q" onclick="toggleFaq(this)">What are Offer Fridges? <span class="arrow">&#9660;</span></div>
                 <div class="faq-a">Offer Fridges are special limited-time fridges unlocked by the admin. They run for a set number of hours and pay out their full total earning to your balance the moment the timer ends.</div>
             </div>
             <div class="faq-item">
-                <div class="faq-q" onclick="toggleFaq(this)">What is the minimum withdrawal? <span class="arrow">▼</span></div>
+                <div class="faq-q" onclick="toggleFaq(this)">What is the minimum withdrawal? <span class="arrow">&#9660;</span></div>
                 <div class="faq-a">The minimum withdrawal amount is KES 200. Your withdrawal phone number must match the phone number registered on your account.</div>
             </div>
             <div class="faq-item">
-                <div class="faq-q" onclick="toggleFaq(this)">I submitted the wrong M-Pesa code. What do I do? <span class="arrow">▼</span></div>
-                <div class="faq-a">Contact us immediately via WhatsApp or Telegram with your correct transaction code. Our admin will update your payment record.</div>
+                <div class="faq-q" onclick="toggleFaq(this)">I sent to the wrong paybill. What do I do? <span class="arrow">&#9660;</span></div>
+                <div class="faq-a">Contact us immediately via WhatsApp or Telegram with your M-Pesa confirmation message. Our admin will update your payment record as quickly as possible.</div>
             </div>
         </div>
 
@@ -714,59 +389,52 @@
             <div class="about-section">
                 <h3>Our Story</h3>
                 <p>Bitfreeze was founded in 2024 in Nairobi, Kenya, with a simple mission — give everyday Kenyans access to a simple, transparent, and reliable daily earning platform.</p>
-                <p>We noticed that most investment platforms were too complicated, required large capital, or weren't built for the Kenyan market. Bitfreeze was built differently — using M-Pesa, the payment system Kenyans already trust, and keeping the process as simple as buying goods at a shop.</p>
+                <p>We noticed that most investment platforms were too complicated, required large capital, or weren't built for the Kenyan market. Bitfreeze was built differently — using M-Pesa, the payment system Kenyans already trust.</p>
                 <h3>Our Mission</h3>
                 <p>To empower Kenyans with a simple passive income stream. Whether you invest KES 100 or KES 8,000 — Bitfreeze works for you every single day.</p>
                 <h3>Why "Bitfreeze"?</h3>
                 <p>Just like a fridge preserves and grows value over time, Bitfreeze preserves your money and grows it daily. The "Bit" represents the digital nature of our platform — modern, fast, and always available.</p>
                 <h3>Our Values</h3>
-                <p>🔒 <strong>Transparency</strong> — Every payment is manually verified. No hidden fees.<br>
-                ⚡ <strong>Speed</strong> — Fast approvals, instant earnings at midnight.<br>
-                🤝 <strong>Trust</strong> — We've served hundreds of Kenyan users since launch.<br>
-                📱 <strong>Accessibility</strong> — Works on any phone, anywhere in Kenya.</p>
+                <p>&#128274; <strong>Transparency</strong> — Every payment is verified before activation. No hidden fees.<br>
+                &#9889; <strong>Speed</strong> — Fast approvals, instant earnings at midnight.<br>
+                &#129309; <strong>Trust</strong> — We've served hundreds of Kenyan users since launch.<br>
+                &#128241; <strong>Accessibility</strong> — Works on any phone, anywhere in Kenya.</p>
             </div>
         </div>
 
         <!-- Terms -->
         <div class="card">
-            <h2>Terms & Conditions</h2>
+            <h2>Terms &amp; Conditions</h2>
             <div class="terms-section">
                 <p>By using Bitfreeze, you agree to the following terms. Please read carefully.</p>
                 <h4>1. Eligibility</h4>
                 <p>You must be at least 18 years old and a resident of Kenya to use Bitfreeze. You must provide a valid M-Pesa registered phone number.</p>
                 <h4>2. Payments</h4>
-                <p>All payments are made via M-Pesa Buy Goods Till Number 6992349. Bitfreeze is not responsible for payments sent to the wrong till number. Always verify the till number before paying.</p>
+                <p>All payments are made via M-Pesa Paybill — Business Number 222111, Account Number 3037819. You must paste your M-Pesa confirmation SMS in the app after paying. Bitfreeze is not responsible for payments sent to the wrong paybill number or using the wrong account number.</p>
                 <h4>3. Earnings</h4>
-                <p>Daily earnings are credited every night at 12:00 AM Kenya time for normal fridges. Offer fridge earnings are credited immediately when the offer timer ends. Earnings are estimates based on fridge type and may not be guaranteed in extraordinary circumstances.</p>
+                <p>Daily earnings are credited every night at 12:00 AM Kenya time for normal fridges. Offer fridge earnings are credited immediately when the offer timer ends.</p>
                 <h4>4. Withdrawals</h4>
                 <p>Minimum withdrawal is KES 200. Withdrawals are processed within 24 hours. Your withdrawal phone must match your registered account phone number.</p>
                 <h4>5. Account Security</h4>
                 <p>You are responsible for keeping your login credentials secure. Bitfreeze will never ask for your password. Report any suspicious activity immediately.</p>
                 <h4>6. Prohibited Activities</h4>
-                <p>Submitting fake M-Pesa transaction codes, creating multiple accounts, or attempting to manipulate the platform in any way will result in permanent account suspension.</p>
+                <p>Submitting fake M-Pesa confirmation messages, creating multiple accounts, or attempting to manipulate the platform in any way will result in permanent account suspension.</p>
                 <h4>7. Changes to Terms</h4>
                 <p>Bitfreeze reserves the right to update these terms at any time. Continued use of the platform constitutes acceptance of the updated terms.</p>
-                <p style="margin-top:16px;color:#ff8a00;font-size:12px;">Last updated: January 2025 · Bitfreeze Kenya</p>
+                <p style="margin-top:16px;color:#ff8a00;font-size:12px;">Last updated: April 2025 &middot; Bitfreeze Kenya</p>
             </div>
         </div>
 
         <!-- Contact -->
         <div class="card">
             <h2>Contact Us</h2>
-            <a id="contactWhatsapp" href="#" target="_blank" class="contact-row">
-                <span class="ci">💬</span> Chat us on WhatsApp
-            </a>
-            <a id="contactTelegram" href="#" target="_blank" class="contact-row">
-                <span class="ci">✈️</span> Message us on Telegram
-            </a>
+            <a id="contactWhatsapp" href="#" target="_blank" class="contact-row"><span class="ci">&#128172;</span> Chat us on WhatsApp</a>
+            <a id="contactTelegram" href="#" target="_blank" class="contact-row"><span class="ci">&#9992;&#65039;</span> Message us on Telegram</a>
         </div>
-
     </div>
 
     <!-- TRADE TAB -->
     <div id="trade" class="tab-content">
-
-        <!-- Balance hero -->
         <div class="trade-hero">
             <div class="trade-bal-item">
                 <div class="trade-bal-label">Trading Balance</div>
@@ -774,134 +442,148 @@
                 <div style="font-size:10px;color:#9aa6b2">Coming Soon</div>
             </div>
             <div class="trade-bal-item">
-                <div class="trade-bal-label">Open P&L</div>
+                <div class="trade-bal-label">Open P&amp;L</div>
                 <div style="font-size:20px;font-weight:800;color:#9aa6b2;font-family:'Courier New',monospace">$0.00</div>
             </div>
             <button onclick="showCS('deposit')" style="background:linear-gradient(90deg,#ff8a00,#ffb347);border:none;border-radius:10px;padding:10px 18px;color:#111;font-weight:800;font-size:13px;cursor:pointer;width:auto;margin:0;">+ Deposit</button>
         </div>
-
-        <!-- Pair selector -->
         <div class="pair-scroll" id="tradePairBar"></div>
-
-        <!-- Big Live Chart -->
         <div class="trade-chart-big">
-            <iframe id="tradeChartFrame"
-                src="https://www.tradingview.com/widgetembed/?symbol=BINANCE:BTCUSDT&interval=5&theme=dark&style=1&locale=en&hide_side_toolbar=false"
-                allowfullscreen></iframe>
+            <iframe id="tradeChartFrame" src="https://www.tradingview.com/widgetembed/?symbol=BINANCE:BTCUSDT&interval=5&theme=dark&style=1&locale=en&hide_side_toolbar=false" allowfullscreen></iframe>
         </div>
-
-        <!-- Live Price Ticker -->
         <div class="trade-price-bar">
             <div class="tprice-sell" onclick="showCS('sell')">
-                <div class="tprice-label">▼ Sell</div>
-                <div class="tprice-val" id="tSellPrice">—</div>
+                <div class="tprice-label">&#9660; Sell</div>
+                <div class="tprice-val" id="tSellPrice">&#8212;</div>
                 <div class="tprice-sub">Tap to sell</div>
             </div>
             <div class="tspread-box">
                 <div class="sp-l">Spread</div>
-                <div class="sp-v" id="tSpread">—</div>
+                <div class="sp-v" id="tSpread">&#8212;</div>
             </div>
             <div class="tprice-buy" onclick="showCS('buy')">
-                <div class="tprice-label">▲ Buy</div>
-                <div class="tprice-val" id="tBuyPrice">—</div>
+                <div class="tprice-label">&#9650; Buy</div>
+                <div class="tprice-val" id="tBuyPrice">&#8212;</div>
                 <div class="tprice-sub">Tap to buy</div>
             </div>
         </div>
-
-        <!-- Info cards -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
             <div class="card" style="padding:16px;text-align:center;cursor:pointer;" onclick="showCS('history')">
-                <div style="font-size:24px;margin-bottom:6px">📋</div>
+                <div style="font-size:24px;margin-bottom:6px">&#128203;</div>
                 <div style="font-size:13px;font-weight:700;color:#fff;">Trade History</div>
                 <div style="font-size:11px;color:#9aa6b2;margin-top:2px">Coming Soon</div>
             </div>
             <div class="card" style="padding:16px;text-align:center;cursor:pointer;" onclick="showCS('withdraw')">
-                <div style="font-size:24px;margin-bottom:6px">💸</div>
+                <div style="font-size:24px;margin-bottom:6px">&#128184;</div>
                 <div style="font-size:13px;font-weight:700;color:#fff;">Withdraw</div>
                 <div style="font-size:11px;color:#9aa6b2;margin-top:2px">Coming Soon</div>
             </div>
         </div>
-
         <div class="card" style="padding:20px;text-align:center;">
-            <div style="font-size:36px;margin-bottom:12px">🚀</div>
+            <div style="font-size:36px;margin-bottom:12px">&#128640;</div>
             <h3 style="color:#fff;margin:0 0 8px;font-size:16px;">Bitfreeze Trading Platform</h3>
-            <p style="font-size:13px;color:#9aa6b2;line-height:1.6;margin:0 0 16px;">
-                Full Forex & Crypto trading is coming soon!<br>
-                Trade BTC, ETH, EUR/USD, Gold & more — all from your Bitfreeze account.
-            </p>
+            <p style="font-size:13px;color:#9aa6b2;line-height:1.6;margin:0 0 16px;">Full Forex &amp; Crypto trading is coming soon!<br>Trade BTC, ETH, EUR/USD, Gold &amp; more from your Bitfreeze account.</p>
             <div style="background:rgba(255,138,0,0.08);border:1px solid rgba(255,138,0,0.2);border-radius:10px;padding:12px;font-size:13px;color:#ffb347;">
-                🔔 You'll be notified the moment trading goes live!
+                &#128276; You'll be notified the moment trading goes live!
             </div>
         </div>
-
     </div>
 
     <!-- COMING SOON MODAL -->
     <div class="cs-overlay" id="csModal">
         <div class="cs-box">
-            <div class="cs-icon" id="csIcon">🚀</div>
+            <div class="cs-icon" id="csIcon">&#128640;</div>
             <div class="cs-title" id="csTitle">Coming Soon!</div>
             <div class="cs-sub" id="csSub">This feature is under development.</div>
-            <div class="cs-badge" id="csBadge">
-                🔔 You'll be notified when this goes live!
-            </div>
-            <button class="cs-close" onclick="document.getElementById('csModal').classList.remove('show')">
-                Got it! 👍
-            </button>
+            <div class="cs-badge" id="csBadge">&#128276; You'll be notified when this goes live!</div>
+            <button class="cs-close" onclick="document.getElementById('csModal').classList.remove('show')">Got it! &#128077;</button>
         </div>
     </div>
 
-<!-- PAYMENT MODAL -->
-<div id="paymentModal">
-    <div class="modalContent">
-        <div class="modal-header">
-            <div class="brand-logo">❄️</div>
-            <div>
-                <h3 style="margin:0;font-size:16px;font-weight:800;color:#111;">Complete Your Purchase</h3>
-                <p style="margin:2px 0 0;font-size:12px;color:rgba(0,0,0,0.6);">Secure M-Pesa Buy Goods Payment</p>
+    <!-- PAYMENT MODAL -->
+    <div id="paymentModal">
+        <div class="modalContent">
+            <div class="modal-header">
+                <div class="brand-logo">&#10052;&#65039;</div>
+                <div>
+                    <h3 style="margin:0;font-size:16px;font-weight:800;color:#111;">Complete Your Purchase</h3>
+                    <p style="margin:2px 0 0;font-size:12px;color:rgba(0,0,0,0.6);">M-Pesa Paybill &middot; Verified Business</p>
+                </div>
             </div>
-        </div>
-        <div class="modal-body">
-            <div class="fridge-order-row">
-                <span class="order-label">📦 Item</span>
-                <span class="order-value" id="modalFridgeName">—</span>
+            <div class="modal-body">
+                <div class="fridge-order-row">
+                    <span class="order-label">&#128230; Item</span>
+                    <span class="order-value" id="modalFridgeName">&#8212;</span>
+                </div>
+                <div class="fridge-order-row">
+                    <span class="order-label">&#128176; Amount</span>
+                    <span class="order-value" id="modalAmount" style="color:#ff8a00;">KES &#8212;</span>
+                </div>
+                <div class="paybill-card">
+                    <div class="mpesa-badge">&#9679; M-Pesa Paybill</div>
+                    <div class="paybill-row">
+                        <span class="paybill-key">Business Number</span>
+                        <span style="display:flex;align-items:center;">
+                            <span class="paybill-val">222111</span>
+                            <button class="copy-pill" onclick="copyText('222111',this)">Copy</button>
+                        </span>
+                    </div>
+                    <div class="paybill-row">
+                        <span class="paybill-key">Account Number</span>
+                        <span style="display:flex;align-items:center;">
+                            <span class="paybill-val acct">3037819</span>
+                            <button class="copy-pill" onclick="copyText('3037819',this)">Copy</button>
+                        </span>
+                    </div>
+                    <div class="paybill-row">
+                        <span class="paybill-key">Business Name</span>
+                        <span style="font-size:13px;color:rgba(255,255,255,0.55);font-weight:600;">Bitfreeze</span>
+                    </div>
+                </div>
+                <div class="pay-steps">
+                    <div class="pay-step"><div class="pay-step-num">1</div><span>Open <strong>M-Pesa</strong> &rarr; <strong>Lipa na M-Pesa</strong> &rarr; <strong>Pay Bill</strong></span></div>
+                    <div class="pay-step"><div class="pay-step-num">2</div><span>Enter Business No. <strong>222111</strong> &rarr; Account No. <strong>3037819</strong></span></div>
+                    <div class="pay-step"><div class="pay-step-num">3</div><span>Enter the <strong>exact amount</strong> shown above &rarr; Enter PIN &rarr; Send</span></div>
+                    <div class="pay-step"><div class="pay-step-num">4</div><span>You will get an <strong>M-Pesa SMS</strong> &mdash; paste the full message below</span></div>
+                </div>
+                <div class="txn-wrap">
+                    <label>Paste Your M-Pesa Confirmation Message</label>
+                    <textarea id="mpesaMsg" placeholder="e.g. QHX4K82LPR Confirmed. Ksh500 sent to BITFREEZE 222111 on 4/4/25 at 1:17 PM. New M-PESA balance is Ksh..."></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+                    <button class="btn-confirm" id="submitPaymentBtn">&#10003; Submit for Approval</button>
+                </div>
+                <p id="paymentMsg"></p>
+                <div class="secure-badge">&#128274; All payments are verified by our team within a few hours</div>
             </div>
-            <div class="fridge-order-row">
-                <span class="order-label">💰 Amount</span>
-                <span class="order-value" id="modalAmount" style="color:#ff8a00;">KES —</span>
-            </div>
-            <div class="till-card">
-                <div class="mpesa-badge">● M-Pesa</div>
-                <div class="till-label">Buy Goods Till Number</div>
-                <div class="till-number">6992349</div>
-                <div class="till-name">Bitfreeze Business</div>
-                <button class="copy-btn" onclick="copyTill()">📋 Copy</button>
-            </div>
-            <div class="steps-list">
-                <p class="steps-title">How to Pay</p>
-                <div class="step"><div class="step-num">1</div><span>Go to <strong>M-Pesa</strong> → <strong>Lipa na M-Pesa</strong> → <strong>Buy Goods & Services</strong></span></div>
-                <div class="step"><div class="step-num">2</div><span>Enter Till <strong>6992349</strong> and the exact amount above</span></div>
-                <div class="step"><div class="step-num">3</div><span>Enter your M-Pesa PIN — you'll get an <strong>SMS confirmation</strong></span></div>
-                <div class="step"><div class="step-num">4</div><span>Paste your <strong>M-Pesa transaction code</strong> below</span></div>
-            </div>
-            <div class="txn-input-wrap">
-                <label>M-Pesa Transaction Code</label>
-                <input type="text" id="txnCode" placeholder="e.g. QHX4K82LPR" maxlength="20" oninput="this.value=this.value.toUpperCase()">
-            </div>
-            <div class="modal-actions">
-                <button class="btn-cancel" onclick="closeModal()">Cancel</button>
-                <button class="btn-confirm" id="submitPaymentBtn">✅ I Have Paid</button>
-            </div>
-            <p id="paymentMsg"></p>
-            <div class="secure-badge">🔒 Payments are verified and secure</div>
         </div>
     </div>
-</div>
+
+</div><!-- end .wrap -->
 
 <script>
 const DOMAIN = window.location.origin;
-const token = localStorage.getItem('bf_token');
+const token  = localStorage.getItem('bf_token');
 if (!token) location.href = '/login';
+
+// DOM shortcuts
+const offerMsg           = document.getElementById('offerMsg');
+const withdrawMsg        = document.getElementById('withdrawMsg');
+const adminMsg           = document.getElementById('adminMsg');
+const unlockMsg          = document.getElementById('unlockMsg');
+const lockMsg            = document.getElementById('lockMsg');
+const userEmail          = document.getElementById('userEmail');
+const userPhone          = document.getElementById('userPhone');
+const userBalance        = document.getElementById('userBalance');
+const userEarning        = document.getElementById('userEarning');
+const userFridges        = document.getElementById('userFridges');
+const userEmailProfile   = document.getElementById('userEmailProfile');
+const userPhoneProfile   = document.getElementById('userPhoneProfile');
+const userBalanceProfile = document.getElementById('userBalanceProfile');
+const userEarningProfile = document.getElementById('userEarningProfile');
+const userFridgesProfile = document.getElementById('userFridgesProfile');
+const refLink            = document.getElementById('refLink');
 
 // TABS
 function showTab(id, btn) {
@@ -913,44 +595,122 @@ function showTab(id, btn) {
     else if (tradePriceTimer) { clearInterval(tradePriceTimer); tradePriceTimer = null; }
 }
 
-// TABS
+// COPY HELPER
+function copyText(text, btn) {
+    navigator.clipboard.writeText(text).then(() => {
+        const orig = btn.textContent;
+        btn.textContent = 'Copied!';
+        btn.style.background = 'rgba(0,200,83,0.2)';
+        btn.style.borderColor = 'rgba(0,200,83,0.4)';
+        btn.style.color = '#00e676';
+        setTimeout(() => {
+            btn.textContent = orig;
+            btn.style.background = '';
+            btn.style.borderColor = '';
+            btn.style.color = '';
+        }, 2000);
+    });
+}
 
-
-// MODAL
+// PAYMENT MODAL
 let currentFridgeId = '';
+
 function buyFridge(fridgeId, fridgeName, fridgePrice) {
     currentFridgeId = fridgeId;
     document.getElementById('modalFridgeName').textContent = fridgeName;
     document.getElementById('modalAmount').textContent = 'KES ' + Number(fridgePrice).toLocaleString();
     document.getElementById('paymentMsg').textContent = '';
-    document.getElementById('txnCode').value = '';
+    document.getElementById('mpesaMsg').value = '';
+    const btn = document.getElementById('submitPaymentBtn');
+    btn.disabled = false;
+    btn.textContent = 'Submit for Approval';
     document.getElementById('paymentModal').style.display = 'flex';
+    setTimeout(() => document.getElementById('mpesaMsg').focus(), 200);
 }
 
 function closeModal() {
     document.getElementById('paymentModal').style.display = 'none';
+    document.getElementById('paymentMsg').textContent = '';
+    const btn = document.getElementById('submitPaymentBtn');
+    btn.disabled = false;
+    btn.textContent = 'Submit for Approval';
 }
 
-function copyTill() {
-    navigator.clipboard.writeText('6992349').then(() => {
-        const btn = document.querySelector('.copy-btn');
-        btn.textContent = '✅ Copied!';
-        setTimeout(() => btn.textContent = '📋 Copy', 2000);
-    });
+function extractTxnCode(msg) {
+    const match = msg.match(/\b([A-Z]{2,3}[0-9A-Z]{7,10})\b/);
+    return match ? match[1] : null;
 }
 
-// REDEEM OFFER CODE
+document.getElementById('submitPaymentBtn').addEventListener('click', async () => {
+    const msgVal     = document.getElementById('mpesaMsg').value.trim();
+    const paymentMsg = document.getElementById('paymentMsg');
+    const btn        = document.getElementById('submitPaymentBtn');
+    paymentMsg.textContent = '';
+
+    if (msgVal.length < 15) {
+        paymentMsg.style.color = '#ff4444';
+        paymentMsg.textContent = 'Please paste your full M-Pesa confirmation message.';
+        document.getElementById('mpesaMsg').focus();
+        return;
+    }
+    const txnCode = extractTxnCode(msgVal);
+    if (!txnCode) {
+        paymentMsg.style.color = '#ff4444';
+        paymentMsg.textContent = 'Could not find a transaction code. Paste the full M-Pesa SMS.';
+        return;
+    }
+    if (!currentFridgeId) {
+        paymentMsg.style.color = '#ff4444';
+        paymentMsg.textContent = 'No fridge selected. Please close and try again.';
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Submitting...';
+    paymentMsg.style.color = '#ffb347';
+    paymentMsg.textContent = 'Sending your payment for verification...';
+
+    try {
+        const res = await fetch(DOMAIN + '/api/payment/manual', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ fridgeId: currentFridgeId, txnCode, mpesaMessage: msgVal })
+        });
+        const ct = res.headers.get('content-type') || '';
+        if (!ct.includes('application/json')) throw new Error('Bad response');
+        const d = await res.json();
+        if (d.error) {
+            paymentMsg.style.color = '#ff4444';
+            paymentMsg.textContent = d.error;
+            btn.disabled = false;
+            btn.textContent = 'Submit for Approval';
+        } else {
+            paymentMsg.style.color = '#00ffb0';
+            paymentMsg.textContent = 'Payment submitted! Your fridge will be activated after verification.';
+            setTimeout(() => { closeModal(); getUser(); }, 2800);
+        }
+    } catch (err) {
+        paymentMsg.style.color = '#ff4444';
+        paymentMsg.textContent = 'Network error. Check your connection and try again.';
+        btn.disabled = false;
+        btn.textContent = 'Submit for Approval';
+    }
+});
+
+// REDEEM OFFER
 async function redeemOffer() {
     const code = document.getElementById('offerCodeInput').value.trim();
     if (!code) return;
-    const res = await fetch(DOMAIN + '/api/offer/redeem', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify({ code })
-    });
-    const d = await res.json();
-    offerMsg.textContent = d.message || d.error;
-    getUser();
+    try {
+        const res = await fetch(DOMAIN + '/api/offer/redeem', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ code })
+        });
+        const d = await res.json();
+        offerMsg.textContent = d.message || d.error;
+        getUser();
+    } catch(e) { offerMsg.textContent = 'Network error'; }
 }
 
 // FETCH USER
@@ -961,24 +721,20 @@ async function getUser() {
         if (!d.user) return logout();
         const u = d.user;
         userEmail.textContent = u.email;
-        userPhone.textContent = u.phone || '—';
+        userPhone.textContent = u.phone || '-';
         userBalance.textContent = u.balance;
         userEarning.textContent = u.earning;
         userFridges.textContent = u.fridges.length;
-
         userEmailProfile.textContent = u.email;
-        userPhoneProfile.textContent = u.phone || '—';
+        userPhoneProfile.textContent = u.phone || '-';
         userBalanceProfile.textContent = u.balance;
         userEarningProfile.textContent = u.earning;
         userFridgesProfile.textContent = u.fridges.length;
-
         refLink.textContent = DOMAIN + '/register.html?ref=' + u.email;
         refLink.href = refLink.textContent;
-
         animateEarnings(0, Number(u.earning) || 0);
         loadEarningFridges(u.fridges);
         loadOfferFridges();
-
     } catch (e) { console.error(e); }
 }
 getUser();
@@ -999,151 +755,89 @@ function animateEarnings(start, end) {
     }, 50);
 }
 
-// FETCH FRIDGES
-async function loadEarningFridges(userFridges) {
-    const res = await fetch(DOMAIN + '/api/fridges', { headers: { Authorization: 'Bearer ' + token } });
-    const data = await res.json();
-    const list = document.getElementById('fridgeList'); list.innerHTML = '';
-    data.fridges.forEach(f => {
-        if (f.id.startsWith('offer')) return;
-        const owned = userFridges.some(uf => uf.id === f.id);
-        const div = document.createElement('div');
-        div.className = 'fridge';
-        div.innerHTML = `
-            <img src="${DOMAIN}/${f.img}" alt="${f.name}">
-            <div class="fridge-info">
-                <strong>${f.name}</strong>
-                <p>Price: KES ${f.price}</p>
-                <p>Daily Earn: KES ${f.dailyEarn}</p>
-                <button onclick="buyFridge('${f.id}', '${f.name}', ${f.price})">${owned ? 'Owned' : 'Buy'}</button>
-            </div>`;
-        list.appendChild(div);
-    });
+// LOAD FRIDGES
+async function loadEarningFridges(userFridgesList) {
+    try {
+        const res  = await fetch(DOMAIN + '/api/fridges', { headers: { Authorization: 'Bearer ' + token } });
+        const data = await res.json();
+        const list = document.getElementById('fridgeList');
+        list.innerHTML = '';
+        data.fridges.forEach(f => {
+            if (f.id.startsWith('offer')) return;
+            const owned = userFridgesList.some(uf => uf.id === f.id);
+            const div = document.createElement('div');
+            div.className = 'fridge';
+            div.innerHTML = '<img src="' + DOMAIN + '/' + f.img + '" alt="' + f.name + '">'
+                + '<div class="fridge-info"><strong>' + f.name + '</strong>'
+                + '<p>Price: KES ' + f.price + '</p>'
+                + '<p>Daily Earn: KES ' + f.dailyEarn + '</p>'
+                + '<button onclick="buyFridge(\'' + f.id + '\',\'' + f.name + '\',' + f.price + ')">' + (owned ? 'Owned' : 'Buy') + '</button>'
+                + '</div>';
+            list.appendChild(div);
+        });
+    } catch(e) { console.error(e); }
 }
 
 async function loadOfferFridges() {
-    const resF = await fetch(DOMAIN + '/api/fridges', { headers: { Authorization: 'Bearer ' + token } });
-    const resMe = await fetch(DOMAIN + '/api/me', { headers: { Authorization: 'Bearer ' + token } });
-    const data = await resF.json();
-    const meData = await resMe.json();
-    const myFridges = meData.user ? meData.user.fridges : [];
-
-    const list = document.getElementById('offerFridgeList'); list.innerHTML = '';
-    data.fridges.forEach(f => {
-        if (!f.id.startsWith('offer')) return;
-        const div = document.createElement('div'); div.className = 'fridge';
-
-        // Check if user already owns this active offer fridge
-        const owned = myFridges.some(uf => {
-            if (uf.id !== f.id) return false;
-            // If it has an endTime, check if it's still active
-            if (uf.endTime) return new Date(uf.endTime) > new Date();
-            return true;
+    try {
+        const resF  = await fetch(DOMAIN + '/api/fridges', { headers: { Authorization: 'Bearer ' + token } });
+        const resMe = await fetch(DOMAIN + '/api/me',     { headers: { Authorization: 'Bearer ' + token } });
+        const data   = await resF.json();
+        const meData = await resMe.json();
+        const myFridges = meData.user ? meData.user.fridges : [];
+        const list = document.getElementById('offerFridgeList');
+        list.innerHTML = '';
+        data.fridges.forEach(f => {
+            if (!f.id.startsWith('offer')) return;
+            const div = document.createElement('div');
+            div.className = 'fridge';
+            const owned = myFridges.some(uf => {
+                if (uf.id !== f.id) return false;
+                if (uf.endTime) return new Date(uf.endTime) > new Date();
+                return true;
+            });
+            let btnLabel = 'Buy', btnDisabled = false;
+            if (f.locked)   { btnLabel = 'Locked';       btnDisabled = true; }
+            else if (owned) { btnLabel = 'Already Owned'; btnDisabled = true; }
+            let remaining = '';
+            if (!f.locked && f.startTime && f.durationHrs) {
+                remaining = '<p id="timer-' + f.id + '">Calculating time...</p>';
+            }
+            const disabledAttr = btnDisabled ? 'disabled style="opacity:0.5;cursor:not-allowed"' : '';
+            const onclickAttr  = btnDisabled ? '' : 'onclick="buyFridge(\'' + f.id + '\',\'' + f.name + '\',' + f.price + ')"';
+            div.innerHTML = '<img src="' + DOMAIN + '/' + f.img + '" alt="' + f.name + '">'
+                + '<div class="fridge-info"><strong>' + f.name + '</strong>'
+                + '<p>Price: ' + (f.locked ? 'Locked' : 'KES ' + f.price) + '</p>'
+                + '<p>Total Earn: ' + (f.locked ? 'Locked' : 'KES ' + f.dailyEarn) + '</p>'
+                + remaining
+                + '<button ' + disabledAttr + ' ' + onclickAttr + '>' + btnLabel + '</button>'
+                + '</div>';
+            list.appendChild(div);
+            if (!f.locked && f.startTime && f.durationHrs) startCountdown(f.id, new Date(f.startTime), f.durationHrs);
         });
-
-        let btnLabel, btnDisabled;
-        if (f.locked) { btnLabel = 'Locked'; btnDisabled = true; }
-        else if (owned) { btnLabel = 'Already Owned'; btnDisabled = true; }
-        else { btnLabel = 'Buy'; btnDisabled = false; }
-
-        let remaining = '';
-        if (!f.locked && f.startTime && f.durationHrs) {
-            remaining = `<p id="timer-${f.id}">Calculating time...</p>`;
-        }
-        div.innerHTML = `
-            <img src="${DOMAIN}/${f.img}" alt="${f.name}">
-            <div class="fridge-info">
-                <strong>${f.name}</strong>
-                <p>Price: ${f.locked ? 'Locked' : 'KES ' + f.price}</p>
-                <p>Total Earn: ${f.locked ? 'Locked' : 'KES ' + f.dailyEarn}</p>
-                ${remaining}
-                <button ${btnDisabled ? 'disabled style="opacity:0.5;cursor:not-allowed"' : ''} 
-                    onclick="${btnDisabled ? '' : `buyFridge('${f.id}', '${f.name}', ${f.price})`}">${btnLabel}</button>
-            </div>`;
-        list.appendChild(div);
-        if (!f.locked && f.startTime && f.durationHrs) startCountdown(f.id, new Date(f.startTime), f.durationHrs);
-    });
+    } catch(e) { console.error(e); }
 }
 
 function startCountdown(id, startTime, durationHrs) {
     const timerEl = document.getElementById('timer-' + id);
     const endTime = new Date(startTime).getTime() + durationHrs * 3600 * 1000;
-
-    // Add active class to make text green while counting
     timerEl.classList.add('active');
-
     const interval = setInterval(() => {
         const diff = endTime - Date.now();
-
-        if (diff <= 0) {
-            clearInterval(interval);
-            timerEl.textContent = 'Offer ended';
-            timerEl.classList.remove('active'); // back to grey
-            return;
-        }
-
-        const hrs = Math.floor(diff / 3600000);
+        if (diff <= 0) { clearInterval(interval); timerEl.textContent = 'Offer ended'; timerEl.classList.remove('active'); return; }
+        const hrs  = Math.floor(diff / 3600000);
         const mins = Math.floor((diff % 3600000) / 60000);
-        const secs = Math.floor((diff % 60000)           / 1000);
-
-        timerEl.textContent = `Remaining: ${hrs}h ${mins}m ${secs}s`;
+        const secs = Math.floor((diff % 60000) / 1000);
+        timerEl.textContent = 'Remaining: ' + hrs + 'h ' + mins + 'm ' + secs + 's';
     }, 1000);
 }
-
-// SUBMIT PAYMENT (Buy Till)
-document.getElementById('submitPaymentBtn').addEventListener('click', async () => {
-    const txnCode = document.getElementById('txnCode').value.trim().toUpperCase();
-    const paymentMsg = document.getElementById('paymentMsg');
-
-    if (!txnCode || txnCode.length < 8) {
-        paymentMsg.style.color = '#ff4444';
-        paymentMsg.textContent = '⚠️ Enter a valid M-Pesa transaction code.';
-        return;
-    }
-
-    const btn = document.getElementById('submitPaymentBtn');
-    btn.disabled = true;
-    btn.textContent = 'Submitting...';
-    paymentMsg.style.color = '#ffb347';
-    paymentMsg.textContent = 'Verifying payment, please wait...';
-
-    try {
-        const res = await fetch(DOMAIN + '/api/payment/manual', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-            body: JSON.stringify({ fridgeId: currentFridgeId, txnCode })
-        });
-        const d = await res.json();
-
-        if (d.error) {
-            paymentMsg.style.color = '#ff4444';
-            paymentMsg.textContent = '❌ ' + d.error;
-            btn.disabled = false;
-            btn.textContent = '✅ I Have Paid';
-        } else {
-            paymentMsg.style.color = '#00ffb0';
-            paymentMsg.textContent = '✅ Payment submitted! Your fridge will be activated after verification.';
-            setTimeout(() => { closeModal(); getUser(); }, 2500);
-        }
-    } catch (err) {
-        paymentMsg.style.color = '#ff4444';
-        paymentMsg.textContent = '❌ Network error. Please try again.';
-        btn.disabled = false;
-        btn.textContent = '✅ I Have Paid';
-    }
-});
 
 // WITHDRAW
 document.getElementById('withdrawForm').addEventListener('submit', async e => {
     e.preventDefault();
-    const phone = document.getElementById('withdrawPhone').value.trim();
+    const phone  = document.getElementById('withdrawPhone').value.trim();
     const amount = Number(document.getElementById('withdrawAmount').value);
-    
-    if (!phone || !amount) {
-        withdrawMsg.textContent = 'Fill all fields';
-        return;
-    }
-
+    if (!phone || !amount) { withdrawMsg.textContent = 'Fill all fields'; return; }
     try {
         const res = await fetch(DOMAIN + '/api/withdraw', {
             method: 'POST',
@@ -1153,22 +847,14 @@ document.getElementById('withdrawForm').addEventListener('submit', async e => {
         const d = await res.json();
         withdrawMsg.textContent = d.message || d.error;
         getUser();
-    } catch (err) {
-        console.error(err);
-        withdrawMsg.textContent = 'Network or server error';
-    }
+    } catch (err) { withdrawMsg.textContent = 'Network or server error'; }
 });
 
-// ADMIN: CREATE OFFER CODE
+// ADMIN
 async function createOfferCode() {
-    const code = document.getElementById('adminCode').value.trim();
+    const code   = document.getElementById('adminCode').value.trim();
     const amount = Number(document.getElementById('adminAmount').value);
-    
-    if (!code || !amount) { 
-        adminMsg.textContent = 'Fill all fields'; 
-        return; 
-    }
-
+    if (!code || !amount) { adminMsg.textContent = 'Fill all fields'; return; }
     try {
         const res = await fetch(DOMAIN + '/api/admin/offercode', {
             method: 'POST',
@@ -1177,24 +863,15 @@ async function createOfferCode() {
         });
         const d = await res.json();
         adminMsg.textContent = d.message || d.error;
-    } catch (err) {
-        console.error(err);
-        adminMsg.textContent = 'Network error';
-    }
+    } catch (err) { adminMsg.textContent = 'Network error'; }
 }
 
-// ADMIN: UNLOCK FRIDGE
 async function unlockFridge() {
-    const id = document.getElementById('unlockFridgeId').value.trim();
-    const price = Number(document.getElementById('unlockPrice').value);
-    const earn = Number(document.getElementById('unlockEarn').value);
+    const id       = document.getElementById('unlockFridgeId').value.trim();
+    const price    = Number(document.getElementById('unlockPrice').value);
+    const earn     = Number(document.getElementById('unlockEarn').value);
     const duration = Number(document.getElementById('unlockDuration').value);
-    
-    if (!id || !price || !earn || !duration) {
-        unlockMsg.textContent = 'Fill all fields';
-        return;
-    }
-
+    if (!id || !price || !earn || !duration) { unlockMsg.textContent = 'Fill all fields'; return; }
     try {
         const res = await fetch(DOMAIN + '/api/admin/unlock', {
             method: 'POST',
@@ -1204,20 +881,12 @@ async function unlockFridge() {
         const d = await res.json();
         unlockMsg.textContent = d.message || d.error;
         getUser();
-    } catch (err) {
-        console.error(err);
-        unlockMsg.textContent = 'Network error';
-    }
+    } catch (err) { unlockMsg.textContent = 'Network error'; }
 }
 
-// ADMIN: LOCK FRIDGE
 async function lockFridge() {
     const id = document.getElementById('lockFridgeId').value.trim();
-    if (!id) {
-        lockMsg.textContent = 'Enter fridge ID';
-        return;
-    }
-
+    if (!id) { lockMsg.textContent = 'Enter fridge ID'; return; }
     try {
         const res = await fetch(DOMAIN + '/api/admin/lock', {
             method: 'POST',
@@ -1227,36 +896,26 @@ async function lockFridge() {
         const d = await res.json();
         lockMsg.textContent = d.message || d.error;
         getUser();
-    } catch (err) {
-        console.error(err);
-        lockMsg.textContent = 'Network error';
-    }
+    } catch (err) { lockMsg.textContent = 'Network error'; }
 }
 
-// FAQ TOGGLE
+// FAQ
 function toggleFaq(el) {
     el.classList.toggle('open');
     el.nextElementSibling.classList.toggle('open');
 }
 
-// LOAD COMMUNITY LINKS FROM SERVER
+// COMMUNITY LINKS
 async function loadCommunityLinks() {
     try {
         const res = await fetch(DOMAIN + '/api/links');
         const d = await res.json();
-        if (d.whatsapp) {
-            document.getElementById('whatsappLink').href = d.whatsapp;
-            document.getElementById('contactWhatsapp').href = d.whatsapp;
-        }
-        if (d.telegram) {
-            document.getElementById('telegramLink').href = d.telegram;
-            document.getElementById('contactTelegram').href = d.telegram;
-        }
-    } catch(e) { console.log('Links not set yet'); }
+        if (d.whatsapp) { document.getElementById('whatsappLink').href = d.whatsapp; document.getElementById('contactWhatsapp').href = d.whatsapp; }
+        if (d.telegram) { document.getElementById('telegramLink').href = d.telegram; document.getElementById('contactTelegram').href = d.telegram; }
+    } catch(e) {}
 }
 
-
-// ── TRADING TAB ──
+// TRADING
 const TRADE_PAIRS_CS = {
     'BTCUSDT': { name:'BTC/USD', spread:8,       chart:'BINANCE:BTCUSDT' },
     'ETHUSDT': { name:'ETH/USD', spread:0.5,     chart:'BINANCE:ETHUSDT' },
@@ -1265,21 +924,20 @@ const TRADE_PAIRS_CS = {
     'XAUUSD':  { name:'XAU/USD', spread:0.35,    chart:'TVC:GOLD' },
     'USOIL':   { name:'OIL/USD', spread:0.03,    chart:'TVC:USOIL' },
 };
-
 let activeTradePair = 'BTCUSDT';
 let tradePriceTimer = null;
 
 const CS_CONTENT = {
-    deposit:  { icon:'💰', title:'Deposit Coming Soon!',  sub:'Fund your trading account with KES and convert to USD. This feature launches very soon!' },
-    buy:      { icon:'📈', title:'Buy Orders Coming Soon!', sub:'Place BUY orders and trade the live market. Full trading functionality launches soon!' },
-    sell:     { icon:'📉', title:'Sell Orders Coming Soon!', sub:'Place SELL orders and profit from falling markets. Full trading functionality launches soon!' },
-    withdraw: { icon:'💸', title:'Withdrawal Coming Soon!', sub:'Withdraw your trading profits back to your M-Pesa. Coming very soon!' },
-    history:  { icon:'📋', title:'Trade History Coming Soon!', sub:'View all your past trades, profits and losses in detail. Coming very soon!' },
+    deposit:  { icon:'&#128176;', title:'Deposit Coming Soon!',       sub:'Fund your trading account with KES and convert to USD. This feature launches very soon!' },
+    buy:      { icon:'&#128200;', title:'Buy Orders Coming Soon!',    sub:'Place BUY orders and trade the live market. Full trading functionality launches soon!' },
+    sell:     { icon:'&#128201;', title:'Sell Orders Coming Soon!',   sub:'Place SELL orders and profit from falling markets. Full trading functionality launches soon!' },
+    withdraw: { icon:'&#128184;', title:'Withdrawal Coming Soon!',    sub:'Withdraw your trading profits back to your M-Pesa. Coming very soon!' },
+    history:  { icon:'&#128203;', title:'Trade History Coming Soon!', sub:'View all your past trades, profits and losses in detail. Coming very soon!' },
 };
 
 function showCS(type) {
     const c = CS_CONTENT[type] || CS_CONTENT.deposit;
-    document.getElementById('csIcon').textContent  = c.icon;
+    document.getElementById('csIcon').innerHTML  = c.icon;
     document.getElementById('csTitle').textContent = c.title;
     document.getElementById('csSub').textContent   = c.sub;
     document.getElementById('csModal').classList.add('show');
@@ -1289,7 +947,7 @@ function buildTradePairBar() {
     const bar = document.getElementById('tradePairBar');
     if (!bar) return;
     bar.innerHTML = Object.entries(TRADE_PAIRS_CS).map(([key, p]) =>
-        `<button class="pair-chip ${key===activeTradePair?'active':''}" onclick="switchTradePair('${key}',this)">${p.name}</button>`
+        '<button class="pair-chip ' + (key===activeTradePair?'active':'') + '" onclick="switchTradePair(\'' + key + '\',this)">' + p.name + '</button>'
     ).join('');
 }
 
@@ -1299,7 +957,7 @@ function switchTradePair(pair, btn) {
     btn.classList.add('active');
     const p = TRADE_PAIRS_CS[pair];
     document.getElementById('tradeChartFrame').src =
-        `https://www.tradingview.com/widgetembed/?symbol=${p.chart}&interval=5&theme=dark&style=1&locale=en&hide_side_toolbar=false`;
+        'https://www.tradingview.com/widgetembed/?symbol=' + p.chart + '&interval=5&theme=dark&style=1&locale=en&hide_side_toolbar=false';
     fetchTradePrice(pair);
 }
 
@@ -1309,9 +967,9 @@ async function fetchTradePrice(pair) {
         let price = null;
         if (pair === 'BTCUSDT' || pair === 'ETHUSDT') {
             const id = pair === 'BTCUSDT' ? 'bitcoin' : 'ethereum';
-            const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd`);
-            const d = await r.json();
-            price = d[pair==='BTCUSDT'?'bitcoin':'ethereum']?.usd;
+            const r  = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=' + id + '&vs_currencies=usd');
+            const d  = await r.json();
+            price = d[pair==='BTCUSDT'?'bitcoin':'ethereum'] ? d[pair==='BTCUSDT'?'bitcoin':'ethereum'].usd : null;
         }
         if (!price) return;
         const dec = pair.includes('USD') && !pair.includes('BTC') && !pair.includes('ETH') ? 5 : 2;
@@ -1328,9 +986,7 @@ function initTradeTab() {
     tradePriceTimer = setInterval(() => fetchTradePrice(activeTradePair), 5000);
 }
 
-loadCommunityLinks();
-
-// LOAD BROADCAST BANNER
+// BROADCAST
 async function loadBroadcast() {
     try {
         const res = await fetch(DOMAIN + '/api/broadcast/latest', { headers: { Authorization: 'Bearer ' + token } });
@@ -1349,16 +1005,17 @@ async function loadBroadcast() {
         }
     } catch(e) {}
 }
-loadBroadcast();
 
+loadCommunityLinks();
+loadBroadcast();
 </script>
 
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').then(() => {
-                console.log('SW registered');
-            }).catch(err => console.log('SW error:', err));
-        }
-    </script>
+<script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js')
+            .then(() => console.log('SW registered'))
+            .catch(err => console.log('SW error:', err));
+    }
+</script>
 </body>
 </html>
