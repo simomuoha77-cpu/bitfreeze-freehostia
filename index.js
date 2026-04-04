@@ -1134,7 +1134,6 @@ async function checkAndCreditOfferEarnings() {
     }
 }
 
-<<<<<<< HEAD
 // ── Mutex flag to prevent concurrent runDailyEarnings calls ──
 let earningsRunning = false;
 
@@ -1143,23 +1142,13 @@ async function runDailyEarnings() {
     // ✅ MUTEX: if already running (e.g. midnight cron + hourly cron fire at same second), skip
     if (earningsRunning) {
         console.log('⚠️ runDailyEarnings already in progress — skipping duplicate call');
-=======
-let earningsRunning = false;
-
-async function runDailyEarnings() {
-    if (earningsRunning) {
-        console.log('⚠️ runDailyEarnings already in progress — skipping');
->>>>>>> f0e6183 (Backup 2026-04-04 18:41:46)
         return;
     }
     earningsRunning = true;
     try {
         const users = await User.find();
         const now = new Date();
-<<<<<<< HEAD
         // Kenya date string e.g. "2026-03-27"
-=======
->>>>>>> f0e6183 (Backup 2026-04-04 18:41:46)
         const todayKenya = new Date(now.getTime() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
         let totalCredited = 0;
         let usersUpdated = 0;
@@ -1178,7 +1167,6 @@ async function runDailyEarnings() {
                 const hoursSinceBuy = (now - boughtAt) / (1000 * 60 * 60);
                 if (hoursSinceBuy < 24) continue;
 
-<<<<<<< HEAD
                 // ✅ DEDUP: skip if already credited today (Kenya date)
                 const lastEarnedAt = f.lastEarnedAt ? new Date(f.lastEarnedAt) : null;
                 if (lastEarnedAt) {
@@ -1188,16 +1176,6 @@ async function runDailyEarnings() {
 
                 earnThisRun += dailyEarn;
                 user.fridges[i].lastEarnedAt = now; // mark as credited today
-=======
-                const lastEarnedAt = f.lastEarnedAt ? new Date(f.lastEarnedAt) : null;
-                if (lastEarnedAt) {
-                    const lastEarnedKenya = new Date(lastEarnedAt.getTime() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
-                    if (lastEarnedKenya === todayKenya) continue;
-                }
-
-                earnThisRun += dailyEarn;
-                user.fridges[i].lastEarnedAt = now;
->>>>>>> f0e6183 (Backup 2026-04-04 18:41:46)
                 changed = true;
             }
 
@@ -1205,14 +1183,10 @@ async function runDailyEarnings() {
                 user.markModified('fridges');
                 await User.updateOne(
                     { _id: user._id },
-<<<<<<< HEAD
                     {
                         $inc: { earning: earnThisRun },
                         $set: { fridges: user.fridges }
                     }
-=======
-                    { $inc: { earning: earnThisRun }, $set: { fridges: user.fridges } }
->>>>>>> f0e6183 (Backup 2026-04-04 18:41:46)
                 );
                 totalCredited += earnThisRun;
                 usersUpdated++;
@@ -1233,11 +1207,7 @@ async function runDailyEarnings() {
     } catch (err) {
         console.error('Daily earnings error:', err);
     } finally {
-<<<<<<< HEAD
         earningsRunning = false; // always release the lock
-=======
-        earningsRunning = false;
->>>>>>> f0e6183 (Backup 2026-04-04 18:41:46)
     }
 }
 
