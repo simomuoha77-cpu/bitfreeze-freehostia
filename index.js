@@ -6,7 +6,6 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const path = require('path');
 const mongoose = require('mongoose');
-const { Telegraf, Markup } = require('telegraf');
 const cron = require('node-cron');
 const axios = require('axios');
 const rateLimit = require('express-rate-limit');
@@ -14,8 +13,6 @@ const rateLimit = require('express-rate-limit');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const SECRET = process.env.BF_SECRET;
-const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
-const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID;
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 
 // ================= MONGODB =================
@@ -55,7 +52,10 @@ const userSchema = new mongoose.Schema({
     lastWithdrawalAttempt: Date,
     referredBy: { type: String, default: null },
     referralRewarded: { type: Boolean, default: false },
-    banned: { type: Boolean, default: false }
+    banned: { type: Boolean, default: false },
+    isMarketer: { type: Boolean, default: false },
+    marketerCommission: { type: Number, default: 0 },
+    marketerNote: { type: String, default: '' }
 });
 const User = mongoose.model('User', userSchema);
 
@@ -113,6 +113,15 @@ const settingsSchema = new mongoose.Schema({
     value: { type: String, default: '' }
 }, { collection: 'settings' });
 const Settings = mongoose.model('Settings', settingsSchema);
+
+const securityLogSchema = new mongoose.Schema({
+    type: String,
+    ip: String,
+    path: String,
+    detail: String,
+    createdAt: { type: Date, default: Date.now }
+}, { collection: 'securitylogs' });
+const SecurityLog = mongoose.model('SecurityLog', securityLogSchema);
 
 const fridgeStateSchema = new mongoose.Schema({
     id: { type: String, unique: true },
@@ -224,7 +233,8 @@ app.use((req, res, next) => {
             suspiciousIPs[ip].count++;
             if (suspiciousIPs[ip].count > 20) {
                 bannedIPs.add(ip);
-                console.log(`🚨 Auto-banned IP ${ip} after suspicious activity`);
+                console.log(`Auto-banned IP ${ip} after suspicious activity`);
+                SecurityLog.create({ type:'IP_BANNED', ip, path:'multiple', detail:`Auto-banned after ${suspiciousIPs[ip].count} suspicious requests` }).catch(()=>{});
             }
         }
     });
@@ -311,8 +321,8 @@ const BLOCKED_PATHS = [
 app.use((req, res, next) => {
     const p = req.path.toLowerCase();
     if (BLOCKED_PATHS.some(b => p.includes(b))) {
-        console.log(`🚨 Blocked hacking attempt: ${req.ip} → ${req.path}`);
-        bannedIPs.add(req.ip); // auto-ban immediately on known exploit paths
+        bannedIPs.add(req.ip);
+        SecurityLog.create({ type:'BLOCKED_PATH', ip:req.ip, path:req.path, detail:'Known exploit path' }).catch(()=>{});
         return res.status(404).send('Not Found');
     }
     const query = req.url.toLowerCase();
@@ -321,8 +331,8 @@ app.use((req, res, next) => {
         query.includes('etc/passwd') || query.includes('cmd=') ||
         query.includes('../') || query.includes('eval(') ||
         query.includes('base64_decode') || query.includes('exec(')) {
-        console.log(`🚨 Blocked SQL/XSS attempt: ${req.ip} → ${req.url}`);
         bannedIPs.add(req.ip);
+        SecurityLog.create({ type:'SQL_XSS', ip:req.ip, path:req.url, detail:'SQL/XSS pattern' }).catch(()=>{});
         return res.status(403).send('Forbidden');
     }
     next();
@@ -704,11 +714,6 @@ app.post('/api/payment/submit', auth, paymentLimiter, async (req, res) => {
         });
         await payment.save();
 
-        await bot.telegram.sendMessage(
-            ADMIN_CHAT_ID,
-            `📲 STK Push Sent\n━━━━━━━━━━━━━━━━━━\nUser: ${user.email}\nFridge: ${fridge.name}\nAmount: KES ${fridge.price}\nPhone: ${user.phone}\nCheckoutID: ${stkData.CheckoutRequestID}\n\nWaiting for M-Pesa callback...`
-        );
-
         res.json({
             message: 'M-Pesa prompt sent to your phone. Enter your PIN to complete payment.',
             checkoutRequestId: stkData.CheckoutRequestID
@@ -768,11 +773,6 @@ app.post('/api/payment/mpesa/callback', async (req, res) => {
             await payment.save();
 
             console.log(`✅ M-Pesa payment confirmed: ${mpesaCode} | KES ${amount} | ${phone}`);
-
-            await bot.telegram.sendMessage(
-                ADMIN_CHAT_ID,
-                `✅ M-Pesa Payment Confirmed!\n━━━━━━━━━━━━━━━━━━\nUser: ${payment.userEmail}\nFridge: ${payment.fridgeName}\nAmount: KES ${amount}\nM-Pesa Code: ${mpesaCode}\nPhone: ${phone}\n\n👉 Go to Admin Panel to approve`
-            );
         } else {
             // Payment failed or cancelled
             payment.stkStatus = 'failed';
@@ -782,10 +782,6 @@ app.post('/api/payment/mpesa/callback', async (req, res) => {
             console.log(`❌ STK payment failed for ${payment.userEmail}: ${desc}`);
 
             try {
-                await bot.telegram.sendMessage(
-                    ADMIN_CHAT_ID,
-                    `❌ STK Payment Failed\nUser: ${payment.userEmail}\nFridge: ${payment.fridgeName}\nReason: ${desc}`
-                );
             } catch(e) {}
         }
     } catch (err) {
@@ -831,11 +827,6 @@ app.post('/api/payment/manual', auth, async (req, res) => {
             stkStatus: 'manual'
         });
         await payment.save();
-
-        await bot.telegram.sendMessage(
-            ADMIN_CHAT_ID,
-            `💰 Manual Payment Submitted\n━━━━━━━━━━━━━━━━━━\nUser: ${user.email}\nPhone: ${user.phone}\nFridge: ${fridge.name}\nAmount: KES ${fridge.price}\nM-Pesa Code: ${txnCode.toUpperCase()}\n\n👉 Go to Admin Panel to approve`
-        );
 
         res.json({ message: 'Payment submitted! Awaiting admin verification.' });
     } catch (err) {
@@ -895,15 +886,21 @@ app.post('/api/admin/payment/approve', auth, async (req, res) => {
         await payment.save();
 
         if (user.referredBy && !user.referralRewarded) {
-            const reward = getReferralReward(payment.fridgePrice || 0);
-            if (reward > 0) {
-                const referrer = await User.findOne({ email: user.referredBy });
-                if (referrer) {
+            const referrer = await User.findOne({ email: user.referredBy });
+            if (referrer) {
+                let reward;
+                if (referrer.isMarketer) {
+                    // Marketers earn 2x the normal referral reward
+                    reward = getReferralReward(payment.fridgePrice || 0) * 2;
+                } else {
+                    reward = getReferralReward(payment.fridgePrice || 0);
+                }
+                if (reward > 0) {
                     referrer.earning += reward;
                     await referrer.save();
                     user.referralRewarded = true;
                     await user.save();
-                    console.log(`✅ Referral reward: KES ${reward} credited to ${user.referredBy}`);
+                    console.log(`Referral reward: KES ${reward} to ${user.referredBy}`);
                 }
             }
         }
@@ -1164,8 +1161,8 @@ async function runDailyEarnings() {
                 if (dailyEarn <= 0) continue;
                 const boughtAt = f.boughtAt ? new Date(f.boughtAt) : null;
                 if (!boughtAt) continue;
-                const hoursSinceBuy = (now - boughtAt) / (1000 * 60 * 60);
-                if (hoursSinceBuy < 24) continue;
+                const boughtAtKenya = new Date(boughtAt.getTime() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
+                if (boughtAtKenya >= todayKenya) continue;
 
                 // ✅ DEDUP: skip if already credited today (Kenya date)
                 const lastEarnedAt = f.lastEarnedAt ? new Date(f.lastEarnedAt) : null;
@@ -1198,10 +1195,6 @@ async function runDailyEarnings() {
 
         try {
             if (typeof bot !== 'undefined' && usersUpdated > 0) {
-                await bot.telegram.sendMessage(
-                    ADMIN_CHAT_ID,
-                    `💰 Daily Earnings Credited\n━━━━━━━━━━━━━━━━━━\nUsers: ${usersUpdated}\nTotal: KES ${totalCredited}\nTime: ${now.toLocaleString('en-KE', {timeZone:'Africa/Nairobi'})}`
-                );
             }
         } catch(e) {}
     } catch (err) {
@@ -1232,18 +1225,6 @@ async function checkMissedEarnings() {
         console.error('checkMissedEarnings error:', err);
     }
 }
-
-// ================= TELEGRAM BOT =================
-const bot = new Telegraf(TELEGRAM_TOKEN);
-
-bot.launch().then(() => console.log('Telegram bot running'))
-.catch(err => {
-    if (err.message && err.message.includes('409')) {
-        console.log('⚠️ Telegram bot already running elsewhere. Skipping local launch.');
-    } else {
-        console.error('Telegram bot error:', err.message);
-    }
-});
 
 // ================= CRON JOBS =================
 cron.schedule('* * * * *', checkAndCreditOfferEarnings);
@@ -1299,11 +1280,6 @@ app.post('/api/withdraw', auth, async (req, res) => {
         await withdrawal.save();
         user.lastWithdrawalAttempt = new Date();
         await user.save();
-
-        await bot.telegram.sendMessage(
-            ADMIN_CHAT_ID,
-            `💸 Withdrawal Request\n━━━━━━━━━━━━━━━━━━\nUser: ${user.email}\nAmount: KES ${amount}\nPhone: ${phone}\n\n👉 Go to Admin Panel to approve`
-        );
 
         res.json({ message: 'Withdrawal request submitted' });
     } catch (err) {
@@ -1547,9 +1523,134 @@ app.post('/api/admin/user/ban', auth, async (req, res) => {
     } catch(err) { res.status(500).json({ error: err.message }); }
 });
 
-// ================= GRACEFUL SHUTDOWN =================
-process.on('SIGINT',  () => { bot.stop('SIGINT');  process.exit(); });
-process.on('SIGTERM', () => { bot.stop('SIGTERM'); process.exit(); });
+
+// ================= ADMIN: REFERRAL OVERVIEW =================
+app.get('/api/admin/referrals', auth, async (req, res) => {
+    try {
+        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
+        const users = await User.find({}, '-password').lean();
+        const referred = {};
+        for (const u of users) {
+            if (u.referredBy) {
+                if (!referred[u.referredBy]) referred[u.referredBy] = [];
+                referred[u.referredBy].push({ email: u.email, joined: u.createdAt, rewarded: u.referralRewarded });
+            }
+        }
+        const stats = users.map(u => ({
+            email: u.email, phone: u.phone, banned: u.banned,
+            isMarketer: u.isMarketer, marketerCommission: u.marketerCommission,
+            referredBy: u.referredBy,
+            referralCount: (referred[u.email] || []).length,
+            referrals: referred[u.email] || [],
+            earning: u.earning, joined: u.createdAt
+        }));
+        res.json({ stats });
+    } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= ADMIN: CREATE MARKETER =================
+app.post('/api/admin/marketer/create', auth, async (req, res) => {
+    try {
+        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
+        const { name, email, password, phone, note } = req.body;
+        if (!name || !email || !password || !phone)
+            return res.status(400).json({ error: 'Name, email, password and phone are all required' });
+        if (password.length < 6)
+            return res.status(400).json({ error: 'Password must be at least 6 characters' });
+        if (await User.findOne({ email }))
+            return res.status(400).json({ error: 'Email already registered' });
+        const hashed = await bcrypt.hash(password, 10);
+        // isMarketer = true, marketerCommission = 0 means use 2x normal rate automatically
+        const user = new User({ name, email, password: hashed, phone, isMarketer: true, marketerCommission: 0, marketerNote: note || '' });
+        await user.save();
+        await ActivityLog.create({ action: 'MARKETER_CREATED', adminEmail: req.user.email, details: 'Marketer: ' + name + ' (' + email + ')' });
+        res.json({ message: 'Marketer account created', email, referralLink: '/register.html?ref=' + email });
+    } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= ADMIN: GET MARKETERS =================
+app.get('/api/admin/marketers', auth, async (req, res) => {
+    try {
+        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
+        const marketers = await User.find({ isMarketer: true }, '-password').lean();
+        const allUsers = await User.find({}, 'referredBy referralRewarded email createdAt').lean();
+        const payments = await Payment.find({ approved: true }, 'userEmail fridgePrice').lean();
+        const result = marketers.map(m => {
+            const refs = allUsers.filter(u => u.referredBy === m.email);
+            const converted = refs.filter(u => u.referralRewarded).length;
+            let totalComm = 0;
+            for (const ref of refs.filter(u => u.referralRewarded)) {
+                const pay = payments.find(p => p.userEmail === ref.email);
+                if (pay) {
+                    totalComm += getReferralReward(pay.fridgePrice || 0) * 2;
+                }
+            }
+            return { ...m, referralCount: refs.length, convertedCount: converted, totalCommission: totalComm, referralLink: '/register.html?ref=' + m.email };
+        });
+        res.json({ marketers: result });
+    } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= ADMIN: UPDATE MARKETER =================
+app.post('/api/admin/marketer/update', auth, async (req, res) => {
+    try {
+        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
+        const { email, commission, note, banned } = req.body;
+        const user = await User.findOne({ email, isMarketer: true });
+        if (!user) return res.status(404).json({ error: 'Marketer not found' });
+        if (commission !== undefined) user.marketerCommission = Number(commission);
+        if (note !== undefined) user.marketerNote = note;
+        if (banned !== undefined) user.banned = banned;
+        await user.save();
+        res.json({ message: 'Marketer updated' });
+    } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= ADMIN: SECURITY LOGS =================
+app.get('/api/admin/security', auth, async (req, res) => {
+    try {
+        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
+        const logs = await SecurityLog.find().sort({ createdAt: -1 }).limit(200);
+        const bannedList = Array.from(bannedIPs);
+        const suspList = Object.entries(suspiciousIPs).map(([ip, d]) => ({ ip, count: d.count, firstSeen: d.firstSeen }));
+        res.json({ logs, bannedIPs: bannedList, suspiciousIPs: suspList });
+    } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= ADMIN: BAN/UNBAN IP =================
+app.post('/api/admin/security/ban-ip', auth, async (req, res) => {
+    try {
+        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
+        const { ip, action } = req.body;
+        if (!ip) return res.status(400).json({ error: 'IP required' });
+        if (action === 'ban') {
+            bannedIPs.add(ip);
+            await SecurityLog.create({ type:'MANUAL_BAN', ip, path:'admin', detail:'Manually banned by admin' });
+        } else {
+            bannedIPs.delete(ip);
+            delete suspiciousIPs[ip];
+            await SecurityLog.create({ type:'MANUAL_UNBAN', ip, path:'admin', detail:'Manually unbanned by admin' });
+        }
+        res.json({ message: action === 'ban' ? 'IP banned' : 'IP unbanned' });
+    } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= HONEYPOT TRAPS =================
+app.get('/administrator', (req, res) => {
+    SecurityLog.create({ type:'HONEYPOT', ip:req.ip, path:'/administrator', detail:'Hacker visited fake admin' }).catch(()=>{});
+    bannedIPs.add(req.ip);
+    res.send('<html><body><h2>Login</h2><form><input name="u" placeholder="Username"><input type="password" name="p"><button>Login</button></form></body></html>');
+});
+app.post('/administrator', (req, res) => {
+    SecurityLog.create({ type:'HONEYPOT_LOGIN', ip:req.ip, path:'/administrator', detail:'Hacker tried fake login' }).catch(()=>{});
+    bannedIPs.add(req.ip);
+    res.send('<html><body><p>Invalid credentials</p></body></html>');
+});
+app.get('/wp-login.php', (req, res) => {
+    SecurityLog.create({ type:'HONEYPOT', ip:req.ip, path:'/wp-login.php', detail:'WordPress honeypot hit' }).catch(()=>{});
+    bannedIPs.add(req.ip);
+    res.send('<html><body>WordPress</body></html>');
+});
 
 // ================= START SERVER =================
 app.listen(PORT, () => {

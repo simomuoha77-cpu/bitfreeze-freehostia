@@ -850,7 +850,22 @@ tbody td {
                     <span class="nav-icon">📋</span> Activity Log
                 </button>
 
+                <div class="nav-section-label">Referrals & Marketers</div>
+                <button class="nav-item" onclick="showPage('referrals', this)">
+                    <span class="nav-icon">&#129309;</span> Referrals
+                </button>
+                <button class="nav-item" onclick="showPage('marketers', this)">
+                    <span class="nav-icon">&#128226;</span> Marketers
+                </button>
+
+                <div class="nav-section-label">Security</div>
+                <button class="nav-item" onclick="showPage('security', this)">
+                    <span class="nav-icon">&#128737;</span> Security
+                    <span class="badge-count" id="secBadge" style="display:none"></span>
+                </button>
+
                 <div class="nav-section-label">Tools</div>
+
                 <button class="nav-item" onclick="showPage('bulktools', this)">
                     <span class="nav-icon">⚡</span> Bulk Tools
                 </button>
@@ -1351,7 +1366,121 @@ tbody td {
                 </div>
 
 
+                <!-- REFERRALS PAGE -->
+                <div class="page" id="page-referrals">
+                    <div class="stats-grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr));margin-bottom:20px;">
+                        <div class="stat-card orange"><div class="stat-label">Total Referrals</div><div class="stat-value" id="refStatTotal">&#8212;</div></div>
+                        <div class="stat-card green"><div class="stat-label">Converted</div><div class="stat-value" id="refStatConverted">&#8212;</div></div>
+                        <div class="stat-card blue"><div class="stat-label">Zero Referrals</div><div class="stat-value" id="refStatZero">&#8212;</div></div>
+                        <div class="stat-card red"><div class="stat-label">Commission Paid</div><div class="stat-value" id="refStatComm">&#8212;</div></div>
+                    </div>
+                    <div class="section-head">
+                        <div class="section-title">All Users — Referral Stats</div>
+                        <div style="display:flex;gap:8px;">
+                            <button class="filter-btn active" id="refFilterAll" onclick="filterReferrals('all',this)">All</button>
+                            <button class="filter-btn" onclick="filterReferrals('has',this)">Has Referrals</button>
+                            <button class="filter-btn" onclick="filterReferrals('zero',this)">Zero Referrals</button>
+                            <button class="filter-btn" onclick="filterReferrals('marketers',this)">Marketers Only</button>
+                        </div>
+                    </div>
+                    <div class="table-wrap" id="referralsTable"></div>
+                </div>
+
+                <!-- MARKETERS PAGE -->
+                <div class="page" id="page-marketers">
+                    <div class="form-card">
+                        <h3>&#128226; Create Marketer Account</h3>
+                        <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Admin creates a marketer account using their name and phone. A unique referral link is generated for them. They earn a custom commission % when their referrals deposit.</p>
+                        <p style="font-size:12px;background:rgba(255,138,0,0.08);border:1px solid rgba(255,138,0,0.2);border-radius:8px;padding:10px 14px;color:#ffb347;margin-bottom:16px;">
+                            &#128161; Marketers earn <strong>2x the normal referral commission</strong> automatically. They log in to the normal dashboard and withdraw earnings like any user.
+                        </p>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Full Name</label>
+                                <input type="text" id="mkName" placeholder="e.g. John Kamau">
+                            </div>
+                            <div class="form-group">
+                                <label>Email Address</label>
+                                <input type="email" id="mkEmail" placeholder="e.g. john@gmail.com">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Password</label>
+                                <input type="password" id="mkPassword" placeholder="Min 6 characters">
+                            </div>
+                            <div class="form-group">
+                                <label>Phone Number</label>
+                                <input type="tel" id="mkPhone" placeholder="e.g. 0712345678">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group" style="flex:2;min-width:100%">
+                                <label>Note (optional)</label>
+                                <input type="text" id="mkNote" placeholder="e.g. TikTok marketer, Nairobi">
+                            </div>
+                        </div>
+                        <button class="btn-action btn-orange" onclick="createMarketer()">&#10133; Create Marketer</button>
+                        <div class="form-msg" id="mkMsg"></div>
+                        <div id="mkResultBox" style="display:none;margin-top:16px;background:rgba(0,230,118,0.07);border:1px solid rgba(0,230,118,0.2);border-radius:10px;padding:16px;">
+                            <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">MARKETER CREATED &#8212; Share this referral link:</div>
+                            <div id="mkResultLink" style="font-family:'DM Mono',monospace;color:var(--green);font-size:13px;word-break:break-all;margin-bottom:10px;"></div>
+                            <div style="font-size:12px;color:var(--muted);">Email: <span id="mkResultEmail" style="color:var(--accent)"></span></div>
+                            <button class="btn-action btn-green" style="margin-top:10px;padding:8px 16px;font-size:12px;" onclick="copyMarketerLink()">&#128203; Copy Link</button>
+                        </div>
+                    </div>
+
+                    <div class="section-head">
+                        <div class="section-title">All Marketers</div>
+                        <button class="refresh-btn" onclick="loadMarketers()">&#8635; Refresh</button>
+                    </div>
+                    <div class="table-wrap" id="marketersTable"></div>
+                </div>
+
+                <!-- SECURITY PAGE -->
+                <div class="page" id="page-security">
+                    <div class="stats-grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr));margin-bottom:20px;">
+                        <div class="stat-card red"><div class="stat-label">Banned IPs</div><div class="stat-value" id="secStatBanned">&#8212;</div></div>
+                        <div class="stat-card orange"><div class="stat-label">Suspicious IPs</div><div class="stat-value" id="secStatSusp">&#8212;</div></div>
+                        <div class="stat-card blue"><div class="stat-label">Total Events</div><div class="stat-value" id="secStatTotal">&#8212;</div></div>
+                        <div class="stat-card green"><div class="stat-label">Honeypot Hits</div><div class="stat-value" id="secStatHoney">&#8212;</div></div>
+                    </div>
+
+                    <div class="form-card">
+                        <h3>&#128737; Manual IP Ban / Unban</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>IP Address</label>
+                                <input type="text" id="banIpInput" placeholder="e.g. 192.168.1.1">
+                            </div>
+                            <div class="form-group" style="display:flex;align-items:flex-end;gap:8px;">
+                                <button class="btn-action btn-red" style="flex:1" onclick="manualBanIp('ban')">&#128683; Ban IP</button>
+                                <button class="btn-action btn-green" style="flex:1" onclick="manualBanIp('unban')">&#128275; Unban IP</button>
+                            </div>
+                        </div>
+                        <div class="form-msg" id="banIpMsg"></div>
+                    </div>
+
+                    <div class="section-head" style="margin-top:4px;">
+                        <div class="section-title">Currently Banned IPs</div>
+                    </div>
+                    <div class="table-wrap" id="bannedIpTable" style="margin-bottom:20px;"></div>
+
+                    <div class="section-head">
+                        <div class="section-title">Security Event Log</div>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                            <button class="filter-btn active" onclick="filterSecLogs('all',this)">All</button>
+                            <button class="filter-btn" onclick="filterSecLogs('HONEYPOT',this)">&#127855; Honeypot</button>
+                            <button class="filter-btn" onclick="filterSecLogs('IP_BANNED',this)">&#128683; Banned</button>
+                            <button class="filter-btn" onclick="filterSecLogs('SQL_XSS',this)">&#128201; SQL/XSS</button>
+                            <button class="filter-btn" onclick="filterSecLogs('BLOCKED_PATH',this)">&#128274; Blocked</button>
+                        </div>
+                    </div>
+                    <div class="table-wrap" id="securityLogsTable"></div>
+                </div>
+
                 <!-- USER DETAIL MODAL -->
+
                 <div id="userDetailModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);z-index:9999;overflow-y:auto;padding:20px;">
                     <div style="max-width:600px;margin:0 auto;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:28px;">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
@@ -1384,7 +1513,10 @@ const pageTitles = {
     logs: 'Activity Log',
     bulktools: 'Bulk Tools',
     export: 'Export Data',
-    settings: 'Settings'
+    settings: 'Settings',
+    referrals: 'Referral Management',
+    marketers: 'Marketer Accounts',
+    security: 'Security Center'
 };
 
 // ── TOAST ──
@@ -1488,6 +1620,9 @@ function loadPage(id) {
     if (id === 'broadcast')   { loadBroadcastHistory(); }
     if (id === 'logs')        { loadLogs(); }
     if (id === 'settings')    { loadSettings(); }
+    if (id === 'referrals')   { loadReferrals(); }
+    if (id === 'marketers')   { loadMarketers(); }
+    if (id === 'security')    { loadSecurity(); }
 }
 
 function refreshAll() {
@@ -2280,8 +2415,189 @@ function showConfirm(title, body, onConfirm, btnClass='btn-orange') {
     modal.classList.add('show');
 }
 
+
+// ── REFERRALS ──
+let _allRefStats = [];
+async function loadReferrals() {
+    const d = await api('/api/admin/referrals');
+    _allRefStats = d.stats || [];
+    const total = _allRefStats.reduce((s,u) => s + u.referralCount, 0);
+    const converted = _allRefStats.filter(u => u.referralCount > 0 && u.referrals.some(r => r.rewarded)).length;
+    const zero = _allRefStats.filter(u => !u.isMarketer && u.referralCount === 0 && !u.banned).length;
+    const comm = _allRefStats.reduce((s,u) => s + (u.earning||0), 0);
+    document.getElementById('refStatTotal').textContent = total;
+    document.getElementById('refStatConverted').textContent = converted;
+    document.getElementById('refStatZero').textContent = zero;
+    document.getElementById('refStatComm').textContent = 'KES ' + comm.toLocaleString();
+    renderReferrals('all');
+}
+function filterReferrals(type, btn) {
+    document.querySelectorAll('#page-referrals .filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderReferrals(type);
+}
+function renderReferrals(type) {
+    let list = _allRefStats;
+    if (type === 'has')       list = list.filter(u => u.referralCount > 0);
+    if (type === 'zero')      list = list.filter(u => u.referralCount === 0 && !u.isMarketer);
+    if (type === 'marketers') list = list.filter(u => u.isMarketer);
+    if (!list.length) { document.getElementById('referralsTable').innerHTML = '<div class="empty-state"><div class="icon">&#129309;</div><p>No users found</p></div>'; return; }
+    document.getElementById('referralsTable').innerHTML = '<table><thead><tr><th>User</th><th>Phone</th><th>Referrals</th><th>Converted</th><th>Type</th><th>Status</th><th>Actions</th></tr></thead><tbody>' +
+    list.map(u => {
+        const converted = u.referrals.filter(r => r.rewarded).length;
+        const pill = u.isMarketer ? '<span class="pill pill-approved">Marketer</span>' : (u.referralCount === 0 ? '<span class="pill pill-rejected">Zero</span>' : '<span class="pill pill-pending">User</span>');
+        const status = u.banned ? '<span class="pill pill-rejected">Suspended</span>' : '<span class="pill pill-approved">Active</span>';
+        return '<tr><td class="user-email" style="cursor:pointer" onclick="viewUser(\'' + u.email + '\')">' + u.email + '</td>' +
+            '<td><span class="mono">' + (u.phone||'&#8212;') + '</span></td>' +
+            '<td><strong style="color:var(--accent)">' + u.referralCount + '</strong></td>' +
+            '<td>' + converted + '</td>' +
+            '<td>' + pill + '</td>' +
+            '<td>' + status + '</td>' +
+            '<td style="display:flex;gap:6px">' +
+                '<button class="act-btn ' + (u.banned?'act-approve':'act-reject') + '" onclick="toggleBan(\'' + u.email + '\',' + (!u.banned) + ')" style="font-size:11px">' + (u.banned?'&#128275; Restore':'&#128683; Suspend') + '</button>' +
+            '</td></tr>';
+    }).join('') + '</tbody></table>';
+}
+
+// ── MARKETERS ──
+async function loadMarketers() {
+    const d = await api('/api/admin/marketers');
+    const list = d.marketers || [];
+    if (!list.length) { document.getElementById('marketersTable').innerHTML = '<div class="empty-state"><div class="icon">&#128226;</div><p>No marketers yet. Create one above.</p></div>'; return; }
+    document.getElementById('marketersTable').innerHTML = '<table><thead><tr><th>Name</th><th>Phone / Email</th><th>Referrals</th><th>Converted</th><th>Commission</th><th>Paid Out</th><th>Status</th><th>Actions</th></tr></thead><tbody>' +
+    list.map(m => '<tr>' +
+        '<td class="user-email">' + (m.name||'&#8212;') + '</td>' +
+        '<td><span class="mono">' + (m.phone||'&#8212;') + '</span><br><span style="font-size:11px;color:var(--muted)">' + m.email + '</span></td>' +
+        '<td><strong style="color:var(--accent)">' + m.referralCount + '</strong></td>' +
+        '<td>' + m.convertedCount + '</td>' +
+        '<td style="color:var(--green);font-size:12px">2x Rate</td>' +
+        '<td style="color:var(--green)">KES ' + (m.totalCommission||0).toLocaleString() + '</td>' +
+        '<td><span class="pill ' + (m.banned?'pill-rejected':'pill-approved') + '">' + (m.banned?'Suspended':'Active') + '</span></td>' +
+        '<td style="display:flex;gap:6px;flex-wrap:wrap">' +
+            '<button class="act-btn act-approve" onclick="copyToClipboard(\'' + window.location.origin + '/register.html?ref=' + m.email + '\')" style="font-size:11px">&#128203; Link</button>' +
+            '<button class="act-btn act-reject" onclick="editMarketer(\'' + m.email + '\')" style="font-size:11px">&#9998; Note</button>' +
+            '<button class="act-btn ' + (m.banned?'act-approve':'act-reject') + '" onclick="toggleMarketerBan(\'' + m.email + '\',' + (!m.banned) + ')" style="font-size:11px">' + (m.banned?'&#128275; Restore':'&#128683; Suspend') + '</button>' +
+        '</td></tr>'
+    ).join('') + '</tbody></table>';
+}
+
+async function createMarketer() {
+    const name     = document.getElementById('mkName').value.trim();
+    const email    = document.getElementById('mkEmail').value.trim();
+    const password = document.getElementById('mkPassword').value;
+    const phone    = document.getElementById('mkPhone').value.trim();
+    const note     = document.getElementById('mkNote').value.trim();
+    const msg      = document.getElementById('mkMsg');
+    if (!name || !email || !password || !phone) { msg.className='form-msg err'; msg.textContent='All fields except Note are required'; return; }
+    if (password.length < 6) { msg.className='form-msg err'; msg.textContent='Password must be at least 6 characters'; return; }
+    const d = await api('/api/admin/marketer/create', 'POST', { name, email, password, phone, note });
+    if (d.error) { msg.className='form-msg err'; msg.textContent=d.error; return; }
+    msg.className='form-msg ok'; msg.textContent='Marketer created!';
+    const box = document.getElementById('mkResultBox');
+    const fullLink = window.location.origin + d.referralLink;
+    document.getElementById('mkResultLink').textContent = fullLink;
+    document.getElementById('mkResultEmail').textContent = d.email;
+    box.style.display = 'block';
+    document.getElementById('mkName').value = '';
+    document.getElementById('mkEmail').value = '';
+    document.getElementById('mkPassword').value = '';
+    document.getElementById('mkPhone').value = '';
+    document.getElementById('mkNote').value = '';
+    toast('Marketer account created!');
+    loadMarketers();
+}
+
+function copyMarketerLink() {
+    const link = document.getElementById('mkResultLink').textContent;
+    copyToClipboard(link);
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => toast('Copied to clipboard!'));
+}
+
+async function editMarketer(email) {
+    const note = prompt('Update note for marketer ' + email + ' (leave blank to keep current):');
+    if (note === null) return;
+    const d = await api('/api/admin/marketer/update', 'POST', { email, note });
+    if (d.error) { toast(d.error, 'err'); return; }
+    toast('Marketer note updated!');
+    loadMarketers();
+}
+
+async function toggleMarketerBan(email, banned) {
+    const d = await api('/api/admin/marketer/update', 'POST', { email, banned });
+    if (d.error) { toast(d.error, 'err'); return; }
+    toast(banned ? 'Marketer suspended' : 'Marketer restored');
+    loadMarketers();
+}
+
+// ── SECURITY ──
+let _allSecLogs = [];
+async function loadSecurity() {
+    const d = await api('/api/admin/security');
+    _allSecLogs = d.logs || [];
+    const bannedList = d.bannedIPs || [];
+    const suspList = d.suspiciousIPs || [];
+    const honeypot = _allSecLogs.filter(l => l.type === 'HONEYPOT' || l.type === 'HONEYPOT_LOGIN').length;
+
+    document.getElementById('secStatBanned').textContent = bannedList.length;
+    document.getElementById('secStatSusp').textContent = suspList.length;
+    document.getElementById('secStatTotal').textContent = _allSecLogs.length;
+    document.getElementById('secStatHoney').textContent = honeypot;
+
+    // Update sidebar badge
+    const badge = document.getElementById('secBadge');
+    if (bannedList.length > 0) { badge.style.display='inline'; badge.textContent = bannedList.length; } else { badge.style.display='none'; }
+
+    // Banned IPs table
+    if (!bannedList.length) {
+        document.getElementById('bannedIpTable').innerHTML = '<div class="empty-state"><div class="icon">&#10003;</div><p>No banned IPs</p></div>';
+    } else {
+        document.getElementById('bannedIpTable').innerHTML = '<table><thead><tr><th>IP Address</th><th>Actions</th></tr></thead><tbody>' +
+        bannedList.map(ip => '<tr><td><span class="mono">' + ip + '</span></td><td><button class="act-btn act-approve" onclick="manualBanIpDirect(\'' + ip + '\',\'unban\')" style="font-size:11px">&#128275; Unban</button></td></tr>').join('') +
+        '</tbody></table>';
+    }
+    renderSecLogs('all');
+}
+function filterSecLogs(type, btn) {
+    document.querySelectorAll('#page-security .filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderSecLogs(type);
+}
+function renderSecLogs(type) {
+    let list = _allSecLogs;
+    if (type !== 'all') list = list.filter(l => l.type === type || (type === 'HONEYPOT' && l.type === 'HONEYPOT_LOGIN'));
+    if (!list.length) { document.getElementById('securityLogsTable').innerHTML = '<div class="empty-state"><div class="icon">&#128737;</div><p>No events</p></div>'; return; }
+    const colors = { 'HONEYPOT':'pill-approved', 'HONEYPOT_LOGIN':'pill-approved', 'IP_BANNED':'pill-rejected', 'MANUAL_BAN':'pill-rejected', 'MANUAL_UNBAN':'pill-pending', 'SQL_XSS':'pill-rejected', 'BLOCKED_PATH':'pill-pending' };
+    document.getElementById('securityLogsTable').innerHTML = '<table><thead><tr><th>Type</th><th>IP</th><th>Path</th><th>Detail</th><th>Time</th></tr></thead><tbody>' +
+    list.map(l => '<tr>' +
+        '<td><span class="pill ' + (colors[l.type]||'pill-pending') + '">' + l.type + '</span></td>' +
+        '<td><span class="mono" style="font-size:11px">' + (l.ip||'&#8212;') + '</span></td>' +
+        '<td style="font-size:12px;color:var(--muted);max-width:120px;overflow:hidden;text-overflow:ellipsis">' + (l.path||'&#8212;') + '</td>' +
+        '<td style="font-size:12px;color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis">' + (l.detail||'&#8212;') + '</td>' +
+        '<td style="color:var(--muted);font-size:12px">' + fmtDate(l.createdAt) + '</td>' +
+    '</tr>').join('') + '</tbody></table>';
+}
+async function manualBanIp(action) {
+    const ip = document.getElementById('banIpInput').value.trim();
+    const msg = document.getElementById('banIpMsg');
+    if (!ip) { msg.className='form-msg err'; msg.textContent='Enter an IP address'; return; }
+    await manualBanIpDirect(ip, action);
+    document.getElementById('banIpInput').value = '';
+}
+async function manualBanIpDirect(ip, action) {
+    const msg = document.getElementById('banIpMsg');
+    const d = await api('/api/admin/security/ban-ip', 'POST', { ip, action });
+    if (d.error) { msg.className='form-msg err'; msg.textContent=d.error; toast(d.error,'err'); return; }
+    msg.className='form-msg ok'; msg.textContent=d.message;
+    toast(d.message);
+    loadSecurity();
+}
+
 // Initial load
 loadOverview();
+
 </script>
 </body>
 </html>
