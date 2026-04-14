@@ -1743,21 +1743,26 @@ function renderWdTable(list, compact) {
     if (!list.length) return `<div class="empty-state"><div class="icon">✅</div><p>No pending withdrawals</p></div>`;
     return `<table>
         <thead><tr>
-            <th>User</th><th>Phone</th><th>Amount</th>
+            <th>User</th><th>Phone</th><th>Requested</th><th>Fee</th><th>Send (Net)</th>
             ${compact?'':'<th>Date</th>'}
             <th>Status</th><th>Actions</th>
         </tr></thead>
-        <tbody>${list.map(w => `<tr>
+        <tbody>${list.map(w => {
+            const fee = w.fee || 0;
+            const net = w.netAmount || (w.amount - fee);
+            return `<tr>
             <td class="user-email">${w.userEmail}</td>
             <td><span class="mono">${w.phone}</span></td>
-            <td><strong>KES ${(w.amount||0).toLocaleString()}</strong></td>
+            <td>KES ${(w.amount||0).toLocaleString()}</td>
+            <td style="color:var(--red);font-size:12px">-KES ${fee}</td>
+            <td><strong style="color:var(--green)">KES ${net.toLocaleString()}</strong></td>
             ${compact?'': `<td style="color:var(--muted);font-size:12px">${fmtDate(w.createdAt)}</td>`}
             <td><span class="pill ${w.approved?'pill-approved':'pill-pending'}">${w.approved?'Approved':'Pending'}</span></td>
             <td>${!w.approved ? `
                 <button class="act-btn act-approve" onclick="actWithdrawal('${w._id}','approve',this)">✅ Approve</button>
                 <button class="act-btn act-reject"  onclick="actWithdrawal('${w._id}','reject',this)"  style="margin-left:6px">❌ Reject</button>
             ` : '<span style="color:var(--muted);font-size:12px">Done</span>'}</td>
-        </tr>`).join('')}</tbody>
+        </tr>`;}).join('')}</tbody>
     </table>`;
 }
 
@@ -1765,7 +1770,11 @@ async function actWithdrawal(id, action, btn) {
     btn.disabled = true;
     const d = await api('/api/admin/withdrawal/' + action, 'POST', { withdrawalId: id });
     if (d.error) { toast(d.error, 'err'); btn.disabled=false; return; }
-    toast(action==='approve' ? 'Withdrawal approved!' : 'Withdrawal rejected');
+    if (action === 'approve' && d.netAmount) {
+        toast('Approved! Send KES ' + d.netAmount.toLocaleString() + ' to ' + d.phone);
+    } else {
+        toast(action==='approve' ? 'Withdrawal approved!' : 'Withdrawal rejected');
+    }
     loadOverview();
     if (document.getElementById('page-withdrawals').classList.contains('active')) loadWithdrawals();
 }

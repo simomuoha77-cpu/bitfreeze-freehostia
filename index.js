@@ -87,6 +87,8 @@ const withdrawalSchema = new mongoose.Schema({
     userEmail: String,
     phone: String,
     amount: Number,
+    fee: { type: Number, default: 0 },
+    netAmount: { type: Number, default: 0 }, // amount user actually receives
     approved: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now }
 }, { collection: 'withdrawals' });
@@ -206,6 +208,20 @@ const REFERRAL_RULES = [
     { min: 200,  reward: 20  },
     { min: 100,  reward: 10  },
 ];
+
+// ================= WITHDRAWAL FEE STRUCTURE =================
+function getWithdrawalFee(amount) {
+    if (amount <= 500)  return 10;
+    if (amount <= 1000) return 25;
+    if (amount <= 1500) return 30;
+    if (amount <= 2000) return 40;
+    if (amount <= 2500) return 51;
+    if (amount <= 3000) return 65;
+    if (amount <= 4000) return 80;
+    if (amount <= 4500) return 100;
+    if (amount <= 5000) return 100;
+    return 120; // 5001 and above up to 8000
+}
 
 function getReferralReward(depositAmount) {
     for (const rule of REFERRAL_RULES) {
@@ -945,7 +961,14 @@ app.post('/api/admin/withdrawal/approve', auth, async (req, res) => {
         await user.save();
         wd.approved = true;
         await wd.save();
-        res.json({ message: 'Withdrawal approved' });
+        const fee = wd.fee || getWithdrawalFee(wd.amount);
+        const netAmount = wd.netAmount || (wd.amount - fee);
+        res.json({
+            message: `Withdrawal approved. Send KES ${netAmount.toLocaleString()} to ${wd.phone} (KES ${wd.amount} requested minus KES ${fee} fee).`,
+            netAmount,
+            fee,
+            phone: wd.phone
+        });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -1276,12 +1299,19 @@ app.post('/api/withdraw', auth, async (req, res) => {
             return res.status(400).json({ error: 'Insufficient earnings' });
         }
 
-        const withdrawal = new Withdrawal({ userEmail: user.email, phone, amount });
+        const fee = getWithdrawalFee(amount);
+        const netAmount = amount - fee;
+
+        const withdrawal = new Withdrawal({ userEmail: user.email, phone, amount, fee, netAmount });
         await withdrawal.save();
         user.lastWithdrawalAttempt = new Date();
         await user.save();
 
-        res.json({ message: 'Withdrawal request submitted' });
+        res.json({
+            message: `Withdrawal request submitted! You will receive KES ${netAmount.toLocaleString()} to your M-Pesa. KES ${fee} is the transaction fee.`,
+            fee,
+            netAmount
+        });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
