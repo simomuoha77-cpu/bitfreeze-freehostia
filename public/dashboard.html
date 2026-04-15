@@ -180,6 +180,7 @@
         <button class="tab" onclick="showTab('profile',this)">Profile</button>
         <button class="tab" onclick="showTab('support',this)">Support</button>
         <button class="tab" onclick="showTab('trade',this)">&#128200; Trade</button>
+        <button class="tab" onclick="showTab('inbox',this)" id="inboxTab">&#128172; Inbox <span id="inboxBadge" style="display:none;background:#ff3d5a;color:#fff;font-size:10px;font-weight:800;padding:1px 6px;border-radius:10px;margin-left:4px;vertical-align:middle;"></span></button>
     </div>
 
     <!-- HOME -->
@@ -498,6 +499,24 @@
         </div>
     </div>
 
+    <!-- INBOX TAB -->
+    <div id="inbox" class="tab-content">
+        <div class="card">
+            <h2>&#128172; Messages from Bitfreeze</h2>
+            <p style="font-size:13px;color:#9aa6b2;margin-bottom:16px;">Messages from our support team will appear here. You can reply directly.</p>
+            <div id="inboxMessages" style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px;">
+                <p style="color:#9aa6b2;font-size:13px;text-align:center;">Loading messages...</p>
+            </div>
+        </div>
+        <!-- Reply box — only shown if there is a thread -->
+        <div class="card" id="replyBox" style="display:none;">
+            <h3 style="margin-top:0;font-size:15px;">Reply</h3>
+            <textarea id="replyText" placeholder="Type your reply here..." style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px;color:#fff;font-size:14px;resize:vertical;min-height:80px;box-sizing:border-box;font-family:Inter,system-ui,Arial;"></textarea>
+            <button onclick="sendUserReply()" style="margin-top:10px;">&#128172; Send Reply</button>
+            <p id="replyMsg" style="font-size:13px;margin-top:8px;min-height:16px;"></p>
+        </div>
+    </div>
+
     <!-- COMING SOON MODAL -->
     <div class="cs-overlay" id="csModal">
         <div class="cs-box">
@@ -601,6 +620,7 @@ function showTab(id, btn) {
     document.getElementById(id).classList.add('active');
     btn.classList.add('active');
     if (id === 'trade') initTradeTab();
+    if (id === 'inbox') loadInbox();
     else if (tradePriceTimer) { clearInterval(tradePriceTimer); tradePriceTimer = null; }
 }
 
@@ -1026,6 +1046,58 @@ async function loadBroadcast() {
 
 loadCommunityLinks();
 loadBroadcast();
+
+// ── INBOX ──
+async function loadInbox() {
+    try {
+        const r = await fetch(DOMAIN + '/api/messages', { headers: { Authorization: 'Bearer ' + token } });
+        const d = await r.json();
+        // Update badge
+        const badge = document.getElementById('inboxBadge');
+        const tabBtn = document.getElementById('inboxTab');
+        if (d.unread > 0) { badge.style.display='inline'; badge.textContent=d.unread; } else { badge.style.display='none'; }
+
+        const el = document.getElementById('inboxMessages');
+        if (!d.thread || !d.thread.messages || !d.thread.messages.length) {
+            el.innerHTML = '<div style="text-align:center;padding:24px;color:#9aa6b2"><div style="font-size:36px;margin-bottom:8px">&#128172;</div><p style="font-size:14px">No messages yet. Our team will contact you here if needed.</p></div>';
+            document.getElementById('replyBox').style.display = 'none';
+            return;
+        }
+
+        document.getElementById('replyBox').style.display = 'block';
+        el.innerHTML = d.thread.messages.map(m => {
+            const isAdmin = m.sender === 'admin';
+            return '<div style="display:flex;justify-content:' + (isAdmin?'flex-start':'flex-end') + '">' +
+                '<div style="max-width:85%;background:' + (isAdmin?'rgba(255,138,0,0.12)':'rgba(255,255,255,0.06)') + ';border:1px solid ' + (isAdmin?'rgba(255,138,0,0.25)':'rgba(255,255,255,0.08)') + ';border-radius:12px;padding:12px 14px;">' +
+                '<div style="font-size:11px;color:#9aa6b2;margin-bottom:5px;">' + (isAdmin?'&#128274; Bitfreeze Support':'You') + ' &bull; ' + new Date(m.sentAt).toLocaleString('en-KE',{dateStyle:'short',timeStyle:'short'}) + '</div>' +
+                '<div style="font-size:14px;color:#e6eef6;line-height:1.5">' + m.text + '</div>' +
+                '</div></div>';
+        }).join('');
+    } catch(e) { console.error('Inbox error', e); }
+}
+
+async function sendUserReply() {
+    const text = document.getElementById('replyText').value.trim();
+    const msg  = document.getElementById('replyMsg');
+    if (!text) { msg.style.color='#ff4444'; msg.textContent='Please type a message first.'; return; }
+    try {
+        const r = await fetch(DOMAIN + '/api/messages/reply', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ text })
+        });
+        const d = await r.json();
+        if (d.error) { msg.style.color='#ff4444'; msg.textContent=d.error; return; }
+        msg.style.color='#00ffb0'; msg.textContent='Reply sent!';
+        document.getElementById('replyText').value = '';
+        setTimeout(() => msg.textContent='', 2500);
+        loadInbox();
+    } catch(e) { msg.style.color='#ff4444'; msg.textContent='Network error. Try again.'; }
+}
+
+// Check inbox every 60 seconds for new messages
+setInterval(loadInbox, 60000);
+loadInbox();
 </script>
 
 <script>

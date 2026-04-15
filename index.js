@@ -135,6 +135,22 @@ const fridgeStateSchema = new mongoose.Schema({
 }, { collection: 'fridgestates' });
 const FridgeState = mongoose.model('FridgeState', fridgeStateSchema);
 
+// ================= MESSAGE SCHEMA =================
+const messageSchema = new mongoose.Schema({
+    userEmail: { type: String, required: true },
+    subject: { type: String, default: '' },
+    messages: [{
+        sender: String,   // 'admin' or user email
+        text: String,
+        sentAt: { type: Date, default: Date.now },
+        read: { type: Boolean, default: false }
+    }],
+    lastUpdated: { type: Date, default: Date.now },
+    adminUnread: { type: Number, default: 0 },
+    userUnread: { type: Number, default: 0 }
+}, { collection: 'messages' });
+const Message = mongoose.model('Message', messageSchema);
+
 // ================= FRIDGES =================
 let FRIDGES = [
     { id: '100', name: 'low Earning Fridge 100', price: 100, dailyEarn: 5, img: 'images/fridge100.jpg', locked: false },
@@ -1542,10 +1558,10 @@ app.post('/api/admin/user/ban', auth, async (req, res) => {
         const { email, banned } = req.body;
         const user = await User.findOne({ email });
         if (!user) return res.status(404).json({ error: 'User not found' });
-        user.banned = banned;
+        user.banned = Boolean(banned);
         await user.save();
         await ActivityLog.create({
-            action: banned ? 'USER_BANNED' : 'USER_UNBANNED',
+            action: user.banned ? 'USER_BANNED' : 'USER_UNBANNED',
             adminEmail: req.user.email,
             details: email
         });
@@ -1680,6 +1696,101 @@ app.get('/wp-login.php', (req, res) => {
     SecurityLog.create({ type:'HONEYPOT', ip:req.ip, path:'/wp-login.php', detail:'WordPress honeypot hit' }).catch(()=>{});
     bannedIPs.add(req.ip);
     res.send('<html><body>WordPress</body></html>');
+});
+
+// ================= KEEP ALIVE PING =================
+app.get('/api/ping', (req, res) => res.json({ status: 'ok', time: new Date() }));
+
+// Auto-ping self every 10 min to prevent Render sleep
+const SITE_URL = process.env.RENDER_EXTERNAL_URL || '';
+if (SITE_URL) {
+    setInterval(async () => {
+        try { await axios.get(SITE_URL + '/api/ping'); console.log('Keep-alive ping OK'); } catch(e) {}
+    }, 10 * 60 * 1000);
+}
+
+// ================= MESSAGING: ADMIN SENDS TO USER =================
+app.post('/api/admin/message/send', auth, async (req, res) => {
+    try {
+        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
+        const { userEmail, subject, text } = req.body;
+        if (!userEmail || !text) return res.status(400).json({ error: 'userEmail and text required' });
+        const user = await User.findOne({ email: userEmail });
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        let thread = await Message.findOne({ userEmail });
+        if (!thread) {
+            thread = new Message({ userEmail, subject: subject || 'Message from Bitfreeze', messages: [], adminUnread: 0, userUnread: 0 });
+        }
+        thread.messages.push({ sender: 'admin', text, sentAt: new Date(), read: false });
+        thread.userUnread = (thread.userUnread || 0) + 1;
+        thread.lastUpdated = new Date();
+        if (subject) thread.subject = subject;
+        await thread.save();
+        await ActivityLog.create({ action: 'MESSAGE_SENT', adminEmail: req.user.email, details: 'To: ' + userEmail });
+        res.json({ message: 'Message sent!' });
+    } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= MESSAGING: USER REPLIES =================
+app.post('/api/messages/reply', auth, async (req, res) => {
+    try {
+        const { text } = req.body;
+        if (!text) return res.status(400).json({ error: 'Message text required' });
+        const userEmail = req.user.email;
+        let thread = await Message.findOne({ userEmail });
+        if (!thread) return res.status(404).json({ error: 'No message thread found' });
+        thread.messages.push({ sender: userEmail, text, sentAt: new Date(), read: false });
+        thread.adminUnread = (thread.adminUnread || 0) + 1;
+        thread.lastUpdated = new Date();
+        await thread.save();
+        res.json({ message: 'Reply sent!' });
+    } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= MESSAGING: USER GETS OWN THREAD =================
+app.get('/api/messages', auth, async (req, res) => {
+    try {
+        const thread = await Message.findOne({ userEmail: req.user.email });
+        if (!thread) return res.json({ thread: null, unread: 0 });
+        // Mark all admin messages as read
+        let changed = false;
+        thread.messages.forEach(m => { if (m.sender === 'admin' && !m.read) { m.read = true; changed = true; } });
+        if (changed) { thread.userUnread = 0; await thread.save(); }
+        res.json({ thread, unread: thread.userUnread });
+    } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= MESSAGING: ADMIN GETS ALL THREADS =================
+app.get('/api/admin/messages', auth, async (req, res) => {
+    try {
+        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
+        const threads = await Message.find().sort({ lastUpdated: -1 });
+        res.json({ threads });
+    } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= MESSAGING: ADMIN READS A THREAD =================
+app.get('/api/admin/messages/:userEmail', auth, async (req, res) => {
+    try {
+        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
+        const thread = await Message.findOne({ userEmail: req.params.userEmail });
+        if (!thread) return res.json({ thread: null });
+        // Mark user replies as read
+        thread.messages.forEach(m => { if (m.sender !== 'admin') m.read = true; });
+        thread.adminUnread = 0;
+        await thread.save();
+        res.json({ thread });
+    } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
+// ================= MESSAGING: ADMIN UNREAD COUNT =================
+app.get('/api/admin/messages/unread/count', auth, async (req, res) => {
+    try {
+        if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
+        const total = await Message.aggregate([{ $group: { _id: null, total: { $sum: '$adminUnread' } } }]);
+        res.json({ unread: total[0]?.total || 0 });
+    } catch(err) { res.status(500).json({ error: err.message }); }
 });
 
 // ================= START SERVER =================
