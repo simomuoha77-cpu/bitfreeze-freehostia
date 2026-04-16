@@ -1175,16 +1175,14 @@ let earningsRunning = false;
 
 // ── DAILY EARNINGS: 12:00 AM Kenya time (UTC+3 = 21:00 UTC) for normal fridges ──
 async function runDailyEarnings() {
-    // ✅ MUTEX: if already running (e.g. midnight cron + hourly cron fire at same second), skip
     if (earningsRunning) {
-        console.log('⚠️ runDailyEarnings already in progress — skipping duplicate call');
+        console.log('runDailyEarnings already running — skipping');
         return;
     }
     earningsRunning = true;
     try {
         const users = await User.find();
         const now = new Date();
-        // Kenya date string e.g. "2026-03-27"
         const todayKenya = new Date(now.getTime() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
         let totalCredited = 0;
         let usersUpdated = 0;
@@ -1251,13 +1249,14 @@ async function checkMissedEarnings() {
             const todayKey = new Date(now.getTime() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
             const alreadyRan = await Settings.findOne({ key: 'last_earnings_date' });
             if (!alreadyRan || alreadyRan.value !== todayKey) {
-                console.log('🔄 Running missed daily earnings for', todayKey);
-                await runDailyEarnings();
+                console.log('Running missed daily earnings for', todayKey);
+                // Save date FIRST to prevent race condition
                 await Settings.findOneAndUpdate(
                     { key: 'last_earnings_date' },
                     { value: todayKey },
                     { upsert: true }
                 );
+                await runDailyEarnings();
             }
         }
     } catch(err) {
@@ -1270,8 +1269,15 @@ cron.schedule('* * * * *', checkAndCreditOfferEarnings);
 cron.schedule('0 21 * * *', async () => {
     const now = new Date();
     const todayKey = new Date(now.getTime() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    await runDailyEarnings();
+    // Save date FIRST to prevent race condition with checkMissedEarnings
+    const already = await Settings.findOne({ key: 'last_earnings_date' });
+    if (already && already.value === todayKey) {
+        console.log('Midnight cron: earnings already ran today, skipping');
+        return;
+    }
     await Settings.findOneAndUpdate({ key: 'last_earnings_date' }, { value: todayKey }, { upsert: true });
+    await runDailyEarnings();
+    console.log('Midnight cron: earnings done for', todayKey);
 }, { timezone: 'UTC' });
 cron.schedule('0 * * * *', checkMissedEarnings);
 console.log('✅ All cron jobs scheduled');
