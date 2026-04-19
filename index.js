@@ -583,11 +583,16 @@ app.get('/api/me', auth, async (req, res) => {
 app.post('/api/admin/run-earnings', auth, async (req, res) => {
     try {
         if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin only' });
-        await runDailyEarnings();
         const today = new Date();
         const todayKey = new Date(today.getTime() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        // Guard: prevent running twice on same Kenya date
+        const alreadyRan = await Settings.findOne({ key: 'last_earnings_date' });
+        if (alreadyRan && alreadyRan.value === todayKey) {
+            return res.status(400).json({ error: 'Earnings already credited today (' + todayKey + '). Cannot run again.' });
+        }
         await Settings.findOneAndUpdate({ key: 'last_earnings_date' }, { value: todayKey }, { upsert: true });
-        res.json({ message: 'Daily earnings run successfully!' });
+        await runDailyEarnings();
+        res.json({ message: 'Daily earnings run successfully for ' + todayKey });
     } catch(err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -1214,17 +1219,14 @@ async function runDailyEarnings() {
             }
 
             if (earnThisRun > 0 && changed) {
+                // Use user.save() so Mongoose properly serializes lastEarnedAt to MongoDB.
+                // updateOne + $set: { fridges } does NOT reliably save subdocument changes.
+                user.earning += earnThisRun;
                 user.markModified('fridges');
-                await User.updateOne(
-                    { _id: user._id },
-                    {
-                        $inc: { earning: earnThisRun },
-                        $set: { fridges: user.fridges }
-                    }
-                );
+                await user.save();
                 totalCredited += earnThisRun;
                 usersUpdated++;
-                console.log(`✅ Credited KES ${earnThisRun} to ${user.email}`);
+                console.log('Credited KES ' + earnThisRun + ' to ' + user.email);
             }
         }
 
@@ -1279,7 +1281,7 @@ cron.schedule('0 21 * * *', async () => {
     await runDailyEarnings();
     console.log('Midnight cron: earnings done for', todayKey);
 }, { timezone: 'UTC' });
-cron.schedule('0 * * * *', checkMissedEarnings);
+// checkMissedEarnings cron removed - keep-alive ping prevents server sleep
 console.log('✅ All cron jobs scheduled');
 
 // ================= USER WITHDRAWAL REQUEST =================
